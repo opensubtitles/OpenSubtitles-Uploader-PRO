@@ -1,12 +1,35 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'child_process'
 
 // https://tauri.app/v1/guides/getting-started/setup/vite
 const host = process.env.TAURI_DEV_HOST
 
+// Plugin to embed API keys at build time
+const embedApiKeysPlugin = () => {
+  return {
+    name: 'embed-api-keys',
+    buildStart() {
+      if (process.env.NODE_ENV === 'production') {
+        try {
+          console.log('🔑 Embedding API keys at build time...');
+          execSync('node scripts/embed-api-keys.js', { stdio: 'inherit' });
+        } catch (error) {
+          console.warn('⚠️ Failed to embed API keys:', error.message);
+        }
+      }
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), embedApiKeysPlugin()],
   publicDir: 'public',
+  
+  // Define global constants for embedded API keys
+  define: {
+    '__EMBEDDED_OPENSUBTITLES_API_KEY__': JSON.stringify(process.env.OPENSUBTITLES_API_KEY || process.env.VITE_OPENSUBTITLES_API_KEY || ''),
+  },
   
   // Add worker configuration for FFmpeg WebAssembly
   worker: {

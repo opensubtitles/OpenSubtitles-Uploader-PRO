@@ -690,3 +690,86 @@ When encountering "NetworkError when attempting to fetch resource":
 5. Look for specific error patterns in the logs
 
 This implementation provides complete visibility into the upload process, making it much easier to diagnose whether NetworkError represents a real failure or just a network timing issue where the upload actually succeeded.
+
+## API Key Embedding System (2025-07-21)
+
+**✅ IMPLEMENTED**: Compile-time API key embedding system for secure binary distribution.
+
+### Overview
+
+The application now supports embedding the OpenSubtitles API key directly into the compiled binary at build time, providing a secure distribution method for desktop applications without exposing credentials in environment variables or config files.
+
+### Implementation Details
+
+**Components**:
+- `scripts/embed-api-keys.js` - Script that generates embedded constants file at build time
+- `src/utils/embeddedConstants.js` - Generated file with embedded API keys (auto-generated, not tracked in git)
+- `vite.config.js` - Enhanced with `embedApiKeysPlugin` and global `define` configuration
+- `src/utils/constants.js` - Updated to prioritize embedded keys over environment variables
+
+**Build Process Integration**:
+1. **Vite Plugin**: Automatically runs the embedding script during production builds
+2. **Global Constants**: Vite's `define` feature injects `__EMBEDDED_OPENSUBTITLES_API_KEY__` at compile time
+3. **Dual Mode Support**: Development uses environment variables, production uses embedded keys
+
+**Environment Variables**:
+- `OPENSUBTITLES_API_KEY` - Primary environment variable for production builds
+- `VITE_OPENSUBTITLES_API_KEY` - Fallback environment variable for development
+
+### GitHub Actions Integration
+
+**Build Workflow Enhanced**:
+- `OPENSUBTITLES_API_KEY` secret added to build environment
+- `NODE_ENV=production` set during Tauri builds
+- API key automatically embedded in desktop application binaries
+
+### Deploy Script Integration
+
+**Production Builds**:
+- Deploy script sets `NODE_ENV=production` before building
+- Ensures API key embedding is triggered during server deployments
+- Maintains backward compatibility with environment variable fallback
+
+### Security Benefits
+
+1. **No Exposed Credentials**: API keys are compiled into binary, not stored in config files
+2. **Environment Independence**: Desktop apps work without requiring users to set environment variables
+3. **Build-Time Validation**: Warns if API keys are missing during production builds
+4. **Fallback Support**: Gracefully falls back to environment variables in development
+
+### Usage
+
+**Development Mode**:
+```bash
+npm run dev  # Uses VITE_OPENSUBTITLES_API_KEY from .env
+```
+
+**Production Build**:
+```bash
+export OPENSUBTITLES_API_KEY="your_api_key_here"
+export NODE_ENV=production
+npm run build  # Embeds API key in binary
+```
+
+**Manual Embedding**:
+```bash
+node scripts/embed-api-keys.js  # Generates embedded constants file
+```
+
+### Files Modified
+
+- `scripts/embed-api-keys.js` - New embedding script
+- `vite.config.js` - Added embedding plugin and global defines
+- `src/utils/constants.js` - Updated API key resolution logic
+- `.github/workflows/build-desktop-apps.yml` - Added API key environment variables
+- `deploy.sh` - Added production environment variable setting
+
+### Validation
+
+The system includes comprehensive validation:
+- Build-time warnings for missing API keys
+- Runtime validation of embedded constants
+- Console logging indicating which API key source is being used
+- Error handling for missing or invalid configurations
+
+This implementation ensures that desktop applications can be distributed with embedded API credentials while maintaining security and developer experience.

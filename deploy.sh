@@ -532,6 +532,9 @@ if [ "$SKIP_BUILD" = false ]; then
     # Backup current build
     backup_build
     
+    # Set production environment for API key embedding
+    export NODE_ENV=production
+    
     if npm run build; then
       # Create build state file
       mkdir -p dist

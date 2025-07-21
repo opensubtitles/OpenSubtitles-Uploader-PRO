@@ -1,8 +1,11 @@
 // Application version - updated manually to match package.json
 export const APP_VERSION = '1.2.0';
 
-// API Configuration - from environment variables
-export const OPENSUBTITLES_COM_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_OPENSUBTITLES_API_KEY || '' : '';
+// API Configuration - embedded keys take priority over environment variables
+// Global __EMBEDDED_OPENSUBTITLES_API_KEY__ is defined by Vite at build time
+export const OPENSUBTITLES_COM_API_KEY = (typeof __EMBEDDED_OPENSUBTITLES_API_KEY__ !== 'undefined' && __EMBEDDED_OPENSUBTITLES_API_KEY__) 
+  ? __EMBEDDED_OPENSUBTITLES_API_KEY__
+  : ((typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_OPENSUBTITLES_API_KEY || '' : '');
 
 // User Agent for all API requests
 export const USER_AGENT = `OpenSubtitles Uploader PRO v${APP_VERSION}`;
