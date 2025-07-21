@@ -1,21 +1,25 @@
 {
-  "package": {
-    "productName": "OpenSubtitles Uploader PRO",
-    "version": "1.1.21"
-  },
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
     "distDir": "../dist",
     "devPath": "http://localhost:5173"
   },
+  "package": {
+    "productName": "OpenSubtitles Uploader PRO",
+    "version": "1.1.21"
+  },
   "tauri": {
+    "allowlist": {
+      "all": true
+    },
     "bundle": {
       "active": true,
       "targets": "all",
+      "identifier": "com.opensubtitles.uploader.pro.v2",
       "icon": [
         "icons/32x32.png",
-        "icons/128x128.png",
+        "icons/128x128.png", 
         "icons/128x128@2x.png",
         "icons/icon.icns",
         "icons/icon.ico"
@@ -27,24 +31,24 @@
       "longDescription": "OpenSubtitles Uploader PRO is a professional React-based subtitle uploader application that integrates with both OpenSubtitles APIs for seamless subtitle management and upload. Features include drag-and-drop support, automatic video/subtitle pairing, language detection, movie hash calculation, and comprehensive metadata enrichment.",
       "macOS": {
         "entitlements": "entitlements.plist",
-        "exceptionDomain": "",
         "frameworks": [],
-        "providerShortName": null,
         "signingIdentity": "-"
-      },
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
       },
       "deb": {
         "depends": []
       }
     },
-    "allowlist": {
-      "all": true
+    "security": {
+      "csp": null
     },
-    "identifier": "com.opensubtitles.uploader.pro.v2",
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://api.github.com/repos/opensubtitles/uploader/releases/latest"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5RkI4MjcxREEwMEEzRDIKUldSVEJqTXNzU2pMY2MyYWY1bWY0VUZ4L2pqOEUxSXdPRDB4TVBKZEJCajVPTVdGbWg3M2J1NgpwQ2ZyNnhCYWJvbE5oZnJRTVZlQUt3N2J2K2J3ZE5hYlNpSGJGdVNRNWNFZHBIR0E9Cg=="
+    },
     "windows": [
       {
         "title": "OpenSubtitles Uploader PRO",
@@ -60,17 +64,6 @@
         "center": true,
         "dragDropEnabled": false
       }
-    ],
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://api.github.com/repos/opensubtitles/uploader/releases/latest"
-      ],
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5RkI4MjcxREEwMEEzRDIKUldSVEJqTXNzU2pMY2MyYWY1bWY0VUZ4L2pqOEUxSXdPRDB4TVBKZEJCajVPTVdGbWg3M2J1NgpwQ2ZyNnhCYWJvbE5oZnJRTVZlQUt3N2J2K2J3ZE5hYlNpSGJGdVNRNWNFZHBIR0E9Cg=="
-    }
+    ]
   }
 }
