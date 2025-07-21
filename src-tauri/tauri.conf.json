@@ -48,9 +48,6 @@
       "entitlements": "entitlements.plist",
       "frameworks": [],
       "signingIdentity": "-"
-    },
-    "deb": {
-      "depends": []
     }
   },
   "plugins": {
