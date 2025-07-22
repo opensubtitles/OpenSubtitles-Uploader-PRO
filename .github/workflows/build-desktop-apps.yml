@@ -29,11 +29,18 @@ jobs:
             arch: 'x64'
             os: 'linux'
           
-          # macOS Universal Binary (Intel + Apple Silicon)
+          # macOS Intel builds
           - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
-            target: 'universal-apple-darwin'
-            arch: 'universal'
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            arch: 'x64'
+            os: 'macos'
+          
+          # macOS Apple Silicon builds  
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            arch: 'arm64'
             os: 'macos'
           
           # Windows Intel/AMD builds
