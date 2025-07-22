@@ -97,12 +97,34 @@ jobs:
         run: |
           echo "🏗️ Building Universal Binary for macOS..."
           
+          # Debug: Show available targets and current architecture
+          echo "📋 Available Rust targets:"
+          rustup target list --installed
+          echo "🖥️ Host architecture: $(uname -m)"
+          echo "🖥️ Rust host target: $(rustc -Vv | grep host)"
+          
+          # Ensure targets are available
+          echo "🎯 Installing required targets..."
+          rustup target add x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
+          
           # Build for Intel architecture first
           echo "🔧 Building for Intel (x86_64-apple-darwin)..."
           if ! npm run tauri build -- --target x86_64-apple-darwin; then
             echo "❌ Intel build failed!"
             exit 1
           fi
+          
+          # Verify Intel build output
+          echo "🔍 Verifying Intel build output..."
+          if [ -f "src-tauri/target/x86_64-apple-darwin/release/opensubtitles-uploader-pro" ]; then
+            file "src-tauri/target/x86_64-apple-darwin/release/opensubtitles-uploader-pro"
+          else
+            echo "❌ Intel binary not found at expected location"
+            echo "📁 Actual contents of x86_64 target directory:"
+            find src-tauri/target/x86_64-apple-darwin -name "opensubtitles-uploader-pro" 2>/dev/null || echo "No Intel binaries found"
+          fi
+          
           echo "✅ Intel build completed"
           
           # Build for Apple Silicon architecture
@@ -132,8 +154,8 @@ jobs:
             UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/$APP_NAME"
             cp -R "$ARM_APP" "$UNIVERSAL_APP"
             
-            # Get executable name
-            EXECUTABLE_NAME=$(basename "$APP_NAME" .app)
+            # Get executable name (the actual binary name, not the app name)
+            EXECUTABLE_NAME="opensubtitles-uploader-pro"
             INTEL_EXEC="$INTEL_APP/Contents/MacOS/$EXECUTABLE_NAME"
             ARM_EXEC="$ARM_APP/Contents/MacOS/$EXECUTABLE_NAME"
             UNIVERSAL_EXEC="$UNIVERSAL_APP/Contents/MacOS/$EXECUTABLE_NAME"
