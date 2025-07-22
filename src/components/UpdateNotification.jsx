@@ -20,8 +20,8 @@ const UpdateNotification = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // Don't show if not standalone, no update available, or dismissed
-  if (!isStandalone || !updateAvailable || isDismissed) {
+  // Don't show if no update available or dismissed
+  if (!updateAvailable || isDismissed) {
     return null;
   }
 
@@ -60,11 +60,12 @@ const UpdateNotification = () => {
                 Update Available
               </h3>
               <div className={`mt-1 text-sm ${isDark ? 'text-blue-200' : 'text-blue-700'}`}>
-                <p>Version {updateInfo?.manifest?.version} is available</p>
-                {isExpanded && updateInfo?.body && (
+                <p>Version {updateInfo?.latestVersion} is available</p>
+                <p className="text-xs mt-1">You're currently using v{updateInfo?.currentVersion}</p>
+                {isExpanded && updateInfo?.releaseNotes && (
                   <div className="mt-2 p-2 rounded bg-black bg-opacity-20">
                     <p className="text-xs font-medium mb-1">Release Notes:</p>
-                    <p className="text-xs whitespace-pre-wrap">{updateInfo.body}</p>
+                    <p className="text-xs whitespace-pre-wrap">{updateInfo.releaseNotes}</p>
                   </div>
                 )}
               </div>
@@ -91,19 +92,72 @@ const UpdateNotification = () => {
           </button>
         </div>
 
-        <div className="mt-4 flex space-x-2">
-          {!isInstalling ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {isStandalone ? (
+            // Standalone app - show install/restart buttons
+            !isInstalling ? (
+              <>
+                <button
+                  onClick={handleInstallUpdate}
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  Install Update
+                </button>
+                
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                  }`}
+                >
+                  {isExpanded ? 'Less Info' : 'More Info'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center text-xs">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Installing update...
+                </div>
+                
+                <button
+                  onClick={handleRestartApp}
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
+                >
+                  Restart App
+                </button>
+              </>
+            )
+          ) : (
+            // Web/browser app - show download links
             <>
-              <button
-                onClick={handleInstallUpdate}
-                className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                  isDark
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                Install Update
-              </button>
+              {updateInfo?.releaseUrl && (
+                <a
+                  href={updateInfo.releaseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  📥 Download Update
+                </a>
+              )}
               
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -114,27 +168,6 @@ const UpdateNotification = () => {
                 }`}
               >
                 {isExpanded ? 'Less Info' : 'More Info'}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center text-xs">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Installing update...
-              </div>
-              
-              <button
-                onClick={handleRestartApp}
-                className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                  isDark
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                Restart App
               </button>
             </>
           )}

@@ -29,6 +29,21 @@
       "csp": null
     }
   },
+  "security": {
+    "capabilities": [
+      {
+        "identifier": "main-capability",
+        "description": "Main app permissions",
+        "windows": ["main"],
+        "permissions": [
+          "shell:allow-open",
+          "fs:default",
+          "dialog:default",
+          "http:default"
+        ]
+      }
+    ]
+  },
   "bundle": {
     "active": true,
     "targets": "all",
@@ -52,7 +67,13 @@
   },
   "plugins": {
     "shell": {
-      "open": true
+      "open": true,
+      "scope": [
+        {
+          "name": "shell:allow-open",
+          "urls": ["https://*", "http://*"]
+        }
+      ]
     },
     "fs": {
       "requireLiteralLeadingDot": false

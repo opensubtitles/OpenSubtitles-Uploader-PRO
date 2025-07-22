@@ -22,6 +22,7 @@ import { useGuessIt } from "../hooks/useGuessIt.js";
 import { useUserSession } from "../hooks/useUserSession.js";
 import { useCheckSubHash } from "../hooks/useCheckSubHash.js";
 import { useVideoMetadata } from "../hooks/useVideoMetadata.js";
+import { useAppUpdate } from "../hooks/useAppUpdate.js";
 import { CacheService } from "../services/cache.js";
 import { MovieHashService } from "../services/movieHash.js";
 import { SubtitleUploadService } from "../services/subtitleUploadService.js";

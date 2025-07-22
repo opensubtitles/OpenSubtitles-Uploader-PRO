@@ -64,6 +64,26 @@ export class UpdateService {
     this.init();
   }
 
+  /**
+   * Compare version strings (semver-like)
+   * Returns: 1 if a > b, -1 if a < b, 0 if equal
+   */
+  compareVersions(a, b) {
+    const parseVersion = (v) => v.replace(/^v/, '').split('.').map(num => parseInt(num) || 0);
+    const aVersion = parseVersion(a);
+    const bVersion = parseVersion(b);
+    
+    for (let i = 0; i < Math.max(aVersion.length, bVersion.length); i++) {
+      const aPart = aVersion[i] || 0;
+      const bPart = bVersion[i] || 0;
+      
+      if (aPart > bPart) return 1;
+      if (aPart < bPart) return -1;
+    }
+    
+    return 0;
+  }
+
   async init() {
     console.log('🔧 UpdateService init:', { isStandalone: this.isStandalone });
     if (this.isStandalone) {
@@ -119,18 +139,11 @@ export class UpdateService {
   }
 
   /**
-   * Check for updates with caching
+   * Check for updates with caching - Custom GitHub API implementation
    * @param {boolean} force - Force check even if cached
    * @returns {Promise<Object>} Update check result
    */
   async checkForUpdates(force = false) {
-    if (!this.isStandalone) {
-      return {
-        updateAvailable: false,
-        error: 'Not running as standalone app'
-      };
-    }
-
     const now = Date.now();
     const cache = UpdateService.updateCache;
 
@@ -145,28 +158,56 @@ export class UpdateService {
     }
 
     try {
+      console.log('🔄 Checking for updates via GitHub API...');
       
-      if (!tauriUpdater) {
-        throw new Error('Tauri updater not available');
+      const response = await fetch('https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/releases/latest', {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'OpenSubtitles Uploader PRO Update Checker'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
       }
-      
-      const updateInfo = await tauriUpdater.checkUpdate();
-      console.log('🔄 Update check result:', updateInfo);
+
+      const release = await response.json();
+      const latestVersion = release.tag_name;
+      const currentVersion = `v${APP_VERSION}`;
+
+      const hasUpdate = this.compareVersions(latestVersion, currentVersion) > 0;
+
+      const updateInfo = {
+        shouldUpdate: hasUpdate,
+        currentVersion: APP_VERSION,
+        latestVersion: latestVersion.replace(/^v/, ''),
+        releaseUrl: release.html_url,
+        releaseName: release.name,
+        releaseNotes: release.body,
+        publishedAt: release.published_at,
+        assets: release.assets.map(asset => ({
+          name: asset.name,
+          size: asset.size,
+          downloadUrl: asset.browser_download_url
+        }))
+      };
+
+      console.log('🔄 Update check result:', { hasUpdate, currentVersion, latestVersion });
 
       // Update cache
       cache.lastChecked = now;
-      cache.updateAvailable = updateInfo.shouldUpdate;
+      cache.updateAvailable = hasUpdate;
       cache.updateInfo = updateInfo;
 
       // Notify listeners
       this.notifyListeners({
         type: 'update_check_complete',
-        updateAvailable: updateInfo.shouldUpdate,
+        updateAvailable: hasUpdate,
         updateInfo: updateInfo
       });
 
       return {
-        updateAvailable: updateInfo.shouldUpdate,
+        updateAvailable: hasUpdate,
         updateInfo: updateInfo,
         cached: false
       };
@@ -276,16 +317,12 @@ export class UpdateService {
    * Start automatic update checks (every 1 hour)
    */
   startAutoUpdateChecks() {
-    if (!this.isStandalone) {
-      console.log('⚠️ Auto-update not available: Not running as standalone app');
-      return;
-    }
-
     if (this.autoCheckInterval) {
       console.log('⚠️ Auto-update checks already running');
       return;
     }
 
+    console.log('🔄 Starting automatic update checks...');
     
     // Check immediately
     this.checkForUpdates(false);

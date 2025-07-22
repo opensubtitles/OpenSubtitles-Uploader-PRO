@@ -99,12 +99,8 @@ export const useAppUpdate = () => {
     return removeListener;
   }, []);
 
-  // Check for updates manually
+  // Check for updates manually - works for all environments now
   const checkForUpdates = useCallback(async (force = false) => {
-    if (!updateState.isStandalone) {
-      return { updateAvailable: false, error: 'Not running as standalone app' };
-    }
-
     setUpdateState(prev => ({ ...prev, isChecking: true, error: null }));
 
     try {
@@ -127,7 +123,7 @@ export const useAppUpdate = () => {
     } finally {
       setUpdateState(prev => ({ ...prev, isChecking: false }));
     }
-  }, [updateState.isStandalone]);
+  }, []);
 
   // Install update
   const installUpdate = useCallback(async () => {
@@ -149,16 +145,11 @@ export const useAppUpdate = () => {
     await updateService.restartApplication();
   }, [updateState.isStandalone]);
 
-  // Start auto-update checks
+  // Start auto-update checks - now works for all environments
   const startAutoUpdates = useCallback(() => {
-    if (!updateState.isStandalone) {
-      console.error('❌ Cannot start auto-updates: Not running as standalone app');
-      return;
-    }
-
     updateService.startAutoUpdateChecks();
     setUpdateState(prev => ({ ...prev, autoCheckEnabled: true }));
-  }, [updateState.isStandalone]);
+  }, []);
 
   // Stop auto-update checks
   const stopAutoUpdates = useCallback(() => {
