@@ -46,7 +46,6 @@ import TestModePanel from "./TestModePanel.jsx";
 import UserProfile from "./UserProfile.jsx";
 import UpdateNotification from "./UpdateNotification.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { useAppUpdate } from "../hooks/useAppUpdate.js";
 
 // Lazy load the DebugPanel component
 const DebugPanel = lazy(() => import("./DebugPanel.jsx").then(module => ({ default: module.DebugPanel })));
