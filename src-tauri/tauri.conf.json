@@ -65,13 +65,14 @@
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "shell:allow-open",
-          "urls": ["https://*", "http://*"]
-        }
-      ]
+      "open": {
+        "enabled": true,
+        "scope": [
+          {
+            "urls": ["https://*", "http://*"]
+          }
+        ]
+      }
     },
     "fs": {
       "requireLiteralLeadingDot": false
