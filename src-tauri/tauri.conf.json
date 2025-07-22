@@ -26,23 +26,21 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Main app permissions",
+          "windows": ["*"],
+          "permissions": [
+            "shell:allow-open",
+            "fs:default",
+            "dialog:default",
+            "http:default"
+          ]
+        }
+      ]
     }
-  },
-  "security": {
-    "capabilities": [
-      {
-        "identifier": "main-capability",
-        "description": "Main app permissions",
-        "windows": ["main"],
-        "permissions": [
-          "shell:allow-open",
-          "fs:default",
-          "dialog:default",
-          "http:default"
-        ]
-      }
-    ]
   },
   "bundle": {
     "active": true,
