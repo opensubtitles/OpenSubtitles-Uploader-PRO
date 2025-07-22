@@ -377,7 +377,7 @@ export class XmlRpcService {
         // Cache miss, make XML-RPC call
         console.log(`Movie Guess cache miss for: ${filename}, making XML-RPC call`);
         if (addDebugInfo) {
-          addDebugInfo(`❌ Movie Guess cache MISS for ${filename}, making XML-RPC call`);
+          addDebugInfo(`❗ Movie Guess cache MISS for ${filename}, making XML-RPC call`);
         }
         
         const data = await this.guessMovieFromStringUncached(filename);
@@ -534,7 +534,7 @@ export class XmlRpcService {
 
     // Cache miss, use retry logic
     if (addDebugInfo) {
-      addDebugInfo(`❌ Movie Guess cache MISS for ${filename}, making XML-RPC call with retry`);
+      addDebugInfo(`❗ Movie Guess cache MISS for ${filename}, making XML-RPC call with retry`);
     }
 
     return retryAsync(
@@ -670,7 +670,7 @@ export class XmlRpcService {
     // Cache miss, make XML-RPC call
     console.log(`CheckSubHash cache miss for ${hashes.length} hashes, making XML-RPC call`);
     if (addDebugInfo) {
-      addDebugInfo(`❌ CheckSubHash cache MISS for ${hashes.length} hashes, making XML-RPC call`);
+      addDebugInfo(`❗ CheckSubHash cache MISS for ${hashes.length} hashes, making XML-RPC call`);
     }
     
     const data = await this.checkSubHashUncached(hashes);

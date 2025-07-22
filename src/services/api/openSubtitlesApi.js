@@ -292,7 +292,7 @@ export class OpenSubtitlesApiService {
         // Cache miss, make API call with rate limiting
         console.log(`Language Detection cache miss for: ${subtitleFile.name}, making API call`);
         if (addDebugInfo) {
-          addDebugInfo(`❌ Language Detection cache MISS for ${subtitleFile.name}, making API call`);
+          addDebugInfo(`❗ Language Detection cache MISS for ${subtitleFile.name}, making API call`);
         }
         
         // Rate limiting - prevent multiple language detection calls happening too quickly
@@ -402,7 +402,7 @@ export class OpenSubtitlesApiService {
         // Cache miss, make API call with rate limiting
         console.log(`Features cache miss for IMDb ID: ${imdbId}, making API call`);
         if (addDebugInfo) {
-          addDebugInfo(`❌ Features cache MISS for IMDb ID ${imdbId}, making API call`);
+          addDebugInfo(`❗ Features cache MISS for IMDb ID ${imdbId}, making API call`);
         }
         
         // Rate limiting
@@ -580,7 +580,7 @@ export class OpenSubtitlesApiService {
 
         // Cache miss, use retry logic
         if (addDebugInfo) {
-          addDebugInfo(`❌ Language Detection cache MISS for ${subtitleFile.name}, making API call with retry`);
+          addDebugInfo(`❗ Language Detection cache MISS for ${subtitleFile.name}, making API call with retry`);
         }
 
         // Rate limiting

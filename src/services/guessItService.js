@@ -89,7 +89,7 @@ export class GuessItService {
     // Cache miss, make API call
     console.log(`GuessIt cache miss for: ${filename}, making API call`);
     if (addDebugInfo) {
-      addDebugInfo(`❌ GuessIt cache MISS for ${filename}, making API call`);
+      addDebugInfo(`❗ GuessIt cache MISS for ${filename}, making API call`);
     }
     
     const data = await this.guessFileMetadataUncached(filename);
@@ -121,7 +121,7 @@ export class GuessItService {
 
     // Cache miss, use retry logic
     if (addDebugInfo) {
-      addDebugInfo(`❌ GuessIt cache MISS for ${filename}, making API call with retry`);
+      addDebugInfo(`❗ GuessIt cache MISS for ${filename}, making API call with retry`);
     }
 
     return retryAsync(
