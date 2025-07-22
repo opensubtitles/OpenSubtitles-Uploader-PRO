@@ -58,12 +58,7 @@
       "requireLiteralLeadingDot": false
     },
     "updater": {
-      "active": true,
-      "endpoints": [
-        "https://api.github.com/repos/opensubtitles/uploader/releases/latest"
-      ],
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5RkI4MjcxREEwMEEzRDIKUldSVEJqTXNzU2pMY2MyYWY1bWY0VUZ4L2pqOEUxSXdPRDB4TVBKZEJCajVPTVdGbWg3M2J1NgpwQ2ZyNnhCYWJvbE5oZnJRTVZlQUt3N2J2K2J3ZE5hYlNpSGJGdVNRNWNFZHBIR0E9Cg=="
+      "active": false
     }
   }
 }
