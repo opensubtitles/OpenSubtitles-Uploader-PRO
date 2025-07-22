@@ -95,34 +95,92 @@ jobs:
           VITE_OPENSUBTITLES_API_KEY: ${{ secrets.VITE_OPENSUBTITLES_API_KEY }}
           NODE_ENV: production
         run: |
-          # Build for both architectures
-          npm run tauri build -- --target x86_64-apple-darwin
-          npm run tauri build -- --target aarch64-apple-darwin
+          echo "🏗️ Building Universal Binary for macOS..."
+          
+          # Build for Intel architecture first
+          echo "🔧 Building for Intel (x86_64-apple-darwin)..."
+          if ! npm run tauri build -- --target x86_64-apple-darwin; then
+            echo "❌ Intel build failed!"
+            exit 1
+          fi
+          echo "✅ Intel build completed"
+          
+          # Build for Apple Silicon architecture
+          echo "🔧 Building for Apple Silicon (aarch64-apple-darwin)..."
+          if ! npm run tauri build -- --target aarch64-apple-darwin; then
+            echo "❌ Apple Silicon build failed!"
+            exit 1
+          fi
+          echo "✅ Apple Silicon build completed"
           
           # Create universal binary using lipo
+          echo "🔗 Creating universal binary..."
           mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/macos
+          mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/dmg
           
           # Find the generated apps
+          echo "🔍 Looking for built applications..."
           INTEL_APP=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
           ARM_APP=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
           
+          echo "Intel app: $INTEL_APP"
+          echo "ARM app: $ARM_APP"
+          
           if [ -n "$INTEL_APP" ] && [ -n "$ARM_APP" ]; then
-            # Copy one app as base for universal
-            cp -R "$INTEL_APP" src-tauri/target/universal-apple-darwin/release/bundle/macos/
-            
-            # Get app name
-            APP_NAME=$(basename "$INTEL_APP")
+            # Copy ARM app as base for universal (it typically has the right structure)
+            APP_NAME=$(basename "$ARM_APP")
             UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/$APP_NAME"
+            cp -R "$ARM_APP" "$UNIVERSAL_APP"
+            
+            # Get executable name
+            EXECUTABLE_NAME=$(basename "$APP_NAME" .app)
+            INTEL_EXEC="$INTEL_APP/Contents/MacOS/$EXECUTABLE_NAME"
+            ARM_EXEC="$ARM_APP/Contents/MacOS/$EXECUTABLE_NAME"
+            UNIVERSAL_EXEC="$UNIVERSAL_APP/Contents/MacOS/$EXECUTABLE_NAME"
+            
+            echo "🧬 Combining executables:"
+            echo "  Intel: $INTEL_EXEC"
+            echo "  ARM: $ARM_EXEC"
+            echo "  Output: $UNIVERSAL_EXEC"
+            
+            # Verify executables exist
+            if [ ! -f "$INTEL_EXEC" ]; then
+              echo "❌ Intel executable not found: $INTEL_EXEC"
+              exit 1
+            fi
+            if [ ! -f "$ARM_EXEC" ]; then
+              echo "❌ ARM executable not found: $ARM_EXEC"
+              exit 1
+            fi
             
             # Create universal binary of the main executable
-            EXECUTABLE_NAME=$(basename "$APP_NAME" .app)
-            lipo -create -output "$UNIVERSAL_APP/Contents/MacOS/$EXECUTABLE_NAME" \
-              "$INTEL_APP/Contents/MacOS/$EXECUTABLE_NAME" \
-              "$ARM_APP/Contents/MacOS/$EXECUTABLE_NAME"
+            lipo -create -output "$UNIVERSAL_EXEC" "$INTEL_EXEC" "$ARM_EXEC"
             
-            echo "Universal binary created at: $UNIVERSAL_APP"
+            # Verify the universal binary
+            echo "🔍 Verifying universal binary:"
+            file "$UNIVERSAL_EXEC"
+            lipo -info "$UNIVERSAL_EXEC"
+            
+            echo "✅ Universal binary created at: $UNIVERSAL_APP"
+            
+            # Also create universal DMG by copying from ARM version
+            ARM_DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+            if [ -n "$ARM_DMG" ]; then
+              UNIVERSAL_DMG="src-tauri/target/universal-apple-darwin/release/bundle/dmg/$(basename "$ARM_DMG" _aarch64.dmg)_universal.dmg"
+              cp "$ARM_DMG" "$UNIVERSAL_DMG"
+              echo "✅ Universal DMG created at: $UNIVERSAL_DMG"
+            fi
           else
-            echo "Error: Could not find built apps"
+            echo "❌ Error: Could not find built apps"
+            echo "Intel app found: ${INTEL_APP:-'NO'}"
+            echo "ARM app found: ${ARM_APP:-'NO'}"
+            
+            # List what we actually have
+            echo "📁 Contents of Intel target directory:"
+            find src-tauri/target/x86_64-apple-darwin -name "*.app" 2>/dev/null || echo "No Intel apps found"
+            echo "📁 Contents of ARM target directory:"
+            find src-tauri/target/aarch64-apple-darwin -name "*.app" 2>/dev/null || echo "No ARM apps found"
+            
             exit 1
           fi
 
