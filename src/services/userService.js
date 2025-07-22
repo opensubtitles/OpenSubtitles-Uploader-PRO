@@ -12,37 +12,47 @@ export class UserService {
    * @returns {string} - Session ID or empty string
    */
   static getSessionId() {
+    console.log('👤 UserService getSessionId: Starting session lookup...');
+    
     // First priority: Check for stored session ID (from URL capture)
     const storedSessionId = SessionManager.getStoredSessionId();
+    console.log(`👤 UserService getSessionId: Stored session ID check - Found: ${!!storedSessionId}`);
     if (storedSessionId) {
-      console.log(`UserService: Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
+      console.log(`👤 UserService getSessionId: ✅ Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
       return storedSessionId;
     }
     
     // Second priority: Get PHPSESSID cookie value
+    console.log('👤 UserService getSessionId: Checking PHPSESSID cookie...');
+    console.log(`👤 UserService getSessionId: Full document.cookie: ${document.cookie}`);
     const cookies = document.cookie.split(';');
+    
     const phpSessionCookie = cookies.find(cookie => 
       cookie.trim().startsWith('PHPSESSID=')
     );
     
+    console.log(`👤 UserService getSessionId: PHPSESSID cookie found: ${!!phpSessionCookie}`);
     if (phpSessionCookie) {
       const sessionId = phpSessionCookie.split('=')[1].trim();
-      console.log(`UserService: Using PHPSESSID: ${sessionId}`);
+      console.log(`👤 UserService getSessionId: ✅ Using PHPSESSID: ${sessionId}`);
       return sessionId;
     }
     
     // Third priority: Try remember_sid cookie (not httpOnly)
+    console.log('👤 UserService getSessionId: Checking remember_sid cookie...');
     const rememberSidCookie = cookies.find(cookie => 
       cookie.trim().startsWith('remember_sid=')
     );
     
+    console.log(`👤 UserService getSessionId: remember_sid cookie found: ${!!rememberSidCookie}`);
     if (rememberSidCookie) {
       const sessionId = rememberSidCookie.split('=')[1].trim();
-      console.log(`UserService: Using remember_sid: ${sessionId}`);
+      console.log(`👤 UserService getSessionId: ✅ Using remember_sid: ${sessionId}`);
       return sessionId;
     }
     
-    // Fallback: empty token (no logging for anonymous users)
+    // Fallback: empty token
+    console.log('👤 UserService getSessionId: ❌ No session ID found anywhere - returning empty');
     return '';
   }
   

@@ -11,11 +11,17 @@ export class SessionManager {
    * Then redirect to clean URL without session ID
    */
   static initializeSession() {
+    console.log('🔐 SessionManager: Initializing session...');
+    console.log(`🔐 SessionManager: Current URL: ${window.location.href}`);
+    console.log(`🔐 SessionManager: URL search params: ${window.location.search}`);
+    
     const urlParams = new URLSearchParams(window.location.search);
     const sidParam = urlParams.get('sid');
     
+    console.log(`🔐 SessionManager: SID parameter found: ${!!sidParam}`);
     if (sidParam) {
-      console.log('SessionManager: Capturing session ID from URL and redirecting to clean URL');
+      console.log(`🔐 SessionManager: ✅ Capturing session ID from URL: ${sidParam.substring(0, 8)}...`);
+      console.log(`🔐 SessionManager: SID length: ${sidParam.length} chars`);
       
       // Store the session ID securely
       this.storeSessionId(sidParam);
@@ -25,10 +31,20 @@ export class SessionManager {
       const cleanUrl = window.location.pathname + 
         (urlParams.toString() ? '?' + urlParams.toString() : '');
       
+      console.log(`🔐 SessionManager: Redirecting to clean URL: ${cleanUrl}`);
       // Use replaceState to avoid adding to browser history
       window.history.replaceState({}, document.title, cleanUrl);
       
       return sidParam;
+    } else {
+      console.log('🔐 SessionManager: No SID parameter in URL');
+      console.log('🔐 SessionManager: Checking existing stored session...');
+      const existing = this.getStoredSessionId();
+      if (existing) {
+        console.log(`🔐 SessionManager: Found existing stored session: ${existing.substring(0, 8)}...`);
+      } else {
+        console.log('🔐 SessionManager: No existing stored session');
+      }
     }
     
     return null;
@@ -40,12 +56,17 @@ export class SessionManager {
    */
   static storeSessionId(sessionId) {
     try {
+      console.log(`🔐 SessionManager: Storing session ID: ${sessionId.substring(0, 8)}...`);
+      console.log(`🔐 SessionManager: Storage key: ${SESSION_STORAGE_KEY}`);
+      
       // Store session ID permanently
       localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
       
-      console.log('SessionManager: Session ID stored securely');
+      // Verify storage worked
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      console.log(`🔐 SessionManager: ✅ Session ID stored successfully - Verification: ${stored === sessionId}`);
     } catch (error) {
-      console.error('SessionManager: Failed to store session ID:', error);
+      console.error('🔐 SessionManager: ❌ Failed to store session ID:', error);
     }
   }
   
@@ -55,10 +76,13 @@ export class SessionManager {
    */
   static getStoredSessionId() {
     try {
+      console.log(`🔐 SessionManager: Retrieving stored session ID from key: ${SESSION_STORAGE_KEY}`);
       const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+      console.log(`🔐 SessionManager: Retrieved session ID: ${sessionId ? sessionId.substring(0, 8) + '...' : 'null'}`);
+      console.log(`🔐 SessionManager: Session ID length: ${sessionId ? sessionId.length : 0} chars`);
       return sessionId || null;
     } catch (error) {
-      console.error('SessionManager: Failed to retrieve session ID:', error);
+      console.error('🔐 SessionManager: ❌ Failed to retrieve session ID:', error);
       return null;
     }
   }

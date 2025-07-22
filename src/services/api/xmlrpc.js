@@ -14,37 +14,52 @@ export class XmlRpcService {
    * Get authentication token from stored session, PHPSESSID cookie, or empty fallback
    */
   static getAuthToken() {
+    console.log('🔑 XML-RPC getAuthToken: Starting token lookup...');
+    
     // First priority: Check for stored session ID (from URL capture)
     const storedSessionId = SessionManager.getStoredSessionId();
+    console.log(`🔑 XML-RPC getAuthToken: Stored session ID check - Found: ${!!storedSessionId}`);
     if (storedSessionId) {
-      console.log(`XML-RPC: Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
+      console.log(`🔑 XML-RPC getAuthToken: ✅ Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
+      console.log(`🔑 XML-RPC getAuthToken: Full stored token length: ${storedSessionId.length} chars`);
       return storedSessionId;
     }
     
     // Second priority: Get PHPSESSID cookie value
+    console.log('🔑 XML-RPC getAuthToken: Checking PHPSESSID cookie...');
+    console.log(`🔑 XML-RPC getAuthToken: Full document.cookie: ${document.cookie}`);
     const cookies = document.cookie.split(';');
+    console.log(`🔑 XML-RPC getAuthToken: Split cookies:`, cookies);
+    
     const phpSessionCookie = cookies.find(cookie => 
       cookie.trim().startsWith('PHPSESSID=')
     );
     
+    console.log(`🔑 XML-RPC getAuthToken: PHPSESSID cookie found: ${!!phpSessionCookie}`);
     if (phpSessionCookie) {
       const token = phpSessionCookie.split('=')[1].trim();
-      console.log(`XML-RPC: Using PHPSESSID token: ${token}`);
+      console.log(`🔑 XML-RPC getAuthToken: ✅ Using PHPSESSID token: ${token}`);
+      console.log(`🔑 XML-RPC getAuthToken: PHPSESSID token length: ${token.length} chars`);
       return token;
     }
     
     // Third priority: Try remember_sid cookie (not httpOnly)
+    console.log('🔑 XML-RPC getAuthToken: Checking remember_sid cookie...');
     const rememberSidCookie = cookies.find(cookie => 
       cookie.trim().startsWith('remember_sid=')
     );
     
+    console.log(`🔑 XML-RPC getAuthToken: remember_sid cookie found: ${!!rememberSidCookie}`);
     if (rememberSidCookie) {
       const token = rememberSidCookie.split('=')[1].trim();
-      console.log(`XML-RPC: Using remember_sid token: ${token}`);
+      console.log(`🔑 XML-RPC getAuthToken: ✅ Using remember_sid token: ${token}`);
+      console.log(`🔑 XML-RPC getAuthToken: remember_sid token length: ${token.length} chars`);
       return token;
     }
     
-    // Fallback: empty token (no logging for anonymous users)
+    // Fallback: empty token
+    console.log('🔑 XML-RPC getAuthToken: ❌ No token found anywhere - using empty token');
+    console.log('🔑 XML-RPC getAuthToken: SessionManager info:', SessionManager.getSessionInfo());
     return '';
   }
 
@@ -722,10 +737,29 @@ export class XmlRpcService {
    */
   static async tryUploadSubtitles(uploadData) {
     try {
+      console.log('🚀 TryUploadSubtitles: Starting upload attempt...');
       const token = this.getAuthToken();
+      
+      console.log(`🚀 TryUploadSubtitles: Retrieved token - Length: ${token.length}, Value: ${token ? token.substring(0, 8) + '...' : 'EMPTY'}`);
+      console.log(`🚀 TryUploadSubtitles: Is token empty? ${token === ''}`);
+      console.log(`🚀 TryUploadSubtitles: Upload data structure:`, {
+        subtitlesCount: uploadData.length,
+        firstSubtitle: uploadData[0] ? {
+          sublanguageid: uploadData[0].sublanguageid,
+          moviehash: uploadData[0].moviehash,
+          moviebytesize: uploadData[0].moviebytesize,
+          hasImdbId: !!uploadData[0].idmovieimdb
+        } : 'No subtitles'
+      });
       
       // Convert upload data to XML-RPC format
       const xmlRpcBody = this.buildTryUploadXml(token, uploadData);
+      
+      console.log(`🚀 TryUploadSubtitles: XML-RPC body length: ${xmlRpcBody.length} chars`);
+      console.log(`🚀 TryUploadSubtitles: XML-RPC includes token: ${xmlRpcBody.includes(token)}`);
+      if (token) {
+        console.log(`🚀 TryUploadSubtitles: Token appears in XML at position: ${xmlRpcBody.indexOf(token)}`);
+      }
       
       
       const response = await delayedFetch(API_ENDPOINTS.OPENSUBTITLES_XMLRPC, {
