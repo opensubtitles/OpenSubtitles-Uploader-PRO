@@ -25,6 +25,7 @@ SKIP_BUILD=false
 DEV_MODE=false
 CLEAN_BUILD=false
 BACKGROUND_MODE=true  # Default to background mode
+API_KEY=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -52,23 +53,31 @@ while [[ $# -gt 0 ]]; do
       BACKGROUND_MODE=false
       shift
       ;;
+    --api-key)
+      API_KEY="$2"
+      shift 2
+      ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo "Options:"
-      echo "  --force-install    Force reinstall all dependencies"
-      echo "  --skip-build       Skip the build step"
-      echo "  --dev              Start development server instead of production build"
-      echo "  --clean            Clean build artifacts before building"
-      echo "  --background, --bg Run server in background (default)"
-      echo "  --foreground, --fg Run server in foreground (blocks terminal)"
-      echo "  -h, --help         Show this help message"
+      echo "  --force-install       Force reinstall all dependencies"
+      echo "  --skip-build          Skip the build step"
+      echo "  --dev                 Start development server instead of production build"
+      echo "  --clean               Clean build artifacts before building"
+      echo "  --background, --bg    Run server in background (default)"
+      echo "  --foreground, --fg    Run server in foreground (blocks terminal)"
+      echo "  --api-key KEY         Set OpenSubtitles API key for production builds"
+      echo "  -h, --help            Show this help message"
+      echo ""
+      echo "Environment Variables:"
+      echo "  OPENSUBTITLES_API_KEY  OpenSubtitles API key (alternative to --api-key)"
       echo ""
       echo "Default behavior: Runs in background mode"
       exit 0
       ;;
     *)
       echo -e "${RED}Unknown option: $1${NC}"
-      echo "Usage: $0 [--force-install] [--skip-build] [--dev] [--clean] [--foreground]"
+      echo "Usage: $0 [--force-install] [--skip-build] [--dev] [--clean] [--foreground] [--api-key KEY]"
       exit 1
       ;;
   esac
@@ -586,6 +595,23 @@ if [ "$SKIP_BUILD" = false ]; then
     
     # Set production environment for API key embedding
     export NODE_ENV=production
+    
+    # Set OpenSubtitles API key for production builds
+    # Priority: command line --api-key > environment variable OPENSUBTITLES_API_KEY
+    if [ ! -z "$API_KEY" ]; then
+      export OPENSUBTITLES_API_KEY="$API_KEY"
+      print_success "✅ OpenSubtitles API key set via --api-key parameter"
+    elif [ ! -z "$OPENSUBTITLES_API_KEY" ]; then
+      export OPENSUBTITLES_API_KEY="$OPENSUBTITLES_API_KEY"
+      print_success "✅ OpenSubtitles API key found in environment variable"
+    else
+      print_warning "⚠️  No OpenSubtitles API key configured"
+      print_warning "The application will work but won't have API access"
+      print_step "To fix this, either:"
+      print_step "1. Set environment variable: export OPENSUBTITLES_API_KEY='your-key'"
+      print_step "2. Use command line: ./deploy.sh --api-key 'your-key'"
+      print_step "3. Add to server profile: echo 'export OPENSUBTITLES_API_KEY=your-key' >> ~/.bashrc"
+    fi
     
     if npm run build; then
       # Create build state file
