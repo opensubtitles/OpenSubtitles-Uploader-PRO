@@ -523,6 +523,24 @@ else
   exit 1
 fi
 
+# Load environment variables from .env file if it exists
+if [ -f ".env" ]; then
+  print_step "📋 Loading environment variables from .env file..."
+  # Load .env file and export variables
+  set -a  # automatically export all variables
+  source .env
+  set +a  # disable automatic export
+  print_success "✅ Loaded .env file"
+  
+  # Convert VITE_OPENSUBTITLES_API_KEY to OPENSUBTITLES_API_KEY for build embedding
+  if [ ! -z "$VITE_OPENSUBTITLES_API_KEY" ] && [ -z "$OPENSUBTITLES_API_KEY" ]; then
+    export OPENSUBTITLES_API_KEY="$VITE_OPENSUBTITLES_API_KEY"
+    print_success "✅ Converted VITE_OPENSUBTITLES_API_KEY to OPENSUBTITLES_API_KEY for build embedding"
+  fi
+else
+  print_step "📋 No .env file found, using system environment variables"
+fi
+
 print_step "📦 Checking dependencies..."
 if [ "$FORCE_INSTALL" = true ] || files_changed "package.json" "package-lock.json"; then
   print_step "📦 Installing/updating dependencies..."
@@ -597,20 +615,25 @@ if [ "$SKIP_BUILD" = false ]; then
     export NODE_ENV=production
     
     # Set OpenSubtitles API key for production builds
-    # Priority: command line --api-key > environment variable OPENSUBTITLES_API_KEY
+    # Priority: command line --api-key > environment OPENSUBTITLES_API_KEY > .env VITE_OPENSUBTITLES_API_KEY
     if [ ! -z "$API_KEY" ]; then
       export OPENSUBTITLES_API_KEY="$API_KEY"
       print_success "✅ OpenSubtitles API key set via --api-key parameter"
     elif [ ! -z "$OPENSUBTITLES_API_KEY" ]; then
       export OPENSUBTITLES_API_KEY="$OPENSUBTITLES_API_KEY"
-      print_success "✅ OpenSubtitles API key found in environment variable"
+      if [ ! -z "$VITE_OPENSUBTITLES_API_KEY" ]; then
+        print_success "✅ OpenSubtitles API key loaded from .env file (VITE_OPENSUBTITLES_API_KEY)"
+      else
+        print_success "✅ OpenSubtitles API key found in environment variable (OPENSUBTITLES_API_KEY)"
+      fi
     else
       print_warning "⚠️  No OpenSubtitles API key configured"
       print_warning "The application will work but won't have API access"
       print_step "To fix this, either:"
-      print_step "1. Set environment variable: export OPENSUBTITLES_API_KEY='your-key'"
-      print_step "2. Use command line: ./deploy.sh --api-key 'your-key'"
-      print_step "3. Add to server profile: echo 'export OPENSUBTITLES_API_KEY=your-key' >> ~/.bashrc"
+      print_step "1. Add to .env file: echo 'VITE_OPENSUBTITLES_API_KEY=your-key' >> .env"
+      print_step "2. Set environment variable: export OPENSUBTITLES_API_KEY='your-key'"
+      print_step "3. Use command line: ./deploy.sh --api-key 'your-key'"
+      print_step "4. Add to server profile: echo 'export OPENSUBTITLES_API_KEY=your-key' >> ~/.bashrc"
     fi
     
     if npm run build; then
