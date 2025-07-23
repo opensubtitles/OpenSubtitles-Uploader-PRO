@@ -36,13 +36,31 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         
-        // First check for URL parameter sid (from opensubtitles.org) or stored auth token
+        // First check for URL parameter sid (from opensubtitles.org), stored auth token, or cookie
         const urlParams = new URLSearchParams(window.location.search);
         const sidFromUrl = urlParams.get('sid');
         const authToken = authService.getToken();
         
-        if (sidFromUrl || authToken) {
-          const sessionId = sidFromUrl || authToken;
+        // Also check for remember_sid cookie (like UserService does)
+        const getCookie = (name) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+        const rememberSidCookie = getCookie('remember_sid');
+        
+        console.log('🔐 AuthContext: Checking authentication sources...');
+        console.log('🔐 AuthContext: URL sid:', sidFromUrl ? 'present' : 'none');
+        console.log('🔐 AuthContext: Stored token:', authToken ? 'present' : 'none');
+        console.log('🔐 AuthContext: Cookie remember_sid:', rememberSidCookie ? `${rememberSidCookie.substring(0, 10)}...` : 'none');
+        
+        if (sidFromUrl || authToken || rememberSidCookie) {
+          const sessionId = sidFromUrl || authToken || rememberSidCookie;
+          console.log('🔐 AuthContext: Using session ID from:', 
+            sidFromUrl ? 'URL parameter' : 
+            authToken ? 'stored token' : 
+            'remember_sid cookie');
           
           // Check if the session ID is valid by calling GetUserInfo
           const userInfo = await authService.checkAuthStatus(sessionId);
