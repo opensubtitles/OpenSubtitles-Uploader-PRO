@@ -1,5 +1,6 @@
 import { XmlRpcService } from './api/xmlrpc.js';
 import authService from './authService.js';
+import { detectSession, logSessionDetection } from '../utils/sessionUtils.js';
 
 /**
  * User session service for OpenSubtitles authentication
@@ -7,52 +8,19 @@ import authService from './authService.js';
 export class UserService {
   
   /**
-   * Get session ID from authService token, cookie, or empty fallback
-   * Uses authService as primary source instead of SessionManager
+   * Get session ID using unified session detection
    * @returns {string} - Session ID or empty string
    */
   static getSessionId() {
-    console.log('👤 UserService getSessionId: Starting session lookup...');
+    // Use unified session detection system
+    const sessionDetection = logSessionDetection('UserService.getSessionId');
     
-    // First priority: Check for logged in user token from authService
-    const authToken = authService.getToken();
-    console.log(`👤 UserService getSessionId: AuthService token check - Found: ${!!authToken}`);
-    if (authToken) {
-      console.log(`👤 UserService getSessionId: ✅ Using AuthService token: ${authToken.substring(0, 8)}...`);
-      return authToken;
+    if (sessionDetection.sessionId) {
+      console.log(`👤 UserService: ✅ Using session from ${sessionDetection.source}: ${sessionDetection.sessionId.substring(0, 10)}...`);
+      return sessionDetection.sessionId;
     }
     
-    // Second priority: Get PHPSESSID cookie value
-    console.log('👤 UserService getSessionId: Checking PHPSESSID cookie...');
-    console.log(`👤 UserService getSessionId: Full document.cookie: ${document.cookie}`);
-    const cookies = document.cookie.split(';');
-    
-    const phpSessionCookie = cookies.find(cookie => 
-      cookie.trim().startsWith('PHPSESSID=')
-    );
-    
-    console.log(`👤 UserService getSessionId: PHPSESSID cookie found: ${!!phpSessionCookie}`);
-    if (phpSessionCookie) {
-      const sessionId = phpSessionCookie.split('=')[1].trim();
-      console.log(`👤 UserService getSessionId: ✅ Using PHPSESSID: ${sessionId}`);
-      return sessionId;
-    }
-    
-    // Third priority: Try remember_sid cookie (not httpOnly)
-    console.log('👤 UserService getSessionId: Checking remember_sid cookie...');
-    const rememberSidCookie = cookies.find(cookie => 
-      cookie.trim().startsWith('remember_sid=')
-    );
-    
-    console.log(`👤 UserService getSessionId: remember_sid cookie found: ${!!rememberSidCookie}`);
-    if (rememberSidCookie) {
-      const sessionId = rememberSidCookie.split('=')[1].trim();
-      console.log(`👤 UserService getSessionId: ✅ Using remember_sid: ${sessionId}`);
-      return sessionId;
-    }
-    
-    // Fallback: empty token
-    console.log('👤 UserService getSessionId: ❌ No session ID found anywhere - returning empty');
+    console.log('👤 UserService: No session found, using empty string');
     return '';
   }
   

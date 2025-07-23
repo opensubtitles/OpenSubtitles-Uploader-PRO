@@ -3,6 +3,7 @@ import { CacheService } from '../cache.js';
 import { retryAsync } from '../../utils/retryUtils.js';
 import { delayedFetch } from '../../utils/networkUtils.js';
 import authService from '../authService.js';
+import { detectSession, logSessionDetection } from '../../utils/sessionUtils.js';
 
 /**
  * OpenSubtitles XML-RPC API service
@@ -11,55 +12,18 @@ export class XmlRpcService {
   // Request deduplication - prevent multiple simultaneous identical requests
   static activeRequests = new Map();
   /**
-   * Get authentication token from authService, PHPSESSID cookie, or empty fallback
+   * Get authentication token using unified session detection
    */
   static getAuthToken() {
-    console.log('🔑 XML-RPC getAuthToken: Starting token lookup...');
+    // Use unified session detection system
+    const sessionDetection = logSessionDetection('XML-RPC Service');
     
-    // First priority: Check for logged in user token from authService
-    const authToken = authService.getToken();
-    console.log(`🔑 XML-RPC getAuthToken: AuthService token check - Found: ${!!authToken}`);
-    if (authToken) {
-      console.log(`🔑 XML-RPC getAuthToken: ✅ Using AuthService token: ${authToken.substring(0, 8)}...`);
-      console.log(`🔑 XML-RPC getAuthToken: Full auth token length: ${authToken.length} chars`);
-      return authToken;
+    if (sessionDetection.sessionId) {
+      console.log(`🔑 XML-RPC: ✅ Using session from ${sessionDetection.source}: ${sessionDetection.sessionId.substring(0, 10)}...`);
+      return sessionDetection.sessionId;
     }
     
-    // Second priority: Get PHPSESSID cookie value
-    console.log('🔑 XML-RPC getAuthToken: Checking PHPSESSID cookie...');
-    console.log(`🔑 XML-RPC getAuthToken: Full document.cookie: ${document.cookie}`);
-    const cookies = document.cookie.split(';');
-    console.log(`🔑 XML-RPC getAuthToken: Split cookies:`, cookies);
-    
-    const phpSessionCookie = cookies.find(cookie => 
-      cookie.trim().startsWith('PHPSESSID=')
-    );
-    
-    console.log(`🔑 XML-RPC getAuthToken: PHPSESSID cookie found: ${!!phpSessionCookie}`);
-    if (phpSessionCookie) {
-      const token = phpSessionCookie.split('=')[1].trim();
-      console.log(`🔑 XML-RPC getAuthToken: ✅ Using PHPSESSID token: ${token}`);
-      console.log(`🔑 XML-RPC getAuthToken: PHPSESSID token length: ${token.length} chars`);
-      return token;
-    }
-    
-    // Third priority: Try remember_sid cookie (not httpOnly)
-    console.log('🔑 XML-RPC getAuthToken: Checking remember_sid cookie...');
-    const rememberSidCookie = cookies.find(cookie => 
-      cookie.trim().startsWith('remember_sid=')
-    );
-    
-    console.log(`🔑 XML-RPC getAuthToken: remember_sid cookie found: ${!!rememberSidCookie}`);
-    if (rememberSidCookie) {
-      const token = rememberSidCookie.split('=')[1].trim();
-      console.log(`🔑 XML-RPC getAuthToken: ✅ Using remember_sid token: ${token}`);
-      console.log(`🔑 XML-RPC getAuthToken: remember_sid token length: ${token.length} chars`);
-      return token;
-    }
-    
-    // Fallback: empty token
-    console.log('🔑 XML-RPC getAuthToken: ❌ No token found anywhere - using empty token');
-    console.log('🔑 XML-RPC getAuthToken: SessionManager info:', SessionManager.getSessionInfo());
+    console.log('🔑 XML-RPC: No session found, using empty string');
     return '';
   }
 
