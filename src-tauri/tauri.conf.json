@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.2.0",
+  "version": "1.4.1",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -31,7 +31,9 @@
         {
           "identifier": "main-capability",
           "description": "Main app permissions",
-          "windows": ["*"],
+          "windows": [
+            "*"
+          ],
           "permissions": [
             "shell:allow-open",
             "fs:default",

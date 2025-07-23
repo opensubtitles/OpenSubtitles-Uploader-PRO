@@ -50,4 +50,13 @@ readmeContent = readmeContent.replace(
 fs.writeFileSync(readmePath, readmeContent);
 console.log(`✅ Updated README.md to v${currentVersion}`);
 
+// Update Tauri config
+const tauriConfigPath = path.join(__dirname, 'src-tauri/tauri.conf.json');
+let tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'));
+
+tauriConfig.version = currentVersion;
+
+fs.writeFileSync(tauriConfigPath, JSON.stringify(tauriConfig, null, 2));
+console.log(`✅ Updated src-tauri/tauri.conf.json to v${currentVersion}`);
+
 console.log(`🎉 Version update complete! All references now point to v${currentVersion}`);
