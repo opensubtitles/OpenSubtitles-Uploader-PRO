@@ -430,16 +430,55 @@ print_step "Ensuring we have the absolute latest state from GitHub..."
 BEFORE_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 print_step "Current commit: $BEFORE_COMMIT"
 
+# Get the latest commit from GitHub API to verify what we should expect
+print_step "Checking latest commit from GitHub API..."
+EXPECTED_COMMIT=$(curl -s "https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/commits/main" | grep '"sha"' | head -1 | sed 's/.*"sha": "\([^"]*\)".*/\1/' | cut -c1-7)
+if [ -z "$EXPECTED_COMMIT" ]; then
+  print_warning "Could not fetch latest commit from GitHub API, proceeding with git fetch..."
+else
+  print_step "Expected latest commit from GitHub: $EXPECTED_COMMIT"
+fi
+
 # Force fetch everything to avoid stale cache issues
-print_step "Force fetching all refs from origin..."
-if ! git fetch --all --force --prune; then
+# Use multiple strategies to ensure we get the latest commits
+print_step "Force fetching all refs from origin (multiple strategies)..."
+
+# Strategy 1: Clear any potential ref cache
+rm -rf .git/refs/remotes/origin
+rm -f .git/FETCH_HEAD
+
+# Strategy 2: Prune and force fetch everything
+if ! git fetch origin --force --prune --tags; then
   print_error "Failed to fetch from GitHub"
   exit 1
+fi
+
+# Strategy 3: If we still don't have the expected commit, try deeper fetch
+if [ ! -z "$EXPECTED_COMMIT" ]; then
+  CURRENT_REMOTE=$(git rev-parse origin/main 2>/dev/null | cut -c1-7 || echo "unknown")
+  if [ "$CURRENT_REMOTE" != "$EXPECTED_COMMIT" ]; then
+    print_warning "Remote commit mismatch. Expected: $EXPECTED_COMMIT, Got: $CURRENT_REMOTE"
+    print_step "Performing deep fetch to get latest commits..."
+    git fetch origin --unshallow --force || git fetch origin --depth=50 --force || true
+  fi
 fi
 
 # Show what we're about to reset to
 REMOTE_COMMIT=$(git rev-parse origin/main 2>/dev/null || echo "unknown")
 print_step "Remote main commit: $REMOTE_COMMIT"
+
+# Verify we have the expected commit
+if [ ! -z "$EXPECTED_COMMIT" ]; then
+  REMOTE_SHORT=$(echo "$REMOTE_COMMIT" | cut -c1-7)
+  if [ "$REMOTE_SHORT" != "$EXPECTED_COMMIT" ]; then
+    print_error "❌ Still don't have expected commit. Expected: $EXPECTED_COMMIT, Have: $REMOTE_SHORT"
+    print_error "This may indicate a network issue or repository synchronization problem."
+    print_error "Manual intervention may be required."
+    exit 1
+  else
+    print_success "✅ Confirmed we have the expected commit: $EXPECTED_COMMIT"
+  fi
+fi
 
 # Force reset to origin/main to ensure we're exactly in sync
 print_step "Hard resetting to origin/main..."
@@ -459,11 +498,17 @@ fi
 print_step "Cleaning untracked files..."
 git clean -fd
 
-# Verify we're truly in sync
+# Final verification we're truly in sync
 LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse origin/main)
 if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
-  print_success "✅ Verified: Local and remote are in perfect sync ($LOCAL_COMMIT)"
+  LOCAL_SHORT=$(echo "$LOCAL_COMMIT" | cut -c1-7)
+  print_success "✅ Verified: Local and remote are in perfect sync ($LOCAL_SHORT)"
+  
+  # Extra verification against GitHub API if available
+  if [ ! -z "$EXPECTED_COMMIT" ] && [ "$LOCAL_SHORT" = "$EXPECTED_COMMIT" ]; then
+    print_success "✅ Double-verified: Matches GitHub API latest commit ($EXPECTED_COMMIT)"
+  fi
 else
   print_error "❌ Sync verification failed: Local=$LOCAL_COMMIT, Remote=$REMOTE_COMMIT"
   exit 1
@@ -526,7 +571,14 @@ fi
 
 # Build step with backup
 if [ "$SKIP_BUILD" = false ]; then
-  if [ "$CLEAN_BUILD" = true ] || build_needed; then
+  # Force build if code was updated (new commit)
+  FORCE_BUILD=false
+  if [ "$BEFORE_COMMIT" != "$AFTER_COMMIT" ]; then
+    print_step "Code was updated, forcing rebuild to ensure latest version..."
+    FORCE_BUILD=true
+  fi
+  
+  if [ "$CLEAN_BUILD" = true ] || [ "$FORCE_BUILD" = true ] || build_needed; then
     print_step "🏗️  Building production version..."
     
     # Backup current build
