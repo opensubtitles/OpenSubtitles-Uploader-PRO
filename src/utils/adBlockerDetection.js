@@ -168,6 +168,16 @@ export class AdBlockerDetection {
           '3. Refresh the page'
         ],
         icon: '🚫'
+      },
+      'Connection Problem': {
+        title: 'Connection Issue',
+        steps: [
+          '1. Check your internet connection',
+          '2. Try restarting the application',
+          '3. If the problem persists, check firewall settings',
+          '4. Contact support if the issue continues'
+        ],
+        icon: '📡'
       }
     };
 

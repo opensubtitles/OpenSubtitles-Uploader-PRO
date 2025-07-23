@@ -2,54 +2,135 @@ import React, { useState, useEffect, useRef } from 'react';
 import { OPENSUBTITLES_COM_API_KEY, getApiHeaders } from '../utils/constants.js';
 
 export const ApiHealthCheck = ({ onApiBlocked }) => {
+  // IMMEDIATE Tauri detection - before any state setup
+  const isTauriDetected = (
+    typeof window !== 'undefined' && 
+    (window.location.protocol === 'tauri:' || 
+     window.location.href.includes('tauri://localhost'))
+  );
+  
+  console.log('🔥 ApiHealthCheck - IMMEDIATE Tauri Detection:', isTauriDetected);
+  console.log('🔥 ApiHealthCheck - URL:', typeof window !== 'undefined' ? window.location.href : 'undefined');
+
   const [isChecking, setIsChecking] = useState(true);
   const [apiStatus, setApiStatus] = useState('checking');
   const [browserInfo, setBrowserInfo] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const hasRunRef = useRef(false);
   const onApiBlockedRef = useRef(onApiBlocked);
+  const connectivityCheckRef = useRef(null);
+  const [isMonitoringConnectivity, setIsMonitoringConnectivity] = useState(false);
 
   // Update the ref when onApiBlocked changes
   useEffect(() => {
     onApiBlockedRef.current = onApiBlocked;
   }, [onApiBlocked]);
 
-  useEffect(() => {
-    // Prevent multiple runs
-    if (hasRunRef.current) return;
-    hasRunRef.current = true;
-
-    // Detect browser first
-    const detectBrowser = () => {
-      const ua = navigator.userAgent;
-      let browser = 'Unknown';
-      let isBlocking = false;
+  // Connectivity monitoring function
+  const checkInternetConnectivity = async () => {
+    try {
+      console.log('🌐 Checking internet connectivity (ping 1.1.1.1)...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
-      if (ua.includes('Brave')) {
-        browser = 'Brave';
-        isBlocking = true;
-      } else if (ua.includes('Chrome')) {
-        browser = 'Chrome';
-      } else if (ua.includes('Firefox')) {
-        browser = 'Firefox';
-      } else if (ua.includes('Safari')) {
-        browser = 'Safari';
-      } else if (ua.includes('Edge')) {
-        browser = 'Edge';
+      // Try to fetch from Cloudflare DNS (1.1.1.1)
+      const response = await fetch('https://1.1.1.1/', {
+        method: 'HEAD',
+        signal: controller.signal,
+        mode: 'no-cors' // Important for cross-origin requests
+      });
+      
+      clearTimeout(timeoutId);
+      console.log('✅ Internet connectivity restored!');
+      return true;
+    } catch (error) {
+      console.log('❌ Internet still not available:', error.message);
+      return false;
+    }
+  };
+
+  // Start connectivity monitoring for Tauri apps with network errors
+  const startConnectivityMonitoring = () => {
+    if (!isTauriDetected || isMonitoringConnectivity) return;
+    
+    console.log('🔄 Starting connectivity monitoring for Tauri app...');
+    setIsMonitoringConnectivity(true);
+    
+    connectivityCheckRef.current = setInterval(async () => {
+      console.log('🌐 Periodic connectivity check...');
+      const isConnected = await checkInternetConnectivity();
+      
+      if (isConnected) {
+        console.log('✅ Connection restored - re-checking API health...');
+        // Reset and re-run the API health check
+        setIsChecking(true);
+        setApiStatus('checking');
+        stopConnectivityMonitoring();
+        
+        // Re-run the full API health check after a brief delay
+        setTimeout(() => {
+          hasRunRef.current = false;
+          checkApiHealth();
+        }, 500);
       }
-      
-      setBrowserInfo({ browser, isBlocking, userAgent: ua });
-    };
+    }, 3000); // Check every 3 seconds
+  };
 
-    const checkApiHealth = async () => {
+  // Stop connectivity monitoring
+  const stopConnectivityMonitoring = () => {
+    if (connectivityCheckRef.current) {
+      console.log('🛑 Stopping connectivity monitoring');
+      clearInterval(connectivityCheckRef.current);
+      connectivityCheckRef.current = null;
+      setIsMonitoringConnectivity(false);
+    }
+  };
+
+  // Detect browser function
+  const detectBrowser = () => {
+    const ua = navigator.userAgent;
+    let browser = 'Unknown';
+    let isBlocking = false;
+    
+    if (ua.includes('Brave')) {
+      browser = 'Brave';
+      isBlocking = true;
+    } else if (ua.includes('Chrome')) {
+      browser = 'Chrome';
+    } else if (ua.includes('Firefox')) {
+      browser = 'Firefox';
+    } else if (ua.includes('Safari')) {
+      browser = 'Safari';
+    } else if (ua.includes('Edge')) {
+      browser = 'Edge';
+    }
+    
+    setBrowserInfo({ browser, isBlocking, userAgent: ua });
+  };
+
+  // Main API health check function
+  const checkApiHealth = async () => {
       detectBrowser();
       
       // Detect Brave but don't return early - still run network tests
-      const isBrave = navigator.userAgent.includes('Brave') || 
-                     (navigator.brave && await navigator.brave.isBrave().catch(() => false));
+      const isBrave = !isTauriDetected && (navigator.userAgent.includes('Brave') || 
+                     (navigator.brave && await navigator.brave.isBrave().catch(() => false)));
       
-      // Use exact same test logic as /adblock page
-      const testUrls = [
+      // For Tauri apps, only test OpenSubtitles API. For browsers, test both API and ad blocking
+      const testUrls = isTauriDetected ? [
+        { 
+          name: 'OpenSubtitles API', 
+          url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported',
+          headers: OPENSUBTITLES_COM_API_KEY ? {
+            'Api-Key': OPENSUBTITLES_COM_API_KEY,
+            'User-Agent': 'OpenSubtitles Uploader PRO',
+            'X-User-Agent': 'OpenSubtitles Uploader PRO'
+          } : {
+            'User-Agent': 'OpenSubtitles Uploader PRO',
+            'X-User-Agent': 'OpenSubtitles Uploader PRO'
+          }
+        }
+      ] : [
         { 
           name: 'OpenSubtitles API', 
           url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported',
@@ -113,16 +194,27 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
         }
       }
 
-      // Set final status based on test results - same logic as /adblock page
+      // Set final status based on test results
       if (!OPENSUBTITLES_COM_API_KEY) {
         setApiStatus('no-key');
       } else if (apiBlocked || adBlocked) {
-        setApiStatus('blocked');
-        if (onApiBlockedRef.current) {
-          if (isBrave && (apiBlocked || adBlocked)) {
-            onApiBlockedRef.current('Brave Shield');
-          } else {
-            onApiBlockedRef.current(apiBlocked ? 'api-blocked' : 'ad-blocked');
+        if (isTauriDetected) {
+          // For Tauri apps, treat connection issues as network problems, not ad blocker issues
+          setApiStatus('network-error');
+          if (onApiBlockedRef.current) {
+            onApiBlockedRef.current('network-error');
+          }
+          // Start connectivity monitoring to auto-hide message when connection restored
+          setTimeout(() => startConnectivityMonitoring(), 1000);
+        } else {
+          // For browsers, use existing ad blocker detection logic
+          setApiStatus('blocked');
+          if (onApiBlockedRef.current) {
+            if (isBrave && (apiBlocked || adBlocked)) {
+              onApiBlockedRef.current('Brave Shield');
+            } else {
+              onApiBlockedRef.current(apiBlocked ? 'api-blocked' : 'ad-blocked');
+            }
           }
         }
       } else {
@@ -130,7 +222,20 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
       }
       
       setIsChecking(false);
+  };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      stopConnectivityMonitoring();
     };
+  }, []);
+
+  // Initial API health check
+  useEffect(() => {
+    // Prevent multiple runs
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
 
     checkApiHealth();
   }, []); // Empty dependency array - only run once
@@ -186,8 +291,10 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
       case 'network-error':
         return {
           icon: '🌐',
-          title: 'Network Error',
-          message: 'Unable to connect to OpenSubtitles API. This is usually caused by ad blockers (uBlock Origin, Adblock Plus, etc.). Please disable them for this site.',
+          title: isTauriDetected ? 'Network Connection Problem' : 'Network Error',
+          message: isTauriDetected 
+            ? 'Unable to connect to OpenSubtitles API. Please check your internet connection or try again later.'
+            : 'Unable to connect to OpenSubtitles API. This is usually caused by ad blockers (uBlock Origin, Adblock Plus, etc.). Please disable them for this site.',
           color: 'bg-red-600',
           isFullWidth: true
         };
@@ -208,7 +315,15 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
   // Show full-width banner for blocking issues, compact notification for other errors
   if (status.isFullWidth) {
     const getDisableInstructions = () => {
-      if (isBraveShield) {
+      if (isTauriDetected) {
+        return [
+          'Check your internet connection',
+          'Try connecting to a different network',
+          'Restart your router/modem if needed',
+          'Check if OpenSubtitles.org is accessible in your browser',
+          'Try again in a few minutes (server may be temporarily unavailable)'
+        ];
+      } else if (isBraveShield) {
         return [
           'Click the Brave Shield icon (🛡️) in the address bar',
           'Turn off "Shields" for uploader.opensubtitles.org',
@@ -238,7 +353,9 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
                 {isBraveShield ? '⚠️ ' : ''}{status.message}
               </p>
               <div className={`text-sm ${isBraveShield ? 'text-orange-100' : 'text-red-100'}`}>
-                <p className="font-semibold mb-1">{isBraveShield ? 'Disable Brave Shield' : 'Disable Ad Blocker'}:</p>
+                <p className="font-semibold mb-1">
+                  {isTauriDetected ? 'Troubleshooting Steps' : (isBraveShield ? 'Disable Brave Shield' : 'Disable Ad Blocker')}:
+                </p>
                 <ul className="list-none space-y-1">
                   {getDisableInstructions().map((step, index) => (
                     <li key={index} className="flex items-start">
@@ -260,16 +377,18 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
             <button
               onClick={() => window.location.reload()}
               className={`${isBraveShield ? 'bg-orange-700 hover:bg-orange-800' : 'bg-red-700 hover:bg-red-800'} text-white px-3 py-1 rounded text-sm font-medium transition-colors`}
-              title="Refresh page after disabling blocker"
+              title={isTauriDetected ? "Retry connection" : "Refresh page after disabling blocker"}
             >
-              🔄 Refresh
+              {isMonitoringConnectivity ? '🔄 Monitoring...' : `🔄 ${isTauriDetected ? 'Retry' : 'Refresh'}`}
             </button>
-            <a
-              href="/#/adblock"
-              className={`${isBraveShield ? 'bg-orange-700 hover:bg-orange-800' : 'bg-red-700 hover:bg-red-800'} text-white px-3 py-1 rounded text-sm font-medium transition-colors`}
-            >
-              🛡️ Test
-            </a>
+            {!isTauriDetected && (
+              <a
+                href="/#/adblock"
+                className={`${isBraveShield ? 'bg-orange-700 hover:bg-orange-800' : 'bg-red-700 hover:bg-red-800'} text-white px-3 py-1 rounded text-sm font-medium transition-colors`}
+              >
+                🛡️ Test
+              </a>
+            )}
             <button
               onClick={() => setDismissed(true)}
               className={`${isBraveShield ? 'bg-orange-700 hover:bg-orange-800' : 'bg-red-700 hover:bg-red-800'} text-white px-3 py-1 rounded text-sm font-medium transition-colors`}

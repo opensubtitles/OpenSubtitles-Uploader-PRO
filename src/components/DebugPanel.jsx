@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CacheService } from '../services/cache.js';
-import { SessionManager } from '../services/sessionManager.js';
+import authService from '../services/authService.js';
 
 export const DebugPanel = ({ 
   debugMode, 
@@ -25,7 +25,11 @@ export const DebugPanel = ({
   useEffect(() => {
     const updateInfo = () => {
       setCacheInfo(CacheService.getCacheSize());
-      setSessionInfo(SessionManager.getSessionInfo());
+      setSessionInfo({
+        hasSessionId: !!authService.getToken(),
+        sessionId: authService.getToken() ? `${authService.getToken().substring(0, 8)}...` : null,
+        isValid: authService.isLoggedIn()
+      });
     };
     
     updateInfo();

@@ -65,20 +65,10 @@
   },
   "plugins": {
     "shell": {
-      "open": {
-        "enabled": true,
-        "scope": [
-          {
-            "urls": ["https://*", "http://*"]
-          }
-        ]
-      }
+      "open": true
     },
     "fs": {
       "requireLiteralLeadingDot": false
-    },
-    "updater": {
-      "active": false
     }
   }
 }

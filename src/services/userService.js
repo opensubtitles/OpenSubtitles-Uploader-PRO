@@ -1,5 +1,5 @@
 import { XmlRpcService } from './api/xmlrpc.js';
-import { SessionManager } from './sessionManager.js';
+import authService from './authService.js';
 
 /**
  * User session service for OpenSubtitles authentication
@@ -7,19 +7,19 @@ import { SessionManager } from './sessionManager.js';
 export class UserService {
   
   /**
-   * Get session ID from stored session, cookie, or empty fallback
-   * Uses secure session storage instead of URL parameter
+   * Get session ID from authService token, cookie, or empty fallback
+   * Uses authService as primary source instead of SessionManager
    * @returns {string} - Session ID or empty string
    */
   static getSessionId() {
     console.log('👤 UserService getSessionId: Starting session lookup...');
     
-    // First priority: Check for stored session ID (from URL capture)
-    const storedSessionId = SessionManager.getStoredSessionId();
-    console.log(`👤 UserService getSessionId: Stored session ID check - Found: ${!!storedSessionId}`);
-    if (storedSessionId) {
-      console.log(`👤 UserService getSessionId: ✅ Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
-      return storedSessionId;
+    // First priority: Check for logged in user token from authService
+    const authToken = authService.getToken();
+    console.log(`👤 UserService getSessionId: AuthService token check - Found: ${!!authToken}`);
+    if (authToken) {
+      console.log(`👤 UserService getSessionId: ✅ Using AuthService token: ${authToken.substring(0, 8)}...`);
+      return authToken;
     }
     
     // Second priority: Get PHPSESSID cookie value

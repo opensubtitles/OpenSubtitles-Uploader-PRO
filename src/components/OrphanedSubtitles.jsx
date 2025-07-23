@@ -4,6 +4,7 @@ import { MetadataTags } from './MetadataTags.jsx';
 import { MovieDisplay } from './MovieDisplay.jsx';
 import { SubtitleUploadOptions, SubtitleUploadOptionsPanel } from './SubtitleUploadOptions.jsx';
 import { MovieSearch } from './MovieSearch.jsx';
+import { openExternal } from '../utils/urlUtils.jsx';
 
 export const OrphanedSubtitles = ({
   orphanedSubtitles,
@@ -782,10 +783,10 @@ export const OrphanedSubtitles = ({
                                       <button
                                         className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                         title={`View existing subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
-                                          window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                                          await openExternal(subtitleUrl);
                                         }}
                                       >
                                         View Existing Subtitle
@@ -806,10 +807,10 @@ export const OrphanedSubtitles = ({
                                       <button
                                         className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                         title={`View subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
-                                          window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                                          await openExternal(subtitleUrl);
                                         }}
                                       >
                                         View on OpenSubtitles.org

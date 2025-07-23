@@ -36,13 +36,13 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         
-        // First check for URL parameter sid (from opensubtitles.org) or stored session
+        // First check for URL parameter sid (from opensubtitles.org) or stored auth token
         const urlParams = new URLSearchParams(window.location.search);
         const sidFromUrl = urlParams.get('sid');
-        const storedSessionId = SessionManager.getStoredSessionId();
+        const authToken = authService.getToken();
         
-        if (sidFromUrl || storedSessionId) {
-          const sessionId = sidFromUrl || storedSessionId;
+        if (sidFromUrl || authToken) {
+          const sessionId = sidFromUrl || authToken;
           
           // Check if the session ID is valid by calling GetUserInfo
           const userInfo = await authService.checkAuthStatus(sessionId);

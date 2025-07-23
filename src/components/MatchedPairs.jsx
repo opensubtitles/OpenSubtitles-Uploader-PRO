@@ -5,6 +5,7 @@ import { MovieDisplay } from './MovieDisplay.jsx';
 import { SubtitleUploadOptions, SubtitleUploadOptionsPanel } from './SubtitleUploadOptions.jsx';
 import { MovieSearch } from './MovieSearch.jsx';
 import { VideoMetadataDisplay } from './VideoMetadataDisplay.jsx';
+import { openExternal } from '../utils/urlUtils.jsx';
 
 // Inline component to avoid setState during render issues
 const VideoMetadataInline = React.memo(({ filePath, getVideoMetadata, isMetadataLoading, getMetadataError }) => {
@@ -908,10 +909,10 @@ export const MatchedPairs = ({
                                         <button
                                           className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                           title={`View existing subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                          onClick={(e) => {
+                                          onClick={async (e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                                            await openExternal(subtitleUrl);
                                           }}
                                         >
                                           View Existing Subtitle
@@ -932,10 +933,10 @@ export const MatchedPairs = ({
                                         <button
                                           className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                           title="View uploaded subtitle on OpenSubtitles.org"
-                                          onClick={(e) => {
+                                          onClick={async (e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                                            await openExternal(subtitleUrl);
                                           }}
                                         >
                                           View on OpenSubtitles.org
@@ -964,10 +965,10 @@ export const MatchedPairs = ({
                                         <button
                                           className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                           title={`View subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                          onClick={(e) => {
+                                          onClick={async (e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                                            await openExternal(subtitleUrl);
                                           }}
                                         >
                                           View on OpenSubtitles.org

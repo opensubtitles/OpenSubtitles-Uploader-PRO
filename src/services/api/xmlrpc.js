@@ -2,7 +2,7 @@ import { API_ENDPOINTS, CACHE_KEYS, DEFAULT_SETTINGS, getApiHeaders } from '../.
 import { CacheService } from '../cache.js';
 import { retryAsync } from '../../utils/retryUtils.js';
 import { delayedFetch } from '../../utils/networkUtils.js';
-import { SessionManager } from '../sessionManager.js';
+import authService from '../authService.js';
 
 /**
  * OpenSubtitles XML-RPC API service
@@ -11,18 +11,18 @@ export class XmlRpcService {
   // Request deduplication - prevent multiple simultaneous identical requests
   static activeRequests = new Map();
   /**
-   * Get authentication token from stored session, PHPSESSID cookie, or empty fallback
+   * Get authentication token from authService, PHPSESSID cookie, or empty fallback
    */
   static getAuthToken() {
     console.log('🔑 XML-RPC getAuthToken: Starting token lookup...');
     
-    // First priority: Check for stored session ID (from URL capture)
-    const storedSessionId = SessionManager.getStoredSessionId();
-    console.log(`🔑 XML-RPC getAuthToken: Stored session ID check - Found: ${!!storedSessionId}`);
-    if (storedSessionId) {
-      console.log(`🔑 XML-RPC getAuthToken: ✅ Using stored session ID: ${storedSessionId.substring(0, 8)}...`);
-      console.log(`🔑 XML-RPC getAuthToken: Full stored token length: ${storedSessionId.length} chars`);
-      return storedSessionId;
+    // First priority: Check for logged in user token from authService
+    const authToken = authService.getToken();
+    console.log(`🔑 XML-RPC getAuthToken: AuthService token check - Found: ${!!authToken}`);
+    if (authToken) {
+      console.log(`🔑 XML-RPC getAuthToken: ✅ Using AuthService token: ${authToken.substring(0, 8)}...`);
+      console.log(`🔑 XML-RPC getAuthToken: Full auth token length: ${authToken.length} chars`);
+      return authToken;
     }
     
     // Second priority: Get PHPSESSID cookie value

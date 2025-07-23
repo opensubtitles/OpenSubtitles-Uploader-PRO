@@ -144,6 +144,17 @@ export class UpdateService {
    * @returns {Promise<Object>} Update check result
    */
   async checkForUpdates(force = false) {
+    // Skip update checks entirely in Tauri environment to prevent SSL/CORS errors
+    if (this.isStandalone) {
+      console.log('ℹ️ Update checks disabled in Tauri environment (SSL/CORS restrictions)');
+      return {
+        updateAvailable: false,
+        updateInfo: null,
+        disabled: true,
+        error: 'Update checks disabled in desktop app'
+      };
+    }
+
     const now = Date.now();
     const cache = UpdateService.updateCache;
 
@@ -160,12 +171,20 @@ export class UpdateService {
     try {
       console.log('🔄 Checking for updates via GitHub API...');
       
+      // Add timeout and better error handling for Tauri environment
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch('https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/releases/latest', {
         headers: {
           'Accept': 'application/vnd.github.v3+json',
           'User-Agent': 'OpenSubtitles Uploader PRO Update Checker'
-        }
+        },
+        signal: controller.signal,
+        mode: 'cors'
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.status}`);
@@ -212,21 +231,48 @@ export class UpdateService {
         cached: false
       };
     } catch (error) {
-      console.error('❌ Update check failed:', error);
+      // Classify and handle different error types
+      let errorType = 'unknown';
+      let userMessage = 'Update check failed';
+      
+      if (error.name === 'AbortError') {
+        errorType = 'timeout';
+        userMessage = 'Update check timed out';
+      } else if (error.message.includes('SSL') || error.message.includes('certificate')) {
+        errorType = 'ssl';
+        userMessage = 'SSL certificate error (update check disabled)';
+      } else if (error.message.includes('CORS') || error.message.includes('access control')) {
+        errorType = 'cors';
+        userMessage = 'Network access restricted (update check disabled)';
+      } else if (error.message.includes('Load failed') || error.message.includes('Failed to fetch')) {
+        errorType = 'network';
+        userMessage = 'Network connection failed (update check disabled)';
+      }
+      
+      // Only log error for debugging, don't show to user in production
+      if (errorType === 'ssl' || errorType === 'cors' || errorType === 'network') {
+        console.log(`ℹ️ Update check disabled: ${userMessage}`);
+      } else {
+        console.error('❌ Update check failed:', error);
+      }
       
       // Update cache with error
       cache.lastChecked = now;
       cache.updateAvailable = false;
       cache.updateInfo = null;
 
-      this.notifyListeners({
-        type: 'update_check_error',
-        error: error.message
-      });
+      // Don't notify listeners for common Tauri errors to avoid UI disruption
+      if (errorType !== 'ssl' && errorType !== 'cors' && errorType !== 'network') {
+        this.notifyListeners({
+          type: 'update_check_error',
+          error: userMessage
+        });
+      }
 
       return {
         updateAvailable: false,
-        error: error.message
+        error: userMessage,
+        errorType: errorType
       };
     }
   }
@@ -317,6 +363,12 @@ export class UpdateService {
    * Start automatic update checks (every 1 hour)
    */
   startAutoUpdateChecks() {
+    // Disable automatic update checks in Tauri environment due to SSL/CORS restrictions
+    if (this.isStandalone) {
+      console.log('ℹ️ Auto-update checks disabled in Tauri environment (SSL/CORS restrictions)');
+      return;
+    }
+
     if (this.autoCheckInterval) {
       console.log('⚠️ Auto-update checks already running');
       return;

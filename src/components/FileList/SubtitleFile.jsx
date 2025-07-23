@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatFileSize } from '../../utils/fileUtils.js';
+import { openExternal } from '../../utils/urlUtils.jsx';
 
 export const SubtitleFile = ({ 
   subtitle,
@@ -244,10 +245,10 @@ export const SubtitleFile = ({
                           <button
                             className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                             title="View existing subtitle on OpenSubtitles.org"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              window.open(subtitleUrl, '_blank', 'noopener,noreferrer');
+                              await openExternal(subtitleUrl);
                             }}
                           >
                             View Existing Subtitle

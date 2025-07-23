@@ -2,11 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { OPENSUBTITLES_COM_API_KEY, USER_AGENT } from '../utils/constants.js';
 
 export const AdBlockTestPage = () => {
-  const [tests, setTests] = useState([
-    { name: 'OpenSubtitles API', url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported', status: 'testing', error: null, time: null },
-    { name: 'XML-RPC API', url: 'https://api.opensubtitles.org/xml-rpc', status: 'testing', error: null, time: null },
-    { name: 'Ad Block Test', url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', status: 'testing', error: null, time: null }
-  ]);
+  // IMMEDIATE Tauri detection - same logic as AdBlockerWarning
+  const isTauriDetected = (
+    typeof window !== 'undefined' && 
+    (window.location.protocol === 'tauri:' || 
+     window.location.href.includes('tauri://localhost'))
+  );
+  
+  console.log('🔥 AdBlockTestPage - Tauri Detection:', isTauriDetected);
+  console.log('🔥 AdBlockTestPage - URL:', typeof window !== 'undefined' ? window.location.href : 'undefined');
+  
+  const [tests, setTests] = useState(() => {
+    const baseTests = [
+      { name: 'OpenSubtitles API', url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported', status: 'testing', error: null, time: null },
+      { name: 'XML-RPC API', url: 'https://api.opensubtitles.org/xml-rpc', status: 'testing', error: null, time: null }
+    ];
+    
+    // Only add ad blocker test for web browsers, not Tauri desktop apps
+    if (!isTauriDetected) {
+      baseTests.push({ name: 'Ad Block Test', url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', status: 'testing', error: null, time: null });
+    }
+    
+    return baseTests;
+  });
   
   const [browserInfo, setBrowserInfo] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
@@ -129,20 +147,39 @@ export const AdBlockTestPage = () => {
     const apiTest = tests[0]; // OpenSubtitles API test
     const adTest = tests[2]; // Ad block test
     
-    if (browserInfo?.browser === 'Brave') {
-      recs.push({
-        type: 'brave',
-        title: '🛡️ Brave Shield Detected',
-        description: 'Brave browser is blocking API requests by default.',
-        steps: [
-          'Click the Shield icon (🛡️) in your address bar',
-          'Turn off "Shields" for this domain',
-          'Refresh this page to retest'
-        ]
-      });
+    // Different recommendations for Tauri vs browser
+    if (isTauriDetected) {
+      // Desktop app recommendations
+      if (apiTest?.status === 'blocked' || apiTest?.status === 'timeout' || apiTest?.status === 'network' || apiTest?.status === 'cors') {
+        recs.push({
+          type: 'network-issue',
+          title: '📡 Network Connectivity Issue',
+          description: 'The desktop app cannot connect to OpenSubtitles servers.',
+          steps: [
+            'Check your internet connection',
+            'Try restarting your router/modem',
+            'Check if a firewall is blocking the application',
+            'Contact your ISP if the problem persists'
+          ]
+        });
+      }
+    } else {
+      // Browser recommendations  
+      if (browserInfo?.browser === 'Brave') {
+        recs.push({
+          type: 'brave',
+          title: '🛡️ Brave Shield Detected',
+          description: 'Brave browser is blocking API requests by default.',
+          steps: [
+            'Click the Shield icon (🛡️) in your address bar',
+            'Turn off "Shields" for this domain',
+            'Refresh this page to retest'
+          ]
+        });
+      }
     }
     
-    if (apiTest?.status === 'blocked' || apiTest?.status === 'timeout' || apiTest?.status === 'network' || apiTest?.status === 'cors') {
+    if (!isTauriDetected && (apiTest?.status === 'blocked' || apiTest?.status === 'timeout' || apiTest?.status === 'network' || apiTest?.status === 'cors')) {
       recs.push({
         type: 'api-blocked',
         title: '🚫 OpenSubtitles API Blocked',
@@ -215,23 +252,50 @@ export const AdBlockTestPage = () => {
       <div className="max-w-4xl mx-auto">
         
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className={`rounded-lg shadow-sm border p-6 mb-6 ${
+          isTauriDetected ? 'bg-blue-50 border-blue-200' : 'bg-white'
+        }`}>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🛡️ OpenSubtitles Uploader - Connectivity Test
+            {isTauriDetected ? '📡 Desktop App - Network Connectivity Test' : '🛡️ OpenSubtitles Uploader - Connectivity Test'}
           </h1>
-          <p className="text-gray-600">
-            This page tests if your browser can access the required APIs for the OpenSubtitles Uploader to function properly.
+          <p className={isTauriDetected ? 'text-blue-700' : 'text-gray-600'}>
+            {isTauriDetected 
+              ? 'This page tests network connectivity for the desktop application. Any connection issues are related to your internet connection, not ad blockers.'
+              : 'This page tests if your browser can access the required APIs for the OpenSubtitles Uploader to function properly.'
+            }
           </p>
+          {isTauriDetected && (
+            <div className="mt-3 p-3 bg-blue-100 rounded-lg">
+              <p className="text-blue-800 text-sm font-medium">
+                💡 <strong>Desktop App Detected:</strong> Ad blockers cannot affect desktop applications. 
+                Any issues shown below are network connectivity problems, not browser extensions.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Browser Info */}
+        {/* Browser/Environment Info */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Browser Information</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {isTauriDetected ? 'Environment Information' : 'Browser Information'}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <span className="font-medium text-gray-700">Browser:</span>
-              <span className="ml-2 text-gray-900">{browserInfo?.browser || 'Detecting...'}</span>
-              {browserInfo?.browser === 'Brave' && (
+              <span className="font-medium text-gray-700">
+                {isTauriDetected ? 'Environment:' : 'Browser:'}
+              </span>
+              <span className="ml-2 text-gray-900">
+                {isTauriDetected 
+                  ? 'Desktop Application (Tauri)' 
+                  : (browserInfo?.browser || 'Detecting...')
+                }
+              </span>
+              {isTauriDetected && (
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  📡 Network Only
+                </span>
+              )}
+              {!isTauriDetected && browserInfo?.browser === 'Brave' && (
                 <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
                   🛡️ Blocking Expected
                 </span>

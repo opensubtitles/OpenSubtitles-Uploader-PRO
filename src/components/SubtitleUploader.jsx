@@ -13,6 +13,64 @@ if (typeof window !== 'undefined' && window.location.protocol === 'tauri:') {
   }
 }
 
+// Environment Detection - ALWAYS log this first for debugging support tickets
+if (typeof window !== 'undefined') {
+  // Log comprehensive environment info immediately
+  console.log('🔍 === SYSTEM ENVIRONMENT INFO (v1.3.4) ===');
+  console.log('🕐 App Start Time:', new Date().toISOString());
+  console.log('📍 Current URL:', window.location.href);
+  console.log('🌐 Protocol:', window.location.protocol);
+  console.log('🖥️ Platform:', navigator.platform);
+  console.log('📱 User Agent:', navigator.userAgent);
+  console.log('🏗️ App Version: OpenSubtitles Uploader PRO v1.3.4');
+  
+  // Detect operating system
+  const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+  const isWindows = /Win/.test(navigator.platform);
+  const isLinux = /Linux/.test(navigator.platform);
+  
+  // macOS specific detection
+  if (isMac) {
+    const isAppleSilicon = /Mac/.test(navigator.platform) && !navigator.userAgent.includes('Intel');
+    const isIntel = /Mac/.test(navigator.platform) && navigator.userAgent.includes('Intel');
+    console.log('🍎 macOS Details:');
+    console.log('  - Apple Silicon (M1/M2/M3):', isAppleSilicon);
+    console.log('  - Intel Processor:', isIntel);
+  }
+  
+  // Tauri/Desktop detection
+  const isTauri = (
+    window.location.protocol === 'tauri:' ||
+    window.location.href.startsWith('tauri://') ||
+    window.location.origin.startsWith('tauri://') ||
+    (typeof window !== 'undefined' && !!window.__TAURI__)
+  );
+  
+  console.log('🖥️ Environment Type:');
+  console.log('  - Desktop App (Tauri):', isTauri);
+  console.log('  - Web Browser:', !isTauri);
+  console.log('  - macOS:', isMac);
+  console.log('  - Windows:', isWindows);  
+  console.log('  - Linux:', isLinux);
+  console.log('=======================================');
+  
+  // Make environment info globally available
+  window.__ENVIRONMENT_INFO__ = {
+    timestamp: new Date().toISOString(),
+    version: '1.3.4',
+    url: window.location.href,
+    protocol: window.location.protocol,
+    platform: navigator.platform,
+    userAgent: navigator.userAgent,
+    isTauri,
+    isMac,
+    isWindows,
+    isLinux,
+    isAppleSilicon: isMac && !navigator.userAgent.includes('Intel'),
+    isIntel: isMac && navigator.userAgent.includes('Intel')
+  };
+}
+
 import { useDebugMode } from "../hooks/useDebugMode.js";
 import { useFileHandling } from "../hooks/useFileHandling.js";
 import { useLanguageData } from "../hooks/useLanguageData.js";
@@ -159,6 +217,50 @@ function SubtitleUploaderInner() {
     clearDebugInfo, 
     toggleDebugMode 
   } = useDebugMode();
+
+  // Add environment info to debug panel immediately after debug mode is initialized
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Add environment detection to debug panel
+      addDebugInfo('🔍 === SYSTEM ENVIRONMENT INFO (v1.3.4) ===');
+      addDebugInfo(`🕐 App Start Time: ${new Date().toISOString()}`);
+      addDebugInfo(`📍 Current URL: ${window.location.href}`);
+      addDebugInfo(`🌐 Protocol: ${window.location.protocol}`);
+      addDebugInfo(`🖥️ Platform: ${navigator.platform}`);
+      addDebugInfo(`📱 User Agent: ${navigator.userAgent}`);
+      addDebugInfo('🏗️ App Version: OpenSubtitles Uploader PRO v1.3.4');
+      
+      // Detect operating system
+      const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+      const isWindows = /Win/.test(navigator.platform);
+      const isLinux = /Linux/.test(navigator.platform);
+      
+      // macOS specific detection
+      if (isMac) {
+        const isAppleSilicon = /Mac/.test(navigator.platform) && !navigator.userAgent.includes('Intel');
+        const isIntel = /Mac/.test(navigator.platform) && navigator.userAgent.includes('Intel');
+        addDebugInfo('🍎 macOS Details:');
+        addDebugInfo(`  - Apple Silicon (M1/M2/M3): ${isAppleSilicon}`);
+        addDebugInfo(`  - Intel Processor: ${isIntel}`);
+      }
+      
+      // Tauri/Desktop detection
+      const isTauri = (
+        window.location.protocol === 'tauri:' ||
+        window.location.href.startsWith('tauri://') ||
+        window.location.origin.startsWith('tauri://') ||
+        (typeof window !== 'undefined' && !!window.__TAURI__)
+      );
+      
+      addDebugInfo('🖥️ Environment Type:');
+      addDebugInfo(`  - Desktop App (Tauri): ${isTauri}`);
+      addDebugInfo(`  - Web Browser: ${!isTauri}`);
+      addDebugInfo(`  - macOS: ${isMac}`);
+      addDebugInfo(`  - Windows: ${isWindows}`);  
+      addDebugInfo(`  - Linux: ${isLinux}`);
+      addDebugInfo('=======================================');
+    }
+  }, [addDebugInfo]); // Run once when component mounts and addDebugInfo is available
 
 
 
