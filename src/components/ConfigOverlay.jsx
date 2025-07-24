@@ -567,6 +567,37 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
           {/* Processing Tab */}
           {activeTab === 'processing' && (
             <>
+              {/* Default Expanded State */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium" style={{ color: colors.text }}>
+                Default Expanded State
+              </label>
+              <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                Set whether upload options are expanded by default
+              </p>
+            </div>
+            <div className="ml-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localConfig.uploadOptionsExpanded}
+                  onChange={(e) => handleChange('uploadOptionsExpanded', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div 
+                  className="w-11 h-6 rounded-full peer transition-colors duration-200 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                  style={{
+                    backgroundColor: localConfig.uploadOptionsExpanded ? colors.success : colors.border,
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+          
+          {/* Minimal separator line */}
+          <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
+          
               {/* MKV Subtitle Extraction Setting */}
           <div className="flex items-center justify-between">
             <div>
@@ -606,37 +637,6 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
               <span>MKV subtitle extraction is disabled</span>
             </div>
           )}
-          
-          {/* Minimal separator line */}
-          <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
-          
-          {/* Default Expanded State */}
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-medium" style={{ color: colors.text }}>
-                Default Expanded State
-              </label>
-              <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
-                Set whether upload options are expanded by default
-              </p>
-            </div>
-            <div className="ml-4">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={localConfig.uploadOptionsExpanded}
-                  onChange={(e) => handleChange('uploadOptionsExpanded', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div 
-                  className="w-11 h-6 rounded-full peer transition-colors duration-200 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                  style={{
-                    backgroundColor: localConfig.uploadOptionsExpanded ? colors.success : colors.border,
-                  }}
-                />
-              </label>
-            </div>
-          </div>
             </>
           )}
 
