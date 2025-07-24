@@ -76,32 +76,87 @@ export const OrphanedSubtitles = ({
     return null;
   }
 
-  // Calculate master checkbox state for all orphaned subtitles
+  // Calculate master checkbox state for uploadable orphaned subtitles (excluding those that exist in database)
   const getMasterCheckboxState = React.useMemo(() => {
     if (!orphanedSubtitles || orphanedSubtitles.length === 0) {
       return { checked: false, indeterminate: false };
     }
     
-    const enabledCount = orphanedSubtitles.filter(subtitle => {
+    // Filter out orphaned subtitles that exist in database
+    const uploadableSubtitles = orphanedSubtitles.filter(subtitle => {
+      const hashResult = hashCheckResults?.[subtitle.fullPath];
+      const exists = hashResult && (
+        hashResult.exists === true ||
+        hashResult.found === true ||
+        hashResult.status === 'exists' ||
+        (hashResult.data && hashResult.data.length > 0) ||
+        hashResult === 'exists'
+      );
+      return !exists; // Only include subtitles that don't exist
+    });
+    
+    if (uploadableSubtitles.length === 0) {
+      return { checked: false, indeterminate: false };
+    }
+    
+    const enabledCount = uploadableSubtitles.filter(subtitle => {
       // Access uploadStates directly instead of calling getUploadEnabled
       return uploadStates[subtitle.fullPath] !== false;
     }).length;
     
     if (enabledCount === 0) {
       return { checked: false, indeterminate: false };
-    } else if (enabledCount === orphanedSubtitles.length) {
+    } else if (enabledCount === uploadableSubtitles.length) {
       return { checked: true, indeterminate: false };
     } else {
       return { checked: false, indeterminate: true };
     }
-  }, [orphanedSubtitles, uploadStates]);
+  }, [orphanedSubtitles, uploadStates, hashCheckResults]);
 
-  // Handle master checkbox toggle
+  // Auto-disable upload for orphaned subtitles that exist in database
+  React.useEffect(() => {
+    if (!hashCheckResults) return;
+    
+    Object.entries(hashCheckResults).forEach(([subtitlePath, hashResult]) => {
+      // Check if this is an orphaned subtitle and it exists in database
+      const isOrphaned = orphanedSubtitles.some(sub => sub.fullPath === subtitlePath);
+      const exists = hashResult && (
+        hashResult.exists === true ||
+        hashResult.found === true ||
+        hashResult.status === 'exists' ||
+        (hashResult.data && hashResult.data.length > 0) ||
+        hashResult === 'exists'
+      );
+      
+      if (isOrphaned && exists) {
+        // Automatically disable upload for orphaned subtitles that exist
+        const currentUploadState = uploadStates[subtitlePath];
+        if (currentUploadState !== false) {
+          // Only call onToggleUpload if it's currently enabled or undefined (would default to enabled)
+          onToggleUpload(subtitlePath, false);
+        }
+      }
+    });
+  }, [hashCheckResults, orphanedSubtitles, uploadStates, onToggleUpload]);
+
+  // Handle master checkbox toggle (only affect uploadable subtitles, not those that exist)
   const handleMasterToggle = React.useCallback((enabled) => {
     orphanedSubtitles.forEach(subtitle => {
-      onToggleUpload(subtitle.fullPath, enabled);
+      const hashResult = hashCheckResults?.[subtitle.fullPath];
+      const exists = hashResult && (
+        hashResult.exists === true ||
+        hashResult.found === true ||
+        hashResult.status === 'exists' ||
+        (hashResult.data && hashResult.data.length > 0) ||
+        hashResult === 'exists'
+      );
+      
+      // Only toggle uploadable subtitles (those that don't exist in database)
+      if (!exists) {
+        onToggleUpload(subtitle.fullPath, enabled);
+      }
     });
-  }, [orphanedSubtitles, onToggleUpload]);
+  }, [orphanedSubtitles, onToggleUpload, hashCheckResults]);
 
   const masterCheckboxState = getMasterCheckboxState;
 
@@ -481,25 +536,46 @@ export const OrphanedSubtitles = ({
 
                         {/* Upload Toggle Checkbox - Moved to right side */}
                         <div className="flex items-center">
-                          <label className="flex items-center cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={isUploadEnabled}
-                              onChange={(e) => onToggleUpload(subtitle.fullPath, e.target.checked)}
-                              className="w-4 h-4 rounded focus:ring-2"
-                              style={{
-                                accentColor: themeColors.success,
-                                backgroundColor: themeColors.cardBackground,
-                                borderColor: themeColors.border
-                              }}
-                            />
-                            <span className={`ml-1 text-xs font-medium transition-colors`}
-                              style={{
-                                color: isUploadEnabled ? themeColors.success : themeColors.textMuted
-                              }}>
-                              {isUploadEnabled ? 'Upload' : 'Skip'}
-                            </span>
-                          </label>
+                          {(() => {
+                            const hashResult = hashCheckResults?.[subtitle.fullPath];
+                            const subtitleExists = hashResult && (
+                              hashResult.exists === true ||
+                              hashResult.found === true ||
+                              hashResult.status === 'exists' ||
+                              (hashResult.data && hashResult.data.length > 0) ||
+                              hashResult === 'exists'
+                            );
+                            
+                            return (
+                              <label className={`flex items-center group ${subtitleExists ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isUploadEnabled}
+                                  onChange={(e) => {
+                                    if (!subtitleExists) {
+                                      onToggleUpload(subtitle.fullPath, e.target.checked);
+                                    }
+                                  }}
+                                  disabled={subtitleExists}
+                                  className="w-4 h-4 rounded focus:ring-2"
+                                  style={{
+                                    accentColor: subtitleExists ? themeColors.textMuted : themeColors.success,
+                                    backgroundColor: themeColors.cardBackground,
+                                    borderColor: themeColors.border,
+                                    opacity: subtitleExists ? 0.5 : 1
+                                  }}
+                                />
+                                <span className={`ml-1 text-xs font-medium transition-colors`}
+                                  style={{
+                                    color: subtitleExists ? themeColors.textMuted : 
+                                           (isUploadEnabled ? themeColors.success : themeColors.textMuted),
+                                    opacity: subtitleExists ? 0.5 : 1
+                                  }}>
+                                  {subtitleExists ? 'Exists' : (isUploadEnabled ? 'Upload' : 'Skip')}
+                                </span>
+                              </label>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -694,7 +770,7 @@ export const OrphanedSubtitles = ({
                           
                           return (
                             <div className="mt-2 text-xs" style={{ color: themeColors.textMuted }}>
-                              💡 Duplicate found, but still good to upload for additional metadata.{' '}
+                              ✅ Subtitle already exists in database.{' '}
                               {subtitleUrl ? (
                                 <a
                                   href={subtitleUrl}
@@ -714,6 +790,9 @@ export const OrphanedSubtitles = ({
                               ) : (
                                 <span style={{ color: themeColors.textMuted }}>(No direct link available)</span>
                               )}
+                              <div className="mt-1" style={{ color: themeColors.textMuted, fontSize: '11px' }}>
+                                Upload automatically disabled - no additional metadata to contribute without video file.
+                              </div>
                             </div>
                           );
                         }

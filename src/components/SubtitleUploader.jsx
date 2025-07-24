@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 
 import logoWhite from '../assets/os_logo_white_512x512.png';
 import logoDark from '../assets/os_logo_dark_512x512.png';
 
+
 // Import Tauri API to ensure it's loaded (only available in Tauri environment)
 if (typeof window !== 'undefined' && window.location.protocol === 'tauri:') {
   try {
@@ -16,13 +17,13 @@ if (typeof window !== 'undefined' && window.location.protocol === 'tauri:') {
 // Environment Detection - ALWAYS log this first for debugging support tickets
 if (typeof window !== 'undefined') {
   // Log comprehensive environment info immediately
-  console.log('🔍 === SYSTEM ENVIRONMENT INFO (v1.3.4) ===');
+  console.log(`🔍 === SYSTEM ENVIRONMENT INFO (v${APP_VERSION}) ===`);
   console.log('🕐 App Start Time:', new Date().toISOString());
   console.log('📍 Current URL:', window.location.href);
   console.log('🌐 Protocol:', window.location.protocol);
   console.log('🖥️ Platform:', navigator.platform);
   console.log('📱 User Agent:', navigator.userAgent);
-  console.log('🏗️ App Version: OpenSubtitles Uploader PRO v1.3.4');
+  console.log(`🏗️ App Version: OpenSubtitles Uploader PRO v${APP_VERSION}`);
   
   // Detect operating system
   const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform);
@@ -57,7 +58,7 @@ if (typeof window !== 'undefined') {
   // Make environment info globally available
   window.__ENVIRONMENT_INFO__ = {
     timestamp: new Date().toISOString(),
-    version: '1.3.4',
+    version: APP_VERSION,
     url: window.location.href,
     protocol: window.location.protocol,
     platform: navigator.platform,
@@ -218,49 +219,7 @@ function SubtitleUploaderInner() {
     toggleDebugMode 
   } = useDebugMode();
 
-  // Add environment info to debug panel immediately after debug mode is initialized
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Add environment detection to debug panel
-      addDebugInfo('🔍 === SYSTEM ENVIRONMENT INFO (v1.3.4) ===');
-      addDebugInfo(`🕐 App Start Time: ${new Date().toISOString()}`);
-      addDebugInfo(`📍 Current URL: ${window.location.href}`);
-      addDebugInfo(`🌐 Protocol: ${window.location.protocol}`);
-      addDebugInfo(`🖥️ Platform: ${navigator.platform}`);
-      addDebugInfo(`📱 User Agent: ${navigator.userAgent}`);
-      addDebugInfo('🏗️ App Version: OpenSubtitles Uploader PRO v1.3.4');
-      
-      // Detect operating system
-      const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform);
-      const isWindows = /Win/.test(navigator.platform);
-      const isLinux = /Linux/.test(navigator.platform);
-      
-      // macOS specific detection
-      if (isMac) {
-        const isAppleSilicon = /Mac/.test(navigator.platform) && !navigator.userAgent.includes('Intel');
-        const isIntel = /Mac/.test(navigator.platform) && navigator.userAgent.includes('Intel');
-        addDebugInfo('🍎 macOS Details:');
-        addDebugInfo(`  - Apple Silicon (M1/M2/M3): ${isAppleSilicon}`);
-        addDebugInfo(`  - Intel Processor: ${isIntel}`);
-      }
-      
-      // Tauri/Desktop detection
-      const isTauri = (
-        window.location.protocol === 'tauri:' ||
-        window.location.href.startsWith('tauri://') ||
-        window.location.origin.startsWith('tauri://') ||
-        (typeof window !== 'undefined' && !!window.__TAURI__)
-      );
-      
-      addDebugInfo('🖥️ Environment Type:');
-      addDebugInfo(`  - Desktop App (Tauri): ${isTauri}`);
-      addDebugInfo(`  - Web Browser: ${!isTauri}`);
-      addDebugInfo(`  - macOS: ${isMac}`);
-      addDebugInfo(`  - Windows: ${isWindows}`);  
-      addDebugInfo(`  - Linux: ${isLinux}`);
-      addDebugInfo('=======================================');
-    }
-  }, [addDebugInfo]); // Run once when component mounts and addDebugInfo is available
+  // Environment info is already logged at startup via console.log, no need to duplicate in debug panel
 
 
 

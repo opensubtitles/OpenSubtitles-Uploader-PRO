@@ -187,7 +187,15 @@ export class XmlRpcService {
    */
   static generateMovieGuessCacheKey(filename) {
     // Create a simple hash of the filename for the cache key
-    return `${CACHE_KEYS.MOVIE_GUESS_CACHE}_${btoa(filename).replace(/[^a-zA-Z0-9]/g, '_')}`;
+    // Use encodeURIComponent to handle special characters before btoa()
+    try {
+      const encodedFilename = encodeURIComponent(filename);
+      return `${CACHE_KEYS.MOVIE_GUESS_CACHE}_${btoa(encodedFilename).replace(/[^a-zA-Z0-9]/g, '_')}`;
+    } catch (error) {
+      // Fallback: use a simple hash if btoa fails
+      console.warn('Cache key generation failed, using fallback:', error);
+      return `${CACHE_KEYS.MOVIE_GUESS_CACHE}_${filename.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    }
   }
 
   /**
@@ -226,7 +234,7 @@ export class XmlRpcService {
       <value>
         <array>
           <data>
-            <value><string>${filename}</string></value>
+            <value><string>${this.escapeXmlContent(filename)}</string></value>
           </data>
         </array>
       </value>
@@ -805,7 +813,7 @@ export class XmlRpcService {
                 </member>
                 <member>
                   <name>subfilename</name>
-                  <value><string>${subtitle.subfilename}</string></value>
+                  <value><string>${this.escapeXmlContent(subtitle.subfilename)}</string></value>
                 </member>
                 ${subtitle.moviehash ? `
                 <member>
@@ -820,7 +828,7 @@ export class XmlRpcService {
                 ${subtitle.moviefilename ? `
                 <member>
                   <name>moviefilename</name>
-                  <value><string>${subtitle.moviefilename}</string></value>
+                  <value><string>${this.escapeXmlContent(subtitle.moviefilename)}</string></value>
                 </member>` : ''}
                 ${subtitle.idmovieimdb ? `
                 <member>

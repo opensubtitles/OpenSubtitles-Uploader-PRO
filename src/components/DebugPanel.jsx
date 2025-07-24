@@ -20,6 +20,7 @@ export const DebugPanel = ({
 }) => {
   const [cacheInfo, setCacheInfo] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Update cache info and session info when debug panel opens or cache is cleared
   useEffect(() => {
@@ -38,6 +39,67 @@ export const DebugPanel = ({
     const interval = setInterval(updateInfo, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Copy debug content to clipboard
+  const copyToClipboard = async () => {
+    try {
+      let content = '=== DEBUG INFORMATION ===\n\n';
+      
+      // Add debug mode status
+      content += `Debug mode: ${debugMode ? 'ON' : 'OFF'}\n`;
+      content += `Timestamp: ${new Date().toISOString()}\n\n`;
+      
+      // Add session info
+      if (sessionInfo) {
+        content += `Session: ${sessionInfo.isValid ? 'Active' : 'None'}`;
+        if (sessionInfo.isValid && sessionInfo.sessionId) {
+          content += ` (${sessionInfo.sessionId})`;
+        }
+        content += '\n\n';
+      }
+      
+      // Add cache info
+      if (cacheInfo) {
+        content += `Cache: ${cacheInfo.formattedSize}`;
+        if (cacheInfo.itemCount > 0) {
+          content += ` (${cacheInfo.itemCount} items)`;
+        }
+        content += '\n\n';
+      }
+      
+      // Add debug log messages
+      content += '=== DEBUG LOG MESSAGES ===\n';
+      if (debugInfo.length === 0) {
+        content += debugMode 
+          ? 'No console messages yet. All browser console output will appear here.\n'
+          : 'No debug info yet. Try dragging and dropping files.\n';
+      } else {
+        debugInfo.forEach((info, idx) => {
+          content += `${idx + 1}. ${info}\n`;
+        });
+      }
+      
+      
+      await navigator.clipboard.writeText(content);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy debug info:', err);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy also failed:', fallbackErr);
+      }
+    }
+  };
 
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -61,7 +123,7 @@ export const DebugPanel = ({
                  color: themeColors.textSecondary
                }}>
         <div className="flex items-center gap-2">
-          <span>🐛 Debug Information</span>
+          <span style={{ color: themeColors.textMuted }}>🔧 Debug Information</span>
           {languagesLoading ? (
             <div className="flex items-center gap-2" style={{color: themeColors.link}}>
               <div className="w-3 h-3 rounded-full animate-spin" style={{
@@ -75,6 +137,20 @@ export const DebugPanel = ({
           ) : languagesError ? (
             <span style={{color: themeColors.error}}>❌ Error</span>
           ) : null}
+          <button
+            onClick={copyToClipboard}
+            className="ml-2 px-2 py-1 text-xs rounded transition-colors"
+            style={{
+              backgroundColor: copySuccess ? themeColors.success : 'transparent',
+              color: copySuccess ? 'white' : themeColors.textMuted,
+              border: `1px solid ${copySuccess ? themeColors.success : themeColors.border}`,
+              cursor: 'pointer',
+              opacity: copySuccess ? 1 : 0.6
+            }}
+            title="Copy all debug information to clipboard"
+          >
+            {copySuccess ? '✅ Copied!' : '📋 Copy'}
+          </button>
         </div>
         <label 
           className="flex items-center gap-2 text-sm cursor-pointer select-none"
@@ -152,110 +228,6 @@ export const DebugPanel = ({
             ))
           )}
         </div>
-        
-        {/* CheckSubHash Results */}
-        {hashCheckResults && Object.keys(hashCheckResults).length > 0 && (
-          <div className="mt-3 p-3 rounded" 
-               style={{
-                 backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa',
-                 border: `1px solid ${isDark ? '#525252' : themeColors.border}`
-               }}>
-            <div className="flex items-center gap-2 mb-2">
-              <span style={{
-                color: isDark ? '#f0f0f0' : themeColors.textSecondary, 
-                fontWeight: 'bold'
-              }}>
-                📝 [CheckSubHash] Subtitle Hash Check Results
-              </span>
-              {hashCheckLoading && (
-                <div className="w-3 h-3 rounded-full animate-spin" style={{
-                  borderTop: `2px solid transparent`,
-                  borderRight: `2px solid ${themeColors.link}`,
-                  borderBottom: `2px solid ${themeColors.link}`,
-                  borderLeft: `2px solid ${themeColors.link}`
-                }}></div>
-              )}
-            </div>
-            
-            {getHashCheckSummary && (
-              <div className="mb-2 text-xs" style={{
-                color: isDark ? '#d0d0d0' : themeColors.textMuted
-              }}>
-                <span>Summary: </span>
-                {(() => {
-                  const summary = getHashCheckSummary();
-                  return (
-                    <span>
-                      {summary.total} total, {' '}
-                      <span style={{
-                        color: isDark ? '#22c55e' : themeColors.success
-                      }}>{summary.new} new</span>, {' '}
-                      <span style={{
-                        color: isDark ? '#ef4444' : themeColors.error
-                      }}>{summary.exists} exists</span>
-                      {summary.pending > 0 && <span>, {summary.pending} pending</span>}
-                      {summary.error > 0 && <span>, {summary.error} errors</span>}
-                    </span>
-                  );
-                })()}
-              </div>
-            )}
-            
-            <div className="text-xs font-mono space-y-1">
-              {Object.values(hashCheckResults).map((result, idx) => (
-                <div key={idx} className="flex items-center gap-2 flex-wrap">
-                  <span style={{
-                    color: isDark ? '#f5f5f5' : themeColors.textSecondary,
-                    fontWeight: '500'
-                  }}>
-                    {result.filename}
-                  </span>
-                  <span style={{
-                    color: isDark ? '#d1d5db' : themeColors.textMuted, 
-                    fontFamily: 'monospace',
-                    fontSize: '10px',
-                    backgroundColor: isDark ? '#374151' : '#f3f4f6',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    border: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'
-                  }}>
-                    {result.hash || 'no hash'}
-                  </span>
-                  {result.status === 'exists' && result.subtitleUrl ? (
-                    <a 
-                      href={result.subtitleUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{
-                        color: isDark ? '#ef4444' : themeColors.error,
-                        fontWeight: '600',
-                        fontSize: '11px',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      uploaded (ID: {result.subtitleId})
-                    </a>
-                  ) : (
-                    <span style={{
-                      color: result.status === 'exists' ? (isDark ? '#ef4444' : themeColors.error) : 
-                             result.status === 'new' ? (isDark ? '#22c55e' : themeColors.success) :
-                             result.status === 'error' ? (isDark ? '#ef4444' : themeColors.error) :
-                             (isDark ? '#d1d5db' : themeColors.textMuted),
-                      fontWeight: '600',
-                      fontSize: '11px'
-                    }}>
-                      {result.status === 'exists' ? 'uploaded' :
-                       result.status === 'new' ? 'not uploaded yet' :
-                       result.status === 'error' ? 'error' :
-                       result.status === 'pending' ? 'checking...' :
-                       result.status}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         
         {/* Cache Info and Session Info */}
         <div className="mt-3 space-y-2">
