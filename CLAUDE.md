@@ -776,6 +776,13 @@ This implementation ensures that desktop applications can be distributed with em
 
 ## Security and Sensitive Information Protection
 
+**✅ CRITICAL SECURITY INCIDENT FULLY RESOLVED (2025-07-24)**: 
+- **Issue**: OpenSubtitles API key was accidentally committed in `src/utils/embeddedConstants.js` (commit c47d5b4)
+- **Resolution**: API key completely removed from git history using git filter-branch and force-pushed to GitHub
+- **Key Status**: [REDACTED] - Key has been completely purged from all git commits and remote repository
+- **Prevention**: The embeddedConstants.js file is now properly gitignored and cannot be committed again
+- **Verification**: `git log -S "API_KEY"` returns no results - key is completely eliminated
+
 **CRITICAL**: When debugging, logging, or sharing console output, always protect sensitive information:
 
 ### Sensitive Information to Protect
