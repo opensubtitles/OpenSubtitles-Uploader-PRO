@@ -206,6 +206,46 @@ jobs:
             exit 1
           fi
 
+      - name: Upload macOS Universal artifacts to release
+        if: matrix.target == 'universal-apple-darwin' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📦 Uploading macOS Universal artifacts to release..."
+          
+          # Find all built artifacts
+          echo "🔍 Looking for macOS artifacts to upload..."
+          
+          # Find DMG file
+          DMG_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            echo "✅ Found DMG: $DMG_FILE"
+            gh release upload "${{ github.ref_name }}" "$DMG_FILE" --clobber
+          else
+            echo "⚠️ No DMG file found"
+          fi
+          
+          # Find APP bundle (zip it first)
+          APP_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+          if [ -n "$APP_FILE" ]; then
+            echo "✅ Found APP: $APP_FILE"
+            APP_NAME=$(basename "$APP_FILE" .app)
+            ZIP_FILE="src-tauri/target/universal-apple-darwin/release/bundle/${APP_NAME}_universal.app.zip"
+            
+            # Create zip of the app bundle
+            cd "$(dirname "$APP_FILE")"
+            zip -r "$(basename "$ZIP_FILE")" "$(basename "$APP_FILE")"
+            cd - > /dev/null
+            mv "$(dirname "$APP_FILE")/$(basename "$ZIP_FILE")" "$ZIP_FILE"
+            
+            echo "📦 Created app bundle zip: $ZIP_FILE"
+            gh release upload "${{ github.ref_name }}" "$ZIP_FILE" --clobber
+          else
+            echo "⚠️ No APP bundle found"
+          fi
+          
+          echo "✅ macOS Universal artifacts upload completed"
+
       - name: Build the app (Standard)
         if: matrix.target != 'universal-apple-darwin'
         uses: tauri-apps/tauri-action@v0.5
