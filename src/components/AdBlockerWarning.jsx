@@ -30,7 +30,7 @@ export const AdBlockerWarning = () => {
     const checkAdBlocker = async () => {
       try {
         console.log('🔍 === WEB BROWSER AD BLOCKER DETECTION START ===');
-        console.log('📱 Running Web Browser Analysis v1.3.4');
+        console.log('📱 Running Web Browser Analysis v1.4.3');
         console.log('📍 Current Location:', window.location.href);
         console.log('🌐 Protocol Detection:', window.location.protocol);
         console.log('==========================================');

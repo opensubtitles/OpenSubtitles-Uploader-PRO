@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { UserService } from '../services/userService.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 /**
  * Custom hook for managing user session
+ * Now uses AuthContext data to avoid duplicate GetUserInfo calls
  */
 export const useUserSession = (addDebugInfo) => {
   const [userInfo, setUserInfo] = useState(null);
@@ -10,7 +12,10 @@ export const useUserSession = (addDebugInfo) => {
   const [error, setError] = useState(null);
   const hasLoadedRef = useRef(false);
 
-  // Load user info on component mount
+  // Get authentication data from AuthContext to avoid duplicate API calls
+  const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
+
+  // Load user info from AuthContext instead of making duplicate API calls
   const loadUserInfo = useCallback(async () => {
     // Prevent duplicate calls
     if (hasLoadedRef.current) {
@@ -22,42 +27,38 @@ export const useUserSession = (addDebugInfo) => {
       setIsLoading(true);
       setError(null);
       
-      const sessionId = UserService.getSessionId();
-      if (!sessionId) {
+      // Use authentication data from AuthContext instead of making new API calls
+      if (isAuthenticated && authUser) {
         if (addDebugInfo) {
-          addDebugInfo('👤 No session ID found - user not logged in');
+          addDebugInfo('👤 Using authentication data from AuthContext (avoiding duplicate GetUserInfo call)');
+        }
+        setUserInfo(authUser);
+      } else {
+        if (addDebugInfo) {
+          addDebugInfo('👤 No authenticated user found in AuthContext');
         }
         setUserInfo(null);
-        return;
       }
       
-      const userData = await UserService.getUserInfo(sessionId, addDebugInfo);
-      setUserInfo(userData);
-      
     } catch (err) {
-      // Handle 401 Unauthorized gracefully (user not logged in)
-      if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-        setError(null); // Don't treat 401 as an error - it's expected when not logged in
-        setUserInfo(null);
-        if (addDebugInfo) {
-          addDebugInfo(`👤 No valid session found - user not logged in`);
-        }
-      } else {
-        setError(err.message);
-        setUserInfo(null);
-        if (addDebugInfo) {
-          addDebugInfo(`👤 Session validation failed: ${err.message}`);
-        }
+      setError(err.message);
+      setUserInfo(null);
+      if (addDebugInfo) {
+        addDebugInfo(`👤 Session validation failed: ${err.message}`);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []); // Remove addDebugInfo from dependency array as it's stable
+  }, [isAuthenticated, authUser, addDebugInfo]);
 
-  // Initialize user session on mount
+  // Initialize user session on mount and when auth state changes
   useEffect(() => {
-    loadUserInfo();
-  }, [loadUserInfo]);
+    // Wait for AuthContext to finish loading before processing
+    if (!authLoading) {
+      hasLoadedRef.current = false; // Reset flag when auth state changes
+      loadUserInfo();
+    }
+  }, [loadUserInfo, authLoading]);
 
   // Helper functions
   const getUsername = useCallback(() => {

@@ -773,3 +773,35 @@ The system includes comprehensive validation:
 - Error handling for missing or invalid configurations
 
 This implementation ensures that desktop applications can be distributed with embedded API credentials while maintaining security and developer experience.
+
+## Security and Sensitive Information Protection
+
+**CRITICAL**: When debugging, logging, or sharing console output, always protect sensitive information:
+
+### Sensitive Information to Protect
+- **API Keys**: OpenSubtitles API keys, tokens, credentials
+- **Authentication Data**: User passwords, login tokens, session IDs
+- **Personal Data**: File paths containing usernames, personal directories
+- **Internal URLs**: Private server endpoints, development URLs
+- **Database Credentials**: Connection strings, passwords
+
+### Safe Logging Practices
+- **Partial Masking**: Show only first/last few characters: `88Xk****9d9e`
+- **Placeholder Text**: Replace sensitive data with `[REDACTED]` or `[API_KEY]`
+- **Conditional Logging**: Use debug flags to control sensitive output
+- **Environment-Aware**: Different logging levels for dev vs production
+
+### Console Output Guidelines
+When sharing debug logs or console output:
+1. **Review logs before sharing** - scan for sensitive information
+2. **Mask API keys** - show only partial values for identification
+3. **Remove personal paths** - replace with generic paths like `/Users/[USER]/`  
+4. **Sanitize URLs** - remove query parameters and tokens
+5. **Check error messages** - may contain sensitive context
+
+### Implementation Requirements
+All console.log statements in the codebase should:
+- Never log complete API keys or tokens
+- Use masked values for identification: `console.log('API Key:', apiKey.slice(0,4) + '****' + apiKey.slice(-4))`
+- Include environment checks for sensitive debugging
+- Use structured logging to control output levels

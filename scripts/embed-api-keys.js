@@ -57,6 +57,9 @@ export const getEmbeddedApiKey = () => {
 
 console.log('📦 Embedded constants loaded:', {
   hasApiKey: !!EMBEDDED_OPENSUBTITLES_API_KEY,
+  apiKeyPreview: EMBEDDED_OPENSUBTITLES_API_KEY ? 
+    (EMBEDDED_OPENSUBTITLES_API_KEY.slice(0,4) + '****' + EMBEDDED_OPENSUBTITLES_API_KEY.slice(-4)) : 
+    '[NONE]',
   buildTime: BUILD_TIMESTAMP
 });
 `;
