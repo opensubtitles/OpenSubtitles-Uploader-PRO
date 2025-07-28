@@ -1,7 +1,7 @@
 # OpenSubtitles Uploader PRO
 
 [![Tests](https://github.com/opensubtitles/opensubtitles-uploader-pro/workflows/Tests/badge.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/actions)
-[![Version](https://img.shields.io/badge/version-1.4.7-blue.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-uploader.opensubtitles.org-brightgreen.svg)](https://uploader.opensubtitles.org)
 [![OpenSubtitles.org API](https://img.shields.io/badge/OpenSubtitles.org-API-orange.svg)](https://www.opensubtitles.org/)

@@ -625,16 +625,41 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
               </label>
             </div>
           </div>
-          {localConfig.extractMkvSubtitles === true && (
-            <div className="flex items-center gap-2 text-xs" style={{ color: colors.success }}>
-              <span>✓</span>
-              <span>MKV files will be automatically processed for embedded subtitles</span>
+          
+          {/* Minimal separator line */}
+          <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
+          
+          {/* Upload MovieHash Only Setting */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium" style={{ color: colors.text }}>
+                Upload MovieHash Only
+              </label>
+              <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                Only update movie hashes without uploading subtitle files
+              </p>
             </div>
-          )}
-          {localConfig.extractMkvSubtitles !== true && (
-            <div className="flex items-center gap-2 text-xs" style={{ color: colors.textSecondary }}>
+            <div className="ml-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localConfig.uploadMovieHashOnly === true}
+                  onChange={(e) => handleChange('uploadMovieHashOnly', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div 
+                  className="w-11 h-6 rounded-full peer transition-colors duration-200 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                  style={{
+                    backgroundColor: (localConfig.uploadMovieHashOnly === true) ? colors.success : colors.border,
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+          {localConfig.uploadMovieHashOnly === true && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: colors.warning || colors.error }}>
               <span>⚠️</span>
-              <span>MKV subtitle extraction is disabled</span>
+              <span>Subtitles will not be uploaded, only movie hashes will be updated</span>
             </div>
           )}
             </>

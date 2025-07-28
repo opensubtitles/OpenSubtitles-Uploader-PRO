@@ -171,7 +171,8 @@ function SubtitleUploaderInner() {
     globalComment: '', // Global comment for all subtitles
     defaultLanguage: '', // Default language for all subtitles (empty = auto-detect)
     defaultFps: '', // Default FPS for orphaned subtitles (empty = no default)
-    defaultTranslator: '' // Default translator for all subtitles (empty = no default)
+    defaultTranslator: '', // Default translator for all subtitles (empty = no default)
+    uploadMovieHashOnly: false // Only update movie hashes, don't upload subtitles (default = false)
   });
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -664,20 +665,43 @@ function SubtitleUploaderInner() {
 
   // Handle subtitle upload toggle
   const handleSubtitleUploadToggle = useCallback((subtitlePath, enabled) => {
-    setUploadStates(prev => ({
-      ...prev,
-      [subtitlePath]: enabled
-    }));
+    console.log(`🔄 DEBUG handleSubtitleUploadToggle called:`);
+    console.log(`   - subtitlePath: "${subtitlePath}"`);
+    console.log(`   - enabled: ${enabled}`);
+    console.log(`   - Previous uploadStates:`, uploadStates);
+    
+    setUploadStates(prev => {
+      const newStates = {
+        ...prev,
+        [subtitlePath]: enabled
+      };
+      console.log(`   - New uploadStates:`, newStates);
+      return newStates;
+    });
     addDebugInfo(`Upload ${enabled ? 'enabled' : 'disabled'} for: ${subtitlePath}`);
-  }, [addDebugInfo]);
+  }, [addDebugInfo, uploadStates]);
 
   // Handle upload options update
   const handleUploadOptionsUpdate = useCallback((subtitlePath, options) => {
-    setUploadOptions(prev => ({
-      ...prev,
-      [subtitlePath]: options
-    }));
-  }, [addDebugInfo]);
+    console.log(`🔧 DEBUG handleUploadOptionsUpdate called:`);
+    console.log(`   - subtitlePath: "${subtitlePath}"`);
+    console.log(`   - options:`, options);
+    console.log(`   - options.foreignpartsonly: ${options.foreignpartsonly}`);
+    console.log(`   - Previous uploadOptions:`, uploadOptions);
+    
+    setUploadOptions(prev => {
+      const newOptions = {
+        ...prev,
+        [subtitlePath]: {
+          ...(prev[subtitlePath] || {}), // Merge with existing options for this subtitle
+          ...options                     // Add/overwrite with new options
+        }
+      };
+      console.log(`   - New uploadOptions:`, newOptions);
+      return newOptions;
+    });
+    addDebugInfo(`Upload options updated for: ${subtitlePath}`);
+  }, [addDebugInfo, uploadOptions]);
 
   // Handle orphaned subtitles FPS change
   const handleOrphanedSubtitlesFpsChange = useCallback((subtitlePath, fps) => {
@@ -689,15 +713,24 @@ function SubtitleUploaderInner() {
 
   // Get upload status for subtitle (default to true, but automatically disable invalid files)
   const getUploadEnabled = useCallback((subtitlePath) => {
+    console.log(`🔍 DEBUG getUploadEnabled called for: ${subtitlePath}`);
+    
     // Find the subtitle file to check its size
     const subtitle = [...files, ...orphanedSubtitles].find(file => file.fullPath === subtitlePath);
     
     if (!subtitle) {
-      return uploadStates[subtitlePath] !== false;
+      console.log(`   - ❌ Subtitle not found in files array`);
+      console.log(`   - Checking uploadStates[${subtitlePath}]: ${uploadStates[subtitlePath]}`);
+      const result = uploadStates[subtitlePath] !== false;
+      console.log(`   - Result: ${result}`);
+      return result;
     }
+    
+    console.log(`   - ✅ Subtitle found: ${subtitle.name}, size: ${subtitle.size} bytes`);
     
     // Automatically disable empty files (0 bytes)
     if (subtitle.size === 0) {
+      console.log(`   - ❌ DISABLED: File is empty (0 bytes)`);
       return false;
     }
     
@@ -705,15 +738,33 @@ function SubtitleUploaderInner() {
     // This matches backend validation: strlen($subtitle['subcontent']) < 512
     // Using file size as approximation since we can't read content synchronously
     if (subtitle.size < 512) {
+      console.log(`   - ⚠️ Small file detected (${subtitle.size} < 512 bytes)`);
+      console.log(`   - 🔍 DEBUG: Checking uploadOptions for path: "${subtitlePath}"`);
+      console.log(`   - 🔍 DEBUG: All uploadOptions keys:`, Object.keys(uploadOptions));
+      console.log(`   - 🔍 DEBUG: uploadOptions object:`, uploadOptions);
+      
       const options = uploadOptions[subtitlePath] || {};
+      console.log(`   - 🔍 DEBUG: Retrieved options for "${subtitlePath}":`, options);
+      console.log(`   - 🔍 DEBUG: options.foreignpartsonly value:`, options.foreignpartsonly);
+      console.log(`   - 🔍 DEBUG: typeof options.foreignpartsonly:`, typeof options.foreignpartsonly);
+      
       const isForeignPartsOnly = options.foreignpartsonly === '1';
+      console.log(`   - 🔍 DEBUG: isForeignPartsOnly calculation: ${options.foreignpartsonly} === '1' = ${isForeignPartsOnly}`);
+      console.log(`   - Is Foreign Parts Only: ${isForeignPartsOnly}`);
       
       if (!isForeignPartsOnly) {
+        console.log(`   - ❌ DISABLED: Small file not marked as Foreign Parts Only`);
+        console.log(`   - 💡 To enable: Set 'Foreign Parts Only' option for this subtitle`);
         return false; // Disable small files that aren't foreign parts only
+      } else {
+        console.log(`   - ✅ Small file allowed because it's marked as Foreign Parts Only`);
       }
     }
     
-    return uploadStates[subtitlePath] !== false; // Default to true unless explicitly set to false
+    const uploadStateResult = uploadStates[subtitlePath] !== false;
+    console.log(`   - Upload state check: uploadStates[${subtitlePath}] = ${uploadStates[subtitlePath]}, result: ${uploadStateResult}`);
+    console.log(`   - ✅ FINAL RESULT: ${uploadStateResult}`);
+    return uploadStateResult; // Default to true unless explicitly set to false
   }, [uploadStates, files, orphanedSubtitles, uploadOptions]);
 
   // Handle upload action
@@ -764,7 +815,8 @@ function SubtitleUploaderInner() {
             }));
           }, 0);
         },
-        getVideoMetadata
+        getVideoMetadata,
+        config
       });
 
       // Process upload results and update state

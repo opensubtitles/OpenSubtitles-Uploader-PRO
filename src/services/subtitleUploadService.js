@@ -34,7 +34,8 @@ export class SubtitleUploadService {
     addDebugInfo,
     onProgress,
     getVideoMetadata, // Add video metadata getter
-    orphanedSubtitlesFps = {} // Add FPS settings for orphaned subtitles
+    orphanedSubtitlesFps = {}, // Add FPS settings for orphaned subtitles
+    config = {} // Add config object for settings
   }) {
     const results = {
       success: [],
@@ -106,27 +107,40 @@ export class SubtitleUploadService {
             
             // If alreadyindb=0, need to do actual upload with UploadSubtitles
             if (tryUploadResponse.alreadyindb === 0 || tryUploadResponse.alreadyindb === '0') {
-              addDebugInfo(`📤 Subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
-              
-              actualUploadData = await this.prepareActualUploadData({
-                video,
-                subtitle,
-                movieData,
-                guessItData,
-                featuresByImdbId,
-                getSubtitleLanguage,
-                uploadOptions,
-                combinedLanguages,
-                addDebugInfo,
-                getVideoMetadata
-              });
-              
-              actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
-              
-              addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
-              addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
-              
-              finalResponse = actualUploadResponse;
+              // Check if uploadMovieHashOnly is enabled
+              if (config.uploadMovieHashOnly === true) {
+                addDebugInfo(`⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for ${subtitle.name}`);
+                addDebugInfo(`✅ Movie hash updated for ${subtitle.name}, subtitle file not uploaded`);
+                // Use TryUpload response but mark as hash-only success
+                finalResponse = {
+                  ...tryUploadResponse,
+                  status: '200 OK',
+                  data: 'Movie hash updated (subtitle not uploaded)',
+                  hashOnlyMode: true
+                };
+              } else {
+                addDebugInfo(`📤 Subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
+                
+                actualUploadData = await this.prepareActualUploadData({
+                  video,
+                  subtitle,
+                  movieData,
+                  guessItData,
+                  featuresByImdbId,
+                  getSubtitleLanguage,
+                  uploadOptions,
+                  combinedLanguages,
+                  addDebugInfo,
+                  getVideoMetadata
+                });
+                
+                actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
+                
+                addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
+                addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
+                
+                finalResponse = actualUploadResponse;
+              }
             } else {
               addDebugInfo(`✅ Subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`);
             }
@@ -280,26 +294,39 @@ export class SubtitleUploadService {
           
           // If alreadyindb=0, need to do actual upload with UploadSubtitles
           if (tryUploadResponse.alreadyindb === 0 || tryUploadResponse.alreadyindb === '0') {
-            addDebugInfo(`📤 Orphaned subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
-            
-            actualUploadData = await this.prepareActualUploadDataForOrphanedSubtitle({
-              subtitle,
-              movieData,
-              guessItData,
-              featuresByImdbId,
-              getSubtitleLanguage,
-              uploadOptions,
-              combinedLanguages,
-              addDebugInfo,
-              orphanedSubtitlesFps
-            });
-            
-            actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
-            
-            addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
-            addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
-            
-            finalResponse = actualUploadResponse;
+            // Check if uploadMovieHashOnly is enabled
+            if (config.uploadMovieHashOnly === true) {
+              addDebugInfo(`⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for orphaned ${subtitle.name}`);
+              addDebugInfo(`✅ Movie hash updated for orphaned ${subtitle.name}, subtitle file not uploaded`);
+              // Use TryUpload response but mark as hash-only success
+              finalResponse = {
+                ...tryUploadResponse,
+                status: '200 OK',
+                data: 'Movie hash updated (subtitle not uploaded)',
+                hashOnlyMode: true
+              };
+            } else {
+              addDebugInfo(`📤 Orphaned subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
+              
+              actualUploadData = await this.prepareActualUploadDataForOrphanedSubtitle({
+                subtitle,
+                movieData,
+                guessItData,
+                featuresByImdbId,
+                getSubtitleLanguage,
+                uploadOptions,
+                combinedLanguages,
+                addDebugInfo,
+                orphanedSubtitlesFps
+              });
+              
+              actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
+              
+              addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
+              addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
+              
+              finalResponse = actualUploadResponse;
+            }
           } else {
             addDebugInfo(`✅ Orphaned subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`);
           }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OpenSubtitlesApiService } from '../services/api/openSubtitlesApi.js';
 import { XmlRpcService } from '../services/api/xmlrpc.js';
+import { retryAsync } from '../utils/retryUtils.js';
 
 // Global debug function to prevent duplicate logging
 let globalDebugFunction = null;
@@ -19,6 +20,9 @@ const LanguageDataSingleton = {
   restData: null,
   xmlRpcData: null,
   combinedData: null,
+  restRetryCount: 0,
+  xmlRpcRetryCount: 0,
+  maxRetries: 10,
   
   // Global logging function to prevent duplicates
   log(message) {
@@ -40,6 +44,8 @@ const LanguageDataSingleton = {
     this.combining = false;
     this.combineLogShown = false;
     this.combineCompleteLogShown = false;
+    this.restRetryCount = 0;
+    this.xmlRpcRetryCount = 0;
     if (this.combineTimeout) {
       clearTimeout(this.combineTimeout);
       this.combineTimeout = null;
@@ -76,21 +82,52 @@ export const useLanguageData = (addDebugInfo) => {
       return;
     }
     
+    // Check if we've exceeded max retries
+    if (LanguageDataSingleton.restRetryCount >= LanguageDataSingleton.maxRetries) {
+      addDebugInfo(`❌ REST API: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`);
+      setLanguagesError(`Max retries exceeded (${LanguageDataSingleton.maxRetries})`);
+      setLanguagesLoading(false);
+      return;
+    }
+    
     LanguageDataSingleton.restLoading = true;
-    addDebugInfo("📥 Loading REST API languages...");
+    LanguageDataSingleton.restRetryCount++;
+    addDebugInfo(`📥 Loading REST API languages... (attempt ${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries})`);
     setLanguagesLoading(true);
     setLanguagesError(null);
     
     try {
-      const { data, fromCache } = await OpenSubtitlesApiService.getSupportedLanguages();
+      const { data, fromCache } = await retryAsync(
+        () => OpenSubtitlesApiService.getSupportedLanguages(),
+        3, // 3 retries per attempt
+        5000, // 5 second base delay
+        (attempt, maxAttempts) => {
+          if (attempt > 1) {
+            addDebugInfo(`🔄 REST API retry ${attempt}/${maxAttempts}...`);
+          }
+        }
+      );
+      
       LanguageDataSingleton.restData = data;
       LanguageDataSingleton.restApiLoaded = true;
       setLanguageMap(data);
       addDebugInfo(`✅ REST: ${Object.keys(data).length} languages ${fromCache ? '(cached)' : '(API)'}`);
     } catch (error) {
-      addDebugInfo(`Error loading languages: ${error.message}`);
+      addDebugInfo(`❌ Error loading languages (attempt ${LanguageDataSingleton.restRetryCount}): ${error.message}`);
       setLanguagesError(error.message);
       setLanguageMap({});
+      
+      // If not at max retries, allow another attempt later
+      if (LanguageDataSingleton.restRetryCount < LanguageDataSingleton.maxRetries) {
+        addDebugInfo(`⏳ Will retry in 10 seconds... (${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`);
+        setTimeout(() => {
+          LanguageDataSingleton.restLoading = false;
+          loadLanguages();
+        }, 10000);
+        return;
+      } else {
+        addDebugInfo(`🛑 Max retries reached. Language loading disabled.`);
+      }
     } finally {
       setLanguagesLoading(false);
       LanguageDataSingleton.restLoading = false;
@@ -106,17 +143,46 @@ export const useLanguageData = (addDebugInfo) => {
       return;
     }
     
+    // Check if we've exceeded max retries
+    if (LanguageDataSingleton.xmlRpcRetryCount >= LanguageDataSingleton.maxRetries) {
+      addDebugInfo(`❌ XML-RPC: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`);
+      return;
+    }
+    
     LanguageDataSingleton.xmlRpcLoading = true;
-    addDebugInfo("📥 Loading XML-RPC languages...");
+    LanguageDataSingleton.xmlRpcRetryCount++;
+    addDebugInfo(`📥 Loading XML-RPC languages... (attempt ${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries})`);
     
     try {
-      const { data, fromCache } = await XmlRpcService.getSubLanguages();
+      const { data, fromCache } = await retryAsync(
+        () => XmlRpcService.getSubLanguages(),
+        3, // 3 retries per attempt
+        2000, // 2 second base delay (XML-RPC is usually faster)
+        (attempt, maxAttempts) => {
+          if (attempt > 1) {
+            addDebugInfo(`🔄 XML-RPC retry ${attempt}/${maxAttempts}...`);
+          }
+        }
+      );
+      
       LanguageDataSingleton.xmlRpcData = data;
       LanguageDataSingleton.xmlRpcLoaded = true;
       setXmlRpcLanguages(data);
       addDebugInfo(`✅ XML-RPC: ${data.length} languages ${fromCache ? '(cached)' : '(API)'}`);
     } catch (error) {
-      addDebugInfo(`XML-RPC GetSubLanguages failed: ${error.message}`);
+      addDebugInfo(`❌ XML-RPC GetSubLanguages failed (attempt ${LanguageDataSingleton.xmlRpcRetryCount}): ${error.message}`);
+      
+      // If not at max retries, allow another attempt later
+      if (LanguageDataSingleton.xmlRpcRetryCount < LanguageDataSingleton.maxRetries) {
+        addDebugInfo(`⏳ XML-RPC will retry in 5 seconds... (${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`);
+        setTimeout(() => {
+          LanguageDataSingleton.xmlRpcLoading = false;
+          loadXmlRpcLanguages();
+        }, 5000);
+        return;
+      } else {
+        addDebugInfo(`🛑 XML-RPC max retries reached.`);
+      }
     } finally {
       LanguageDataSingleton.xmlRpcLoading = false;
     }

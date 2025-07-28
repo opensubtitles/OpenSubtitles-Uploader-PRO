@@ -8,16 +8,6 @@ export const VideoFile = ({ video, movieGuess, features, onMovieChange, colors, 
   const [movieSearchResults, setMovieSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Debug MKV extraction status
-  if (video.hasMkvSubtitleExtraction) {
-    console.log(`VideoFile debug for ${video.name}:`, {
-      mkvExtractionStatus: video.mkvExtractionStatus,
-      extractedCount: video.extractedCount,
-      streamCount: video.streamCount,
-      hasMkvSubtitleExtraction: video.hasMkvSubtitleExtraction,
-      hasMovieGuess: !!movieGuess
-    });
-  }
 
   // Helper function to check if input is IMDb ID or URL
   const isImdbInput = (input) => {

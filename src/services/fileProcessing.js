@@ -293,18 +293,16 @@ export class FileProcessingService {
         const detectedStreams = await mkvSubtitleExtractor.detectSubtitleStreams(mkvFile.file);
         
         if (detectedStreams.length === 0) {
-          console.log(`📝 No subtitle streams found in MKV file: ${mkvFile.name}`);
+          console.log(`📝 No subtitle streams found`);
           onFileUpdate(mkvFile.fullPath, { mkvExtractionStatus: 'no_streams' });
           continue;
         }
 
-        console.log(`🎉 Successfully detected ${detectedStreams.length} subtitle stream(s) in ${mkvFile.name}`);
-        console.log(`🎯 Auto-extracting all ${detectedStreams.length} subtitle streams...`);
+        console.log(`🎉 Found ${detectedStreams.length} subtitle streams, extracting...`);
         
         // Also add to debug panel
         if (addDebugInfo) {
-          addDebugInfo(`🎉 Detected ${detectedStreams.length} subtitle streams in MKV file`);
-          addDebugInfo(`🎯 Starting auto-extraction of all ${detectedStreams.length} streams...`);
+          addDebugInfo(`🎉 Found ${detectedStreams.length} subtitle streams, extracting...`);
         }
 
         // Update status to extracting
@@ -315,31 +313,36 @@ export class FileProcessingService {
           extractedCount: 0
         });
 
-        // Extract all detected streams automatically
-        let extractedCount = 0;
-        const languageCounts = {}; // Track how many subtitles per language to avoid duplicates
+        // Use batch extraction for efficiency instead of individual stream extraction
+        console.log(`🎯 Using batch extraction for all ${detectedStreams.length} streams...`);
+        if (addDebugInfo) {
+          addDebugInfo(`🎯 Using efficient batch extraction for all ${detectedStreams.length} streams...`);
+        }
         
-        for (let i = 0; i < detectedStreams.length; i++) {
-          const stream = detectedStreams[i];
-          try {
-            console.log(`🔧 Extracting stream ${i + 1}/${detectedStreams.length}: ${stream.title}`);
-            if (addDebugInfo) {
-              addDebugInfo(`🔧 Extracting stream ${i + 1}/${detectedStreams.length}: ${stream.language} (index ${stream.streamIndex})`);
-            }
-            
-            const extractedSubtitle = await mkvSubtitleExtractor.extractSingleStream(
-              stream.id, 
-              stream.streamIndex, 
-              stream.language, 
-              stream.originalFileName
-            );
+        try {
+          // Since we already have the metadata with detected streams, we should extract them efficiently
+          // The key insight is that we already did the heavy metadata extraction, now we just need the subtitle data
+          console.log(`🎯 Extracting ${detectedStreams.length} streams efficiently using detected metadata...`);
+          
+          // Use the legacy extractSubtitles method which is optimized for our use case
+          const extractedSubtitles = await mkvSubtitleExtractor.extractSubtitles(mkvFile);
+          
+          console.log(`🎉 Extraction completed: ${extractedSubtitles.length}/${detectedStreams.length} subtitles extracted`);
+          if (addDebugInfo) {
+            addDebugInfo(`🎉 Extracted ${extractedSubtitles.length}/${detectedStreams.length} subtitles`);
+          }
+          
+          let extractedCount = 0;
+          const languageCounts = {}; // Track how many subtitles per language to avoid duplicates
+          
+          for (const extractedSubtitle of extractedSubtitles) {
 
             if (extractedSubtitle && extractedSubtitle !== null) {
               const subtitleFile = extractedSubtitle.file;
               
               // Check for empty subtitle files (0 bytes) - double check in case MKV extractor didn't catch it
               if (subtitleFile.size === 0 || extractedSubtitle.size === 0) {
-                console.warn(`⚠️ Extracted subtitle has 0 bytes: ${subtitleFile.name} (stream ${stream.streamIndex})`);
+                console.warn(`⚠️ Extracted subtitle has 0 bytes: ${subtitleFile.name} (stream ${extractedSubtitle.streamIndex})`);
                 if (addDebugInfo) {
                   addDebugInfo(`⚠️ Skipped empty subtitle: ${subtitleFile.name} (0 bytes)`);
                 }
@@ -401,15 +404,27 @@ export class FileProcessingService {
               });
             } else {
               // extractedSubtitle is null (empty subtitle detected by MKV extractor)
-              console.warn(`⚠️ Skipping empty subtitle from stream ${stream.streamIndex} (${stream.language})`);
+              console.warn(`⚠️ Skipping empty subtitle from stream ${extractedSubtitle.streamIndex || 'unknown'} (${extractedSubtitle.language || 'unknown'})`);
               if (addDebugInfo) {
-                addDebugInfo(`⚠️ Skipped empty subtitle: stream ${stream.streamIndex} (0 bytes)`);
+                addDebugInfo(`⚠️ Skipped empty subtitle: stream ${extractedSubtitle.streamIndex || 'unknown'} (0 bytes)`);
               }
             }
-          } catch (extractError) {
-            console.warn(`⚠️ Failed to extract stream ${stream.streamIndex}: ${extractError.message}`);
-            // Continue with next stream
           }
+          
+        } catch (batchError) {
+          console.error(`❌ Batch extraction failed for ${mkvFile.name}:`, batchError.message);
+          if (addDebugInfo) {
+            addDebugInfo(`❌ Batch extraction failed: ${batchError.message}`);
+          }
+          
+          // Mark extraction as failed
+          onFileUpdate(mkvFile.fullPath, { 
+            mkvExtractionStatus: 'extraction_failed',
+            extractedCount: 0,
+            streamCount: detectedStreams.length
+          });
+          
+          continue; // Skip to next MKV file
         }
 
         // Update final status
@@ -420,29 +435,17 @@ export class FileProcessingService {
           extractedCount: extractedCount
         });
 
-        console.log(`🎉 Auto-extraction completed: ${extractedCount}/${detectedStreams.length} subtitles extracted and paired with ${mkvFile.name}`);
+        console.log(`🎉 Auto-extraction completed: ${extractedCount}/${detectedStreams.length} subtitles extracted and paired`);
         if (addDebugInfo) {
           addDebugInfo(`🎉 Auto-extraction completed: ${extractedCount}/${detectedStreams.length} subtitles extracted and paired`);
         }
 
-        // Cleanup notification (individual extractions now handle their own cleanup)
-        try {
-          await mkvSubtitleExtractor.cleanupFiles();
-          console.log(`🧹 All extractions completed for ${mkvFile.name} with automatic cleanup`);
-        } catch (cleanupError) {
-          console.warn(`⚠️ Cleanup notification failed: ${cleanupError.message}`);
-        }
+        // Cleanup notification (batch extraction handles its own cleanup automatically)
+        console.log(`🧹 Batch extraction completed with automatic cleanup`);
 
       } catch (error) {
         console.error(`❌ Failed to extract subtitles from MKV file ${mkvFile.name}:`, error);
         onFileUpdate(mkvFile.fullPath, { mkvExtractionStatus: 'error', mkvExtractionError: error.message });
-        
-        // Try to cleanup even on error
-        try {
-          await mkvSubtitleExtractor.cleanupFiles();
-        } catch (cleanupError) {
-          // Ignore cleanup errors during error handling
-        }
       }
     }
   }
@@ -490,7 +493,7 @@ export class FileProcessingService {
         console.log(`✅ Extracted subtitle: ${subtitleFile.name} (${subtitleData.language})`);
       }
 
-      console.log(`🎉 Successfully extracted ${extractedSubtitles.length} subtitle(s) from ${mkvFile.name}`);
+      console.log(`🎉 Extracted ${extractedSubtitles.length} subtitles`);
 
     } catch (error) {
       console.error(`❌ Failed to extract subtitles from MKV file ${mkvFile.name}:`, error);

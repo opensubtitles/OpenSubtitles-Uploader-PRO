@@ -9,8 +9,6 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
      window.location.href.includes('tauri://localhost'))
   );
   
-  console.log('🔥 ApiHealthCheck - IMMEDIATE Tauri Detection:', isTauriDetected);
-  console.log('🔥 ApiHealthCheck - URL:', typeof window !== 'undefined' ? window.location.href : 'undefined');
 
   const [isChecking, setIsChecking] = useState(true);
   const [apiStatus, setApiStatus] = useState('checking');

@@ -57,6 +57,11 @@ export const UploadButton = ({
     enabledOrphanedSubtitles.forEach(subtitle => {
       const subtitleName = subtitle.name || subtitle.fullPath.split('/').pop();
       
+      // DEBUG: Log orphaned subtitle validation details
+      console.log(`🔍 DEBUG: Validating orphaned subtitle: ${subtitleName}`);
+      console.log(`   - Full path: ${subtitle.fullPath}`);
+      console.log(`   - Is enabled: ${getUploadEnabled(subtitle.fullPath)}`);
+      
       // Helper function to create clickable error for orphaned subtitles
       const createClickableError = (message, subtitlePath) => {
         const elementId = `movie-${subtitlePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
@@ -68,12 +73,15 @@ export const UploadButton = ({
 
       // Check if movie is identified for this orphaned subtitle
       const movieData = movieGuesses[subtitle.fullPath];
+      console.log(`   - Movie data:`, movieData);
+      
       if (!movieData || movieData === 'guessing' || movieData === 'error' || movieData === 'no-match') {
         let statusText = '';
         if (movieData === 'guessing') statusText = ' (still identifying...)';
         else if (movieData === 'error') statusText = ' (identification failed)';
         else if (movieData === 'no-match') statusText = ' (no match found)';
         
+        console.log(`   - ❌ BLOCKING ERROR: Movie not identified${statusText}`);
         errors.push(createClickableError(`"${subtitleName}": Subtitle movie not identified${statusText}`, subtitle.fullPath));
         hasBlockingErrors = true;
       }
@@ -84,13 +92,21 @@ export const UploadButton = ({
         ? bestMovieData.imdbid 
         : movieData?.imdbid;
 
+      console.log(`   - Best movie data:`, bestMovieData);
+      console.log(`   - Upload IMDb ID: ${uploadImdbId}`);
+
       if (!hasBlockingErrors && !uploadImdbId) {
+        console.log(`   - ❌ BLOCKING ERROR: No IMDb ID available`);
         errors.push(createClickableError(`"${subtitleName}": No IMDb ID available for upload`, subtitle.fullPath));
         hasBlockingErrors = true;
       }
 
       // Check if subtitle has language selected
-      if (!hasBlockingErrors && !getSubtitleLanguage(subtitle)) {
+      const subtitleLanguage = getSubtitleLanguage(subtitle);
+      console.log(`   - Subtitle language: ${subtitleLanguage}`);
+      
+      if (!hasBlockingErrors && !subtitleLanguage) {
+        console.log(`   - ❌ BLOCKING ERROR: No language selected`);
         errors.push(createClickableError(`"${subtitleName}": Upload language must be selected`, subtitle.fullPath));
         hasBlockingErrors = true;
       }
@@ -109,7 +125,10 @@ export const UploadButton = ({
 
       // Count this orphaned subtitle as ready only if no blocking errors occurred
       if (!hasBlockingErrors) {
+        console.log(`   - ✅ READY FOR UPLOAD: No blocking errors`);
         readySubtitlesCount++;
+      } else {
+        console.log(`   - ❌ SKIPPED: Has blocking errors`);
       }
     });
 

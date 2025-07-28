@@ -372,6 +372,11 @@ export const OrphanedSubtitles = ({
           // Get upload enabled status directly from uploadStates (no useMemo needed)
           const isUploadEnabled = uploadStates[subtitle.fullPath] !== false;
           
+          // DEBUG: Log checkbox state for this subtitle
+          console.log(`🔍 OrphanedSubtitles checkbox state for ${subtitle.name}:`);
+          console.log(`   - uploadStates[${subtitle.fullPath}] = ${uploadStates[subtitle.fullPath]}`);
+          console.log(`   - isUploadEnabled = ${isUploadEnabled}`);
+          
           // Debug logging causes setState during render - removed
           
           return (
