@@ -319,6 +319,8 @@ export class FileProcessingService {
           addDebugInfo(`🎯 Using efficient batch extraction for all ${detectedStreams.length} streams...`);
         }
         
+        let extractedCount = 0; // Define extractedCount in broader scope
+        
         try {
           // Since we already have the metadata with detected streams, we should extract them efficiently
           // The key insight is that we already did the heavy metadata extraction, now we just need the subtitle data
@@ -332,7 +334,7 @@ export class FileProcessingService {
             addDebugInfo(`🎉 Extracted ${extractedSubtitles.length}/${detectedStreams.length} subtitles`);
           }
           
-          let extractedCount = 0;
+          extractedCount = 0; // Reset counter (already declared above)
           const languageCounts = {}; // Track how many subtitles per language to avoid duplicates
           
           for (const extractedSubtitle of extractedSubtitles) {

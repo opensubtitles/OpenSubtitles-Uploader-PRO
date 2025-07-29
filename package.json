@@ -18,7 +18,13 @@
   "author": "OpenSubtitles",
   "license": "MIT",
   "type": "module",
-  "private": true,
+  "main": "dist/assets/index-Do63mFrb.js",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "CLAUDE.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -26,6 +32,7 @@
     "test": "node --test tests/**/*.test.js",
     "update-version": "node update-version.js",
     "update-readme-version": "node -e \"const fs=require('fs');const pkg=require('./package.json');let readme=fs.readFileSync('README.md','utf8');readme=readme.replace(/version-[0-9.]+/g,'version-'+pkg.version).replace(/Version [0-9.]+/g,'Version '+pkg.version);fs.writeFileSync('README.md',readme);\"",
+    "prepublishOnly": "npm run build",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

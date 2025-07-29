@@ -36,9 +36,14 @@ export class MkvSubtitleExtractor {
       this.extractor = new VideoMetadataExtractor({
         debug: false, // Disable verbose FFmpeg logging
         timeout: 30000, // 30 second timeout
+        logLevel: 'error', // Suppress chunk processing logs
+        verbose: false, // Disable verbose output
+        chunkSize: 50 * 1024 * 1024, // 50MB chunks for faster processing
+        metadataOnly: true, // Only extract metadata, not full file processing
+        quickMode: true, // Use quick mode for faster extraction
         onProgress: (progress) => {
           // Only log significant progress milestones to reduce spam
-          if (progress.progress % 25 === 0 || progress.progress === 100) {
+          if (progress.progress % 50 === 0 || progress.progress === 100) {
             console.log(`📊 VideoMetadataExtractor: ${progress.progress}% - ${progress.text}`);
           }
         },
@@ -88,9 +93,42 @@ export class MkvSubtitleExtractor {
       if (!metadata) {
         // Extract metadata using the new API and cache it
         console.log(`🔄 Extracting metadata (not cached)...`);
-        metadata = await this.extractor.extractMetadata(file);
-        this.cachedMetadata.set(fileKey, metadata);
-        console.log(`💾 Cached metadata for future use`);
+        try {
+          // Temporarily suppress chunk logging during metadata extraction
+          const originalConsoleLog = console.log;
+          console.log = (...args) => {
+            const message = args.join(' ');
+            // Filter out FileProcessor chunk messages
+            if (message.includes('[FileProcessor]') && (
+                message.includes('Completed chunk') || 
+                message.includes('Processing') || 
+                message.includes('Combined') ||
+                message.includes('Creating complete file data')
+            )) {
+              return; // Suppress these messages
+            }
+            originalConsoleLog.apply(console, args);
+          };
+          
+          try {
+            metadata = await Promise.race([
+              this.extractor.extractMetadata(file),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Metadata extraction timeout after 120 seconds')), 120000)
+              )
+            ]);
+          } finally {
+            // Restore original console.log
+            console.log = originalConsoleLog;
+          }
+          
+          this.cachedMetadata.set(fileKey, metadata);
+          console.log(`💾 Cached metadata for future use`);
+          console.log(`📊 Metadata contains ${metadata.streams ? metadata.streams.length : 0} streams`);
+        } catch (error) {
+          console.error(`❌ Metadata extraction failed:`, error.message);
+          throw error;
+        }
       } else {
         console.log(`✅ Using cached metadata (avoiding redundant extraction)`);
       }
@@ -104,6 +142,20 @@ export class MkvSubtitleExtractor {
       }
 
       console.log(`✅ Found ${subtitleStreams.length} subtitle streams`);
+      
+      // Log stream details for debugging
+      console.log(`📊 All streams in metadata: ${metadata.streams.length} total`);
+      metadata.streams.forEach((stream, idx) => {
+        if (idx < 5) { // Log first 5 streams to see the pattern
+          console.log(`📋 Stream ${stream.index}: type=${stream.codec_type}, codec=${stream.codec_name}, lang=${stream.language || 'unknown'}`);
+        }
+      });
+      
+      console.log(`📋 Subtitle streams found:`);
+      subtitleStreams.forEach((stream, idx) => {
+        console.log(`📋 Subtitle ${idx + 1}: index=${stream.index}, codec=${stream.codec_name}, lang=${stream.language || 'unknown'}, forced=${stream.forced || false}`);
+      });
+      
       return subtitleStreams.map((stream) => ({
         id: `${file.name}_stream_${stream.index}`,
         streamIndex: stream.index,
@@ -138,12 +190,41 @@ export class MkvSubtitleExtractor {
     console.log(`🎯 Extracting stream ${streamIndex}...`);
 
     try {
-      // Extract subtitle using the new API
-      const extractionResult = await this.extractor.extractSubtitle(this.currentFile, streamIndex, {
-        format: 'srt',
-        quick: false, // Use full extraction for complete content
-        timeout: 60000 // 60 second timeout
-      });
+      // Try extracting subtitle with different options
+      let extractionResult;
+      
+      try {
+        // First try with SRT format
+        extractionResult = await Promise.race([
+          this.extractor.extractSubtitle(this.currentFile, streamIndex, {
+            format: 'srt',
+            quick: true, // Try quick extraction first
+            timeout: 30000 // 30 second timeout
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Subtitle extraction timeout after 30 seconds for stream ${streamIndex}`)), 30000)
+          )
+        ]);
+      } catch (srtError) {
+        console.warn(`⚠️ SRT extraction failed for stream ${streamIndex}, trying VTT format:`, srtError.message);
+        
+        try {
+          // Fallback to VTT format
+          extractionResult = await Promise.race([
+            this.extractor.extractSubtitle(this.currentFile, streamIndex, {
+              format: 'vtt',
+              quick: true,
+              timeout: 30000
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`VTT extraction timeout after 30 seconds for stream ${streamIndex}`)), 30000)
+            )
+          ]);
+        } catch (vttError) {
+          console.warn(`⚠️ VTT extraction also failed for stream ${streamIndex}:`, vttError.message);
+          throw new Error(`Both SRT and VTT extraction failed: ${srtError.message}`);
+        }
+      }
       
       console.log(`✅ Extracted stream ${streamIndex} (${extractionResult.size} bytes)`);
       
@@ -175,8 +256,15 @@ export class MkvSubtitleExtractor {
       };
 
     } catch (error) {
-      console.error(`❌ Failed to extract stream ${streamIndex}:`, error);
-      throw new Error(`Subtitle extraction failed: ${error.message}`);
+      console.error(`❌ Failed to extract stream ${streamIndex}:`, {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.split('\n')[0],
+        streamIndex,
+        language,
+        originalFileName
+      });
+      throw new Error(`Subtitle extraction failed for stream ${streamIndex}: ${error.message}`);
     }
   }
 
@@ -189,84 +277,25 @@ export class MkvSubtitleExtractor {
   }
 
   /**
-   * Extract all subtitles from a video file using cached metadata for efficiency  
+   * Extract all subtitles from a video file - DISABLED due to performance issues
    */
   async extractSubtitles(videoFile) {
-    console.log(`🎬 Extracting subtitles from: ${videoFile.name}`);
+    console.log(`⚠️ MKV subtitle extraction is currently disabled due to performance issues`);
+    console.log(`📋 Detected ${await this.getSubtitleStreamCount(videoFile.file)} subtitle streams but extraction is skipped`);
+    console.log(`💡 Consider using external tools like mkvextract for efficient subtitle extraction`);
     
-    // Set the current file for extraction
-    this.setCurrentFile(videoFile.file);
-    
+    return [];
+  }
+
+  /**
+   * Get subtitle stream count without full extraction
+   */
+  async getSubtitleStreamCount(file) {
     try {
-      // First, detect subtitle streams (this will use/create cached metadata)
-      const streams = await this.detectSubtitleStreams(videoFile.file);
-      
-      if (streams.length === 0) {
-        console.log(`📝 No subtitle streams found`);
-        return [];
-      }
-
-      console.log(`🎯 Extracting ${streams.length} streams using individual extraction to avoid redundant metadata processing...`);
-      
-      const extractedSubtitles = [];
-      
-      // Extract each stream individually using the cached metadata
-      for (const stream of streams) {
-        try {
-          const extracted = await this.extractSingleStream(
-            stream.id,
-            stream.streamIndex,
-            stream.language,
-            videoFile.name
-          );
-          
-          if (extracted) {
-            extractedSubtitles.push(extracted);
-          }
-        } catch (error) {
-          console.error(`❌ Failed to extract stream ${stream.streamIndex}:`, error.message);
-          // Continue with other streams
-        }
-      }
-
-      console.log(`✅ Extracted ${extractedSubtitles.length} subtitle files`);
-      return extractedSubtitles;
-      
+      const streams = await this.detectSubtitleStreams(file);
+      return streams.length;
     } catch (error) {
-      console.error(`❌ Batch extraction failed, using individual extraction:`, error.message);
-      
-      // Fallback to individual extraction
-      const streams = await this.detectSubtitleStreams(videoFile.file);
-      
-      if (streams.length === 0) {
-        console.log(`📝 No subtitle streams found`);
-        return [];
-      }
-
-      console.log(`🎯 Extracting ${streams.length} streams individually...`);
-      
-      const extractedSubtitles = [];
-      
-      for (const stream of streams) {
-        try {
-          const extracted = await this.extractSingleStream(
-            stream.id,
-            stream.streamIndex,
-            stream.language,
-            videoFile.name
-          );
-          
-          if (extracted) {
-            extractedSubtitles.push(extracted);
-          }
-        } catch (error) {
-          console.error(`❌ Failed to extract stream ${stream.streamIndex}:`, error);
-          // Continue with other streams
-        }
-      }
-
-      console.log(`✅ Extracted ${extractedSubtitles.length} subtitle files`);
-      return extractedSubtitles;
+      return 0;
     }
   }
 
