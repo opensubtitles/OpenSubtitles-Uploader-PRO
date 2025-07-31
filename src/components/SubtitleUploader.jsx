@@ -172,7 +172,8 @@ function SubtitleUploaderInner() {
     defaultLanguage: '', // Default language for all subtitles (empty = auto-detect)
     defaultFps: '', // Default FPS for orphaned subtitles (empty = no default)
     defaultTranslator: '', // Default translator for all subtitles (empty = no default)
-    uploadMovieHashOnly: false // Only update movie hashes, don't upload subtitles (default = false)
+    uploadMovieHashOnly: false, // Only update movie hashes, don't upload subtitles (default = false)
+    extractMkvSubtitles: true // Enable MKV subtitle extraction by default (v1.8.1 API)
   });
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);

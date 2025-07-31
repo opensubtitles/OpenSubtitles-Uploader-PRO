@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKV Subtitle Extraction Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover {
+            border-color: #007cba;
+            background-color: #f0f8ff;
+        }
+        .drop-zone.dragover {
+            border-color: #007cba;
+            background-color: #e6f3ff;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .button {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #005c8a;
+        }
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .progress {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 MKV Subtitle Extraction Test - v1.8.1</h1>
+        <p>This tool tests the MKV subtitle extraction functionality using the latest v1.8.1 API with improved performance (10MB chunks) and native extractAllSubtitles() function.</p>
+        
+        <div class="drop-zone" id="dropZone">
+            <p>📁 Drop an MKV file here or click to select</p>
+            <input type="file" accept=".mkv,.mp4,.avi,.mov" style="display: none;" id="fileInput">
+        </div>
+        
+        <div class="progress" id="progress" style="display: none;">
+            <strong>Status:</strong> <span id="statusText">Ready</span>
+        </div>
+        
+        <div>
+            <button class="button" onclick="testBatchSubtitles()" id="testBtn" disabled>🚀 Test v1.8.1 Native API</button>
+            <button class="button" onclick="testVideoInfo()" id="infoBtn" disabled>📊 Get Video Info</button>
+            <button class="button" onclick="downloadZip()" id="downloadBtn" disabled>📥 Download ZIP</button>
+            <button class="button" onclick="clearResults()">🧹 Clear Results</button>
+            <button class="button" onclick="clearCacheAndReload()" style="background-color: #dc3545;">🗑️ Clear FFmpeg Cache</button>
+        </div>
+        
+        <div class="results" id="results">Ready to test MKV subtitle extraction...</div>
+    </div>
+
+    <script type="module">
+        import { mkvSubtitleExtractor } from './src/services/mkvSubtitleExtractor.js';
+        
+        let currentFile = null;
+        let allSubtitlesData = null;
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        const progress = document.getElementById('progress');
+        const statusText = document.getElementById('statusText');
+        const testBtn = document.getElementById('testBtn');
+        const infoBtn = document.getElementById('infoBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // File selection handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('drop', handleDrop);
+        dropZone.addEventListener('dragenter', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        });
+        
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+        
+        function handleFile(file) {
+            currentFile = file;
+            log(`📁 File selected: ${file.name} (${formatBytes(file.size)})`);
+            updateStatus('File loaded');
+            testBtn.disabled = false;
+            infoBtn.disabled = false;
+            allSubtitlesData = null;
+            downloadBtn.disabled = true;
+        }
+        
+        function updateStatus(status) {
+            statusText.textContent = status;
+            progress.style.display = 'block';
+        }
+        
+        function log(message) {
+            results.textContent += new Date().toLocaleTimeString() + ' - ' + message + '\n';
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Test video info using new v1.8.1 API
+        window.testVideoInfo = async function() {
+            if (!currentFile) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            updateStatus('Getting video info...');
+            log('Testing v1.8.1 getVideoInfo() function...');
+            infoBtn.disabled = true;
+            
+            try {
+                const startTime = performance.now();
+                const videoInfo = await mkvSubtitleExtractor.getVideoInfo(currentFile);
+                const duration = performance.now() - startTime;
+                
+                log(`✅ Video Info Retrieved (${duration.toFixed(2)}ms):`);
+                log(`📊 Duration: ${videoInfo.duration || 'N/A'}`);
+                log(`🎬 Resolution: ${videoInfo.width || 'N/A'}x${videoInfo.height || 'N/A'}`);
+                log(`📺 Format: ${videoInfo.format || 'N/A'}`);
+                log(`🔤 Codec: ${videoInfo.codec || 'N/A'}`);
+                log(`📝 Subtitle Streams: ${videoInfo.subtitleStreams?.length || 'N/A'}`);
+                log('');
+                
+                updateStatus('Video info retrieved');
+                
+            } catch (error) {
+                log(`❌ Video Info Test FAILED: ${error.message}`);
+                updateStatus('Video info failed');
+            } finally {
+                infoBtn.disabled = false;
+            }
+        };
+
+        // Test function based on test-simple.html with v1.8.1 improvements
+        window.testBatchSubtitles = async function() {
+            if (!currentFile) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            updateStatus('Testing v1.8.1 native batch extraction...');
+            log('Starting v1.8.1 native batch subtitle extraction test...');
+            testBtn.disabled = true;
+            
+            try {
+                const startTime = performance.now();
+                log('Calling v1.8.1 native extractAllSubtitles() function...');
+                
+                // This now uses the v1.8.1 native API with 10MB chunk optimization
+                const allSubtitles = await mkvSubtitleExtractor.extractAllSubtitles(currentFile);
+                
+                log('v1.8.1 native extractAllSubtitles() completed successfully');
+                
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                
+                // Store for download
+                allSubtitlesData = allSubtitles;
+                
+                // Display results like test-simple.html
+                const languages = [...new Set(allSubtitles.extractedFiles.map(f => f.language || 'unknown'))];
+                
+                log(`✅ v1.8.1 Native Batch Extraction Test PASSED`);
+                log(`⏱️ Extraction Time: ${duration.toFixed(2)}ms (with 10MB chunk optimization)`);
+                log(`📚 Total Files: ${allSubtitles.extractedFiles.length}`);
+                log(`📦 ZIP Size: ${allSubtitles.zipBlob ? formatBytes(allSubtitles.zipBlob.size) : 'No ZIP created'}`);
+                log(`🔤 Languages: ${languages.join(', ')}`);
+                log(`🚀 Performance: Enhanced with v1.8.1 simplified API`);
+                log('');
+                
+                // Show file details
+                if (allSubtitles.extractedFiles.length > 0) {
+                    log('📋 Extracted Files:');
+                    allSubtitles.extractedFiles.forEach((file, index) => {
+                        log(`  ${index + 1}. ${file.name} (${file.language || 'unknown'}) - ${formatBytes(file.size)}`);
+                    });
+                    log('');
+                    
+                    if (allSubtitles.zipBlob) {
+                        downloadBtn.disabled = false;
+                        log('📥 ZIP file ready for download');
+                    }
+                } else {
+                    log('📝 No subtitle streams found or extraction failed');
+                }
+                
+                updateStatus('Extraction completed');
+                
+            } catch (error) {
+                log(`❌ v1.8.1 Native Batch Extraction Test FAILED`);
+                log(`Error: ${error.message}`);
+                log(`Note: May fall back to legacy implementation if native API fails`);
+                console.error('Extraction error:', error);
+                updateStatus('Extraction failed');
+            } finally {
+                testBtn.disabled = false;
+            }
+        };
+        
+        window.downloadZip = function() {
+            if (allSubtitlesData && allSubtitlesData.zipBlob) {
+                const filename = `${currentFile.name.replace(/\.[^.]+$/, '')}_subtitles.zip`;
+                mkvSubtitleExtractor.downloadSubtitlesZip(allSubtitlesData.zipBlob, filename);
+                log(`📥 Downloaded: ${filename}`);
+            } else {
+                alert('No ZIP file available for download');
+            }
+        };
+        
+        window.clearResults = function() {
+            results.textContent = 'Ready to test MKV subtitle extraction with v1.8.1...';
+            progress.style.display = 'none';
+            allSubtitlesData = null;
+            downloadBtn.disabled = true;
+        };
+        
+        window.clearCacheAndReload = async function() {
+            try {
+                updateStatus('Clearing FFmpeg cache...');
+                await clearFFmpegCache();
+                log('🔄 Reloading page to download fresh FFmpeg files...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } catch (error) {
+                log(`❌ Failed to clear cache: ${error.message}`);
+                log('💡 Try closing all tabs and reloading manually');
+                updateStatus('Cache clear failed');
+            }
+        };
+        
+        // Clear corrupted FFmpeg cache
+        async function clearFFmpegCache() {
+            log('🧹 Clearing corrupted FFmpeg cache...');
+            
+            try {
+                // Clear IndexedDB cache
+                const dbName = 'ffmpeg-wasm-cache';
+                
+                return new Promise((resolve, reject) => {
+                    const deleteRequest = indexedDB.deleteDatabase(dbName);
+                    
+                    deleteRequest.onsuccess = function() {
+                        log('✅ FFmpeg cache cleared successfully');
+                        resolve();
+                    };
+                    
+                    deleteRequest.onerror = function(event) {
+                        log('❌ Error clearing FFmpeg cache: ' + event);
+                        reject(event);
+                    };
+                    
+                    deleteRequest.onblocked = function() {
+                        log('⚠️ Cache deletion blocked - close other tabs and refresh');
+                        reject(new Error('Blocked'));
+                    };
+                });
+                
+            } catch (error) {
+                log('❌ Error during cache cleanup: ' + error.message);
+                throw error;
+            }
+        }
+
+        // Check browser support and FFmpeg cache
+        async function checkBrowserSupport() {
+            const features = {
+                SharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
+                WebAssembly: typeof WebAssembly !== 'undefined',
+                crossOriginIsolated: window.crossOriginIsolated
+            };
+            
+            log('🔍 Browser Support Check:');
+            log(`  SharedArrayBuffer: ${features.SharedArrayBuffer ? '✅' : '❌'}`);
+            log(`  WebAssembly: ${features.WebAssembly ? '✅' : '❌'}`);
+            log(`  Cross-Origin Isolated: ${features.crossOriginIsolated ? '✅' : '❌'}`);
+            
+            if (!features.WebAssembly) {
+                log('⚠️ Warning: WebAssembly not supported, extraction may fail');
+            }
+            if (!features.crossOriginIsolated) {
+                log('ℹ️ Note: Cross-Origin Isolation not enabled, using credentialless mode');
+            }
+            
+            // Check for corrupted FFmpeg cache
+            try {
+                const dbName = 'ffmpeg-wasm-cache';
+                const openRequest = indexedDB.open(dbName);
+                
+                openRequest.onsuccess = function(event) {
+                    const db = event.target.result;
+                    if (db.objectStoreNames.contains('files')) {
+                        const transaction = db.transaction(['files'], 'readonly');
+                        const store = transaction.objectStore('files');
+                        const getAllRequest = store.getAll();
+                        
+                        getAllRequest.onsuccess = function() {
+                            const results = getAllRequest.result;
+                            const corruptedFiles = results.filter(file => 
+                                file.data && file.data.size === 0
+                            );
+                            
+                            if (corruptedFiles.length > 0) {
+                                log(`⚠️ Found ${corruptedFiles.length} corrupted FFmpeg cache files (0MB)`);
+                                log('💡 Use "Clear Cache" button or refresh to fix');
+                            } else {
+                                log('✅ FFmpeg cache appears healthy');
+                            }
+                        };
+                    }
+                };
+                
+                openRequest.onerror = function() {
+                    log('ℹ️ No FFmpeg cache found (first run)');
+                };
+                
+            } catch (error) {
+                log('ℹ️ Could not check FFmpeg cache: ' + error.message);
+            }
+            
+            log('');
+        }
+        
+        // Initialize
+        log('🚀 MKV Subtitle Extraction Test Ready - v1.8.1');
+        log('📋 Drop an MKV file to begin testing the new simplified API');
+        log('🎯 New features: 10MB chunks, native extractAllSubtitles(), getVideoInfo()');
+        log('');
+        checkBrowserSupport();
+    </script>
+</body>
+</html>

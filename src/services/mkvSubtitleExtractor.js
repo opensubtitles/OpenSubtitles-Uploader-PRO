@@ -1,8 +1,22 @@
-import { VideoMetadataExtractor } from '@opensubtitles/video-metadata-extractor';
+import { 
+  VideoMetadataExtractor,
+  extractMetadata, 
+  extractSubtitle, 
+  extractAllSubtitles as extractAllSubtitlesFromPackage, 
+  getVideoInfo,
+  cleanup
+} from '@opensubtitles/video-metadata-extractor';
+import JSZip from 'jszip';
 
 /**
  * Service for extracting subtitles from MKV files using the OpenSubtitles video metadata extractor
- * Now using the official @opensubtitles/video-metadata-extractor package v1.7.2+
+ * Now using the official @opensubtitles/video-metadata-extractor package v1.8.1+
+ * 
+ * v1.8.1 Improvements:
+ * - New simplified API functions (extractMetadata, extractSubtitle, extractAllSubtitles)
+ * - Improved performance with 10MB chunks (reduced from 50MB)
+ * - Better memory management and resource cleanup
+ * - Enhanced support for large files up to 88GB
  */
 export class MkvSubtitleExtractor {
   constructor() {
@@ -31,19 +45,19 @@ export class MkvSubtitleExtractor {
 
   async _doInitialize() {
     try {
-      console.log('🎬 Initializing VideoMetadataExtractor...');
+      console.log('🎬 Initializing VideoMetadataExtractor v1.8.1...');
       
       this.extractor = new VideoMetadataExtractor({
         debug: false, // Disable verbose FFmpeg logging
-        timeout: 30000, // 30 second timeout
+        timeout: 60000, // Increased to 60 second timeout for FFmpeg loading
         logLevel: 'error', // Suppress chunk processing logs
         verbose: false, // Disable verbose output
-        chunkSize: 50 * 1024 * 1024, // 50MB chunks for faster processing
+        chunkSize: 10 * 1024 * 1024, // 10MB chunks (v1.8.1 optimization)
         metadataOnly: true, // Only extract metadata, not full file processing
         quickMode: true, // Use quick mode for faster extraction
         onProgress: (progress) => {
           // Only log significant progress milestones to reduce spam
-          if (progress.progress % 50 === 0 || progress.progress === 100) {
+          if (progress.progress % 25 === 0 || progress.progress === 100) {
             console.log(`📊 VideoMetadataExtractor: ${progress.progress}% - ${progress.text}`);
           }
         },
@@ -52,6 +66,7 @@ export class MkvSubtitleExtractor {
         }
       });
       
+      console.log('⏳ Initializing FFmpeg WebAssembly (this may take a moment)...');
       await this.extractor.initialize();
 
       this.isLoaded = true;
@@ -64,70 +79,96 @@ export class MkvSubtitleExtractor {
   }
 
   /**
-   * Detect subtitle tracks in MKV file (without extracting them)
+   * Detect subtitle tracks in MKV file using v1.8.1 native API (without extracting them)
    * @param {File} file - MKV file to detect subtitles in
    * @returns {Promise<Array>} Array of detected subtitle stream info
    */
   async detectSubtitleStreams(file) {
     const fileExtension = file.name.split('.').pop().toLowerCase();
     
-    // Check supported formats (initialize if needed)
-    await this.initialize();
-    
+    // Check supported formats
     if (!this.getSupportedFormats().includes(fileExtension)) {
       throw new Error(`File format not supported: ${file.name}`);
     }
 
-    console.log(`🎬 Starting video subtitle detection for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    console.log(`🎬 Starting v1.8.1 native subtitle detection for: ${file.name} (${fileSizeMB} MB)`);
+    
+    // Add file validation and debugging
+    console.log(`🔍 File validation:`);
+    console.log(`  - Name: ${file.name}`);
+    console.log(`  - Size: ${file.size} bytes (${fileSizeMB} MB)`);
+    console.log(`  - Type: ${file.type}`);
+    console.log(`  - Last Modified: ${new Date(file.lastModified).toISOString()}`);
+    console.log(`  - File instanceof File: ${file instanceof File}`);
+    console.log(`  - File instanceof Blob: ${file instanceof Blob}`);
+    
+    // No file size restrictions - the v1.8.1 API handles large files properly
+    console.log(`🚀 File size: ${fileSizeMB} MB - proceeding with v1.8.1 native extraction`);
+    if (file.size > 1000 * 1024 * 1024) {
+      console.log(`ℹ️ Large file - using optimized 10MB chunks for better performance`);
+    }
 
     // Store file for later extraction
     this.currentFile = file;
 
     try {
-      console.log(`🔍 Detecting subtitle streams...`);
+      console.log(`🔍 Using v1.8.1 native extractMetadata API...`);
       
       // Check if we already have cached metadata for this file
       const fileKey = `${file.name}_${file.size}_${file.lastModified}`;
       let metadata = this.cachedMetadata.get(fileKey);
       
       if (!metadata) {
-        // Extract metadata using the new API and cache it
-        console.log(`🔄 Extracting metadata (not cached)...`);
+        // Use the v1.8.1 native extractMetadata function directly (no class initialization needed)
+        console.log(`🔄 Extracting metadata using v1.8.1 native API (not cached)...`);
         try {
-          // Temporarily suppress chunk logging during metadata extraction
-          const originalConsoleLog = console.log;
-          console.log = (...args) => {
-            const message = args.join(' ');
-            // Filter out FileProcessor chunk messages
-            if (message.includes('[FileProcessor]') && (
-                message.includes('Completed chunk') || 
-                message.includes('Processing') || 
-                message.includes('Combined') ||
-                message.includes('Creating complete file data')
-            )) {
-              return; // Suppress these messages
-            }
-            originalConsoleLog.apply(console, args);
-          };
+          // Direct call to v1.8.1 native function - this should work without class setup
+          metadata = await Promise.race([
+            extractMetadata(file),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Native metadata extraction timeout after 120 seconds')), 120000)
+            )
+          ]);
           
+          this.cachedMetadata.set(fileKey, metadata);
+          console.log(`💾 Cached v1.8.1 native metadata for future use`);
+          console.log(`📊 Native metadata contains ${metadata.streams ? metadata.streams.length : 0} streams`);
+        } catch (error) {
+          console.error(`❌ v1.8.1 native metadata extraction failed:`, error.message);
+          console.log(`📊 Error details:`, {
+            name: error.name,
+            message: error.message,
+            code: error.code || 'No code',
+            stack: error.stack?.split('\n')[0] || 'No stack'
+          });
+          
+          console.log(`💡 File size: ${fileSizeMB} MB - attempting fallback approach...`);
+          
+          console.log(`🔄 Attempting fallback to class-based approach...`);
+          
+          // Fallback to class-based approach if native API fails
           try {
+            await this.initialize();
             metadata = await Promise.race([
               this.extractor.extractMetadata(file),
               new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Metadata extraction timeout after 120 seconds')), 120000)
+                setTimeout(() => reject(new Error('Fallback metadata extraction timeout after 120 seconds')), 120000)
               )
             ]);
-          } finally {
-            // Restore original console.log
-            console.log = originalConsoleLog;
+            
+            this.cachedMetadata.set(fileKey, metadata);
+            console.log(`💾 Cached fallback metadata for future use`);
+            console.log(`📊 Fallback metadata contains ${metadata.streams ? metadata.streams.length : 0} streams`);
+          } catch (fallbackError) {
+            console.error(`❌ Both native and fallback metadata extraction failed:`, fallbackError.message);
+            console.log(`🔍 Final error analysis for file: ${file.name}`);
+            console.log(`  - File size: ${fileSizeMB} MB`);
+            console.log(`  - Browser: ${navigator.userAgent.split(' ')[0]}`);
+            console.log(`  - Available memory: ${navigator.deviceMemory || 'unknown'} GB`);
+            console.log(`💡 This file may be too large or corrupted for browser-based extraction`);
+            throw new Error(`Subtitle detection failed: ${fallbackError.message}`);
           }
-          
-          this.cachedMetadata.set(fileKey, metadata);
-          console.log(`💾 Cached metadata for future use`);
-          console.log(`📊 Metadata contains ${metadata.streams ? metadata.streams.length : 0} streams`);
-        } catch (error) {
-          console.error(`❌ Metadata extraction failed:`, error.message);
-          throw error;
         }
       } else {
         console.log(`✅ Using cached metadata (avoiding redundant extraction)`);
@@ -182,24 +223,23 @@ export class MkvSubtitleExtractor {
    * @param {string} originalFileName - Original video file name
    * @returns {Promise<Object>} Extracted subtitle file object
    */
-  async extractSingleStream(streamId, streamIndex, language, originalFileName) {
+  async extractSingleStream(_streamId, streamIndex, language, originalFileName) {
     if (!this.currentFile) {
       throw new Error('No video file available for extraction');
     }
 
-    console.log(`🎯 Extracting stream ${streamIndex}...`);
+    console.log(`🎯 Extracting stream ${streamIndex} using v1.8.1 API...`);
 
     try {
-      // Try extracting subtitle with different options
+      // Use the new simplified extractSubtitle API
       let extractionResult;
       
       try {
-        // First try with SRT format
+        // First try with SRT format using the new API
         extractionResult = await Promise.race([
-          this.extractor.extractSubtitle(this.currentFile, streamIndex, {
+          extractSubtitle(this.currentFile, streamIndex, {
             format: 'srt',
-            quick: true, // Try quick extraction first
-            timeout: 30000 // 30 second timeout
+            quick: true // Try quick extraction first
           }),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error(`Subtitle extraction timeout after 30 seconds for stream ${streamIndex}`)), 30000)
@@ -209,12 +249,11 @@ export class MkvSubtitleExtractor {
         console.warn(`⚠️ SRT extraction failed for stream ${streamIndex}, trying VTT format:`, srtError.message);
         
         try {
-          // Fallback to VTT format
+          // Fallback to VTT format using the new API
           extractionResult = await Promise.race([
-            this.extractor.extractSubtitle(this.currentFile, streamIndex, {
+            extractSubtitle(this.currentFile, streamIndex, {
               format: 'vtt',
-              quick: true,
-              timeout: 30000
+              quick: true
             }),
             new Promise((_, reject) => 
               setTimeout(() => reject(new Error(`VTT extraction timeout after 30 seconds for stream ${streamIndex}`)), 30000)
@@ -277,14 +316,235 @@ export class MkvSubtitleExtractor {
   }
 
   /**
-   * Extract all subtitles from a video file - DISABLED due to performance issues
+   * Extract all subtitles from a video file
+   * @param {Object} videoFile - Video file object with file property
+   * @returns {Promise<Array>} Array of extracted subtitle files
    */
   async extractSubtitles(videoFile) {
-    console.log(`⚠️ MKV subtitle extraction is currently disabled due to performance issues`);
-    console.log(`📋 Detected ${await this.getSubtitleStreamCount(videoFile.file)} subtitle streams but extraction is skipped`);
-    console.log(`💡 Consider using external tools like mkvextract for efficient subtitle extraction`);
+    console.log(`🎬 Starting batch subtitle extraction for: ${videoFile.file.name}`);
     
-    return [];
+    try {
+      // First detect all subtitle streams
+      const subtitleStreams = await this.detectSubtitleStreams(videoFile.file);
+      
+      if (subtitleStreams.length === 0) {
+        console.log('📝 No subtitle streams found in video file');
+        return [];
+      }
+      
+      console.log(`🎯 Extracting ${subtitleStreams.length} subtitle streams...`);
+      
+      const extractedSubtitles = [];
+      
+      // Extract each subtitle stream
+      for (let i = 0; i < subtitleStreams.length; i++) {
+        const stream = subtitleStreams[i];
+        console.log(`🔄 Extracting stream ${i + 1}/${subtitleStreams.length}: ${stream.title}`);
+        
+        try {
+          const extractedSubtitle = await this.extractSingleStream(
+            stream.id,
+            stream.streamIndex, 
+            stream.language,
+            stream.originalFileName
+          );
+          
+          if (extractedSubtitle) {
+            extractedSubtitles.push(extractedSubtitle);
+            console.log(`✅ Successfully extracted: ${extractedSubtitle.name}`);
+          } else {
+            console.warn(`⚠️ Skipped empty subtitle stream ${stream.streamIndex}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to extract stream ${stream.streamIndex}:`, error.message);
+          // Continue with other streams instead of failing completely
+        }
+      }
+      
+      console.log(`🎉 Batch extraction completed: ${extractedSubtitles.length}/${subtitleStreams.length} subtitles extracted`);
+      return extractedSubtitles;
+      
+    } catch (error) {
+      console.error('❌ Batch subtitle extraction failed:', error);
+      throw new Error(`Batch subtitle extraction failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Extract all subtitles from a video file using the new v1.8.1 native API
+   * @param {File} file - Video file to extract subtitles from
+   * @returns {Promise<Object>} Object with extractedFiles array and zipBlob
+   */
+  async extractAllSubtitles(file) {
+    console.log(`🎬 Starting extractAllSubtitles for: ${file.name} using v1.8.1 native API`);
+    
+    try {
+      // Use the new native extractAllSubtitles function from the package
+      console.log(`🚀 Trying native extractAllSubtitles() from package v1.8.1...`);
+      
+      const startTime = performance.now();
+      const nativeResult = await Promise.race([
+        extractAllSubtitlesFromPackage(file),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Native extraction timeout after 180 seconds')), 180000)
+        )
+      ]);
+      
+      const duration = performance.now() - startTime;
+      console.log(`⏱️ Native extraction completed in ${duration.toFixed(2)}ms`);
+      
+      // Check if native result has the expected format and data
+      if (nativeResult && 
+          nativeResult.extractedFiles && 
+          Array.isArray(nativeResult.extractedFiles) &&
+          nativeResult.extractedFiles.length > 0) {
+        
+        console.log(`✅ Native extraction successful:`);
+        console.log(`📚 Total Files: ${nativeResult.extractedFiles.length}`);
+        console.log(`📦 ZIP Size: ${nativeResult.zipBlob ? nativeResult.zipBlob.size + ' bytes' : 'No ZIP'}`);
+        
+        // Log extracted files
+        nativeResult.extractedFiles.forEach((file, index) => {
+          console.log(`  ${index + 1}. ${file.name} (${file.language || 'unknown'}) - ${file.size} bytes`);
+        });
+        
+        return nativeResult;
+      } else {
+        console.warn('⚠️ Native extraction returned no results or unexpected format, falling back to legacy implementation');
+        console.log('Native result:', nativeResult);
+        return await this.extractAllSubtitlesLegacy(file);
+      }
+      
+    } catch (error) {
+      console.error('❌ Native extractAllSubtitles failed, falling back to legacy implementation:', error.message);
+      return await this.extractAllSubtitlesLegacy(file);
+    }
+  }
+
+  /**
+   * Legacy implementation of extractAllSubtitles (fallback)
+   * @param {File} file - Video file to extract subtitles from
+   * @returns {Promise<Object>} Object with extractedFiles array and zipBlob
+   */
+  async extractAllSubtitlesLegacy(file) {
+    console.log(`🔄 Using legacy extractAllSubtitles implementation for: ${file.name}`);
+    
+    try {
+      // Set current file for extraction
+      this.setCurrentFile(file);
+      
+      // First detect all subtitle streams (this will handle initialization if needed)
+      const subtitleStreams = await this.detectSubtitleStreams(file);
+      
+      if (subtitleStreams.length === 0) {
+        console.log('📝 No subtitle streams found');
+        return {
+          extractedFiles: [],
+          zipBlob: null
+        };
+      }
+      
+      console.log(`🎯 Extracting all ${subtitleStreams.length} subtitle streams using legacy method...`);
+      
+      const extractedFiles = [];
+      
+      // Extract each subtitle stream
+      for (let i = 0; i < subtitleStreams.length; i++) {
+        const stream = subtitleStreams[i];
+        console.log(`🔄 Extracting stream ${i + 1}/${subtitleStreams.length}: ${stream.title}`);
+        
+        try {
+          const extractedSubtitle = await this.extractSingleStream(
+            stream.id,
+            stream.streamIndex, 
+            stream.language,
+            stream.originalFileName
+          );
+          
+          if (extractedSubtitle && extractedSubtitle.file) {
+            extractedFiles.push({
+              file: extractedSubtitle.file,
+              name: extractedSubtitle.name,
+              language: extractedSubtitle.language || 'unknown',
+              streamIndex: extractedSubtitle.streamIndex,
+              size: extractedSubtitle.file.size,
+              extractedFrom: extractedSubtitle.extractedFrom,
+              preview: extractedSubtitle.preview
+            });
+            console.log(`✅ Successfully extracted: ${extractedSubtitle.name} (${extractedSubtitle.file.size} bytes)`);
+          } else {
+            console.warn(`⚠️ Skipped empty subtitle stream ${stream.streamIndex}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to extract stream ${stream.streamIndex}:`, error.message);
+          // Continue with other streams instead of failing completely
+        }
+      }
+      
+      console.log(`🎉 Legacy batch extraction completed: ${extractedFiles.length}/${subtitleStreams.length} subtitles extracted`);
+      
+      // Create ZIP blob if we have extracted files
+      let zipBlob = null;
+      if (extractedFiles.length > 0) {
+        try {
+          zipBlob = await this.createZipFromSubtitles(extractedFiles);
+          console.log(`📦 Created ZIP archive: ${zipBlob.size} bytes`);
+        } catch (zipError) {
+          console.warn(`⚠️ Failed to create ZIP archive:`, zipError.message);
+          // Don't fail the whole operation if ZIP creation fails
+        }
+      }
+      
+      return {
+        extractedFiles,
+        zipBlob
+      };
+      
+    } catch (error) {
+      console.error('❌ Legacy extractAllSubtitles failed:', error);
+      throw new Error(`Legacy extract all subtitles failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create a ZIP archive from extracted subtitle files
+   * @param {Array} extractedFiles - Array of extracted subtitle file objects
+   * @returns {Promise<Blob>} ZIP file as Blob
+   */
+  async createZipFromSubtitles(extractedFiles) {
+    console.log(`📦 Creating ZIP archive from ${extractedFiles.length} subtitle files...`);
+    
+    try {
+      const zip = new JSZip();
+      
+      // Add each subtitle file to the ZIP
+      for (const subtitleFile of extractedFiles) {
+        if (subtitleFile.file && subtitleFile.name) {
+          // Read file contents
+          const fileContent = await subtitleFile.file.arrayBuffer();
+          
+          // Add to ZIP with the subtitle filename
+          zip.file(subtitleFile.name, fileContent);
+          console.log(`📁 Added to ZIP: ${subtitleFile.name} (${subtitleFile.size} bytes)`);
+        }
+      }
+      
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+          level: 6 // Good balance between size and speed
+        }
+      });
+      
+      console.log(`✅ ZIP archive created: ${zipBlob.size} bytes`);
+      return zipBlob;
+      
+    } catch (error) {
+      console.error('❌ Failed to create ZIP archive:', error);
+      throw new Error(`ZIP creation failed: ${error.message}`);
+    }
   }
 
   /**
@@ -320,28 +580,82 @@ export class MkvSubtitleExtractor {
   }
 
   /**
+   * Get video information using the new v1.8.1 getVideoInfo API
+   * @param {File} file - Video file to get info for
+   * @returns {Promise<Object>} Video information object
+   */
+  async getVideoInfo(file) {
+    try {
+      console.log(`📊 Getting video info for: ${file.name} using v1.8.1 API`);
+      const videoInfo = await getVideoInfo(file);
+      console.log(`✅ Video info retrieved:`, videoInfo);
+      return videoInfo;
+    } catch (error) {
+      console.error(`❌ Failed to get video info:`, error.message);
+      throw new Error(`Get video info failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Get supported file formats from the extractor
    */
   getSupportedFormats() {
     if (this.extractor) {
       return this.extractor.getSupportedFormats();
     }
-    // Default supported formats if extractor not initialized
-    return ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'webm', 'ogv', '3gp', 'flv'];
+    // Enhanced supported formats with v1.8.1 improvements
+    return ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'webm', 'ogv', '3gp', 'flv', 'ts', 'mts', 'm2ts'];
+  }
+
+  /**
+   * Download extracted subtitles as ZIP file (for testing/user convenience)
+   * @param {Blob} zipBlob - ZIP blob to download
+   * @param {string} filename - Name for the downloaded file
+   */
+  downloadSubtitlesZip(zipBlob, filename = 'extracted_subtitles.zip') {
+    if (!zipBlob) {
+      console.warn('⚠️ No ZIP blob to download');
+      return;
+    }
+    
+    try {
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log(`📥 Downloaded: ${filename} (${zipBlob.size} bytes)`);
+    } catch (error) {
+      console.error('❌ Failed to download ZIP:', error);
+    }
   }
 
   /**
    * Terminate the extractor and clean up resources
    */
   async terminate() {
+    try {
+      // Use the new cleanup function from v1.8.1 API
+      await cleanup();
+      console.log('✅ v1.8.1 API cleanup completed');
+    } catch (error) {
+      console.error('❌ Error during v1.8.1 API cleanup:', error.message);
+    }
+    
+    // Legacy extractor cleanup (if still exists)
     if (this.extractor) {
       try {
         await this.extractor.terminate();
-        console.log('✅ VideoMetadataExtractor terminated');
+        console.log('✅ Legacy VideoMetadataExtractor terminated');
       } catch (error) {
-        console.error('❌ Error terminating VideoMetadataExtractor:', error.message);
+        console.error('❌ Error terminating legacy VideoMetadataExtractor:', error.message);
       }
     }
+    
+    // Clear internal state
     this.extractor = null;
     this.isLoaded = false;
     this.loadingPromise = null;

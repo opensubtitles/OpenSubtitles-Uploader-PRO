@@ -37,14 +37,24 @@ export default defineConfig({
     plugins: () => [react()]
   },
   
-  // Optimize dependencies for FFmpeg, archive-wasm, and Tauri
+  // Optimize dependencies for FFmpeg, video metadata extractor, and Tauri
   optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util', 'archive-wasm']
+    exclude: [
+      '@ffmpeg/ffmpeg', 
+      '@ffmpeg/util', 
+      'archive-wasm',
+      '@opensubtitles/video-metadata-extractor'
+    ],
+    include: [
+      'jszip'
+    ]
   },
   build: {
     sourcemap: false,
     target: 'esnext', // Support top-level await
     format: 'es',
+    // Support for WebAssembly files
+    assetsInclude: ['**/*.wasm'],
     rollupOptions: {
       output: {
         manualChunks: {
@@ -106,8 +116,10 @@ export default defineConfig({
     port: 1420,
     allowedHosts: ['uploader.opensubtitles.org'],
     headers: {
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Opener-Policy': 'same-origin'
+      // Headers needed for FFmpeg WebAssembly support
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Resource-Policy': 'cross-origin'
     }
   },
   // Tauri expects a fixed port, and vite server will fail if the port is not available
