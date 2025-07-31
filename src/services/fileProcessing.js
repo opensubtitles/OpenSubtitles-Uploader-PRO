@@ -277,9 +277,26 @@ export class FileProcessingService {
    * @param {Function} onFileUpdate - Callback to update file status
    * @param {Function} onSubtitleExtracted - Callback when subtitle is extracted
    * @param {Function} addDebugInfo - Callback to add debug messages to UI
+   * @param {Object} config - Configuration object with extractMkvSubtitles setting
    */
-  static async processMkvExtractions(files, onFileUpdate, onSubtitleExtracted, addDebugInfo = null) {
+  static async processMkvExtractions(files, onFileUpdate, onSubtitleExtracted, addDebugInfo = null, config = {}) {
+    // Check if MKV extraction is enabled in configuration
+    if (!config.extractMkvSubtitles) {
+      console.log(`⚠️ MKV subtitle extraction is disabled in configuration - skipping MKV processing`);
+      if (addDebugInfo) {
+        addDebugInfo(`⚠️ MKV subtitle extraction disabled in settings - skipping MKV files`);
+      }
+      return;
+    }
+    
     const mkvFiles = files.filter(file => file.hasMkvSubtitleExtraction);
+    
+    if (mkvFiles.length === 0) {
+      console.log(`📝 No MKV files found for extraction`);
+      return;
+    }
+    
+    console.log(`🎬 Processing ${mkvFiles.length} MKV file(s) for subtitle extraction (enabled in config)`);
     
     for (const mkvFile of mkvFiles) {
       try {
@@ -287,15 +304,16 @@ export class FileProcessingService {
         onFileUpdate(mkvFile.fullPath, { mkvExtractionStatus: 'detecting' });
         
         console.log(`🎯 Starting MKV subtitle extraction for: ${mkvFile.name} using v1.8.1 native API`);
-        console.log(`🚀 Using the same approach as the working test-mkv-extraction.html`);
+        console.log(`🚀 Using direct extractAllSubtitles() - no separate metadata detection to avoid double file read`);
         
-        // Use the exact same approach as the working test page
+        // Use direct extractAllSubtitles to avoid reading the file twice
+        // This function handles both detection and extraction in a single pass
         let extractionResult;
         try {
           const startTime = performance.now();
-          console.log(`🔄 Calling v1.8.1 native extractAllSubtitles() function...`);
+          console.log(`🔄 Calling v1.8.1 native extractAllSubtitles() function (single file read)...`);
           
-          // This is the exact same call that works in the test page
+          // Direct call - this reads the file once and extracts everything
           extractionResult = await mkvSubtitleExtractor.extractAllSubtitles(mkvFile.file);
           
           const duration = performance.now() - startTime;
@@ -404,14 +422,26 @@ export class FileProcessingService {
               // Extract filename from different API structures
               let originalName = extractedFileData.filename || extractedFileData.name || subtitleFile.name || `stream_${extractedCount}.srt`;
               
-              // Handle multiple subtitles with same language by adding a suffix
+              // Get stream index for better naming
+              const streamIndex = extractedFileData.streamIndex || subtitleFile.streamIndex || extractedCount;
+              
+              // Handle multiple subtitles with same language by using track/stream index
               if (!languageCounts[langCode]) {
                 languageCounts[langCode] = 0;
               }
               languageCounts[langCode]++;
               
-              const langSuffix = languageCounts[langCode] === 1 ? langCode : `${langCode}_${languageCounts[langCode]}`;
-              const subtitleName = `${mkvBaseName}.${langSuffix}.srt`;
+              // Use stream index for disambiguation instead of simple numbering
+              let subtitleName;
+              if (languageCounts[langCode] === 1) {
+                // First subtitle with this language - no suffix needed
+                subtitleName = `${mkvBaseName}.${langCode}.srt`;
+              } else {
+                // Multiple subtitles with same language - use track index for clarity
+                subtitleName = `${mkvBaseName}.track${streamIndex}.${langCode}.srt`;
+              }
+              
+              console.log(`📝 Generated subtitle name: ${subtitleName} (stream ${streamIndex}, language ${langCode})`);
               
               const basePath = mkvFile.fullPath.includes('/') ? 
                 mkvFile.fullPath.substring(0, mkvFile.fullPath.lastIndexOf('/') + 1) : '';

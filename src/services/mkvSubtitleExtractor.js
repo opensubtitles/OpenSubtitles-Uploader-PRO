@@ -379,8 +379,8 @@ export class MkvSubtitleExtractor {
     console.log(`🎬 Starting extractAllSubtitles for: ${file.name} using v1.8.1 native API`);
     
     try {
-      // Use the new native extractAllSubtitles function from the package
-      console.log(`🚀 Trying native extractAllSubtitles() from package v1.8.1...`);
+      // Try the native extractAllSubtitles function first (single-pass)
+      console.log(`🚀 Trying native extractAllSubtitles() from package v1.8.1 (single file read)...`);
       
       const startTime = performance.now();
       const nativeResult = await Promise.race([
@@ -399,26 +399,124 @@ export class MkvSubtitleExtractor {
           Array.isArray(nativeResult.extractedFiles) &&
           nativeResult.extractedFiles.length > 0) {
         
-        console.log(`✅ Native extraction successful:`);
-        console.log(`📚 Total Files: ${nativeResult.extractedFiles.length}`);
-        console.log(`📦 ZIP Size: ${nativeResult.zipBlob ? nativeResult.zipBlob.size + ' bytes' : 'No ZIP'}`);
-        
-        // Log extracted files
-        nativeResult.extractedFiles.forEach((file, index) => {
-          console.log(`  ${index + 1}. ${file.name} (${file.language || 'unknown'}) - ${file.size} bytes`);
-        });
+        console.log(`✅ Native extraction successful (${nativeResult.extractedFiles.length} files)`);
         
         return nativeResult;
       } else {
-        console.warn('⚠️ Native extraction returned no results or unexpected format, falling back to legacy implementation');
-        console.log('Native result:', nativeResult);
-        return await this.extractAllSubtitlesLegacy(file);
+        console.warn('⚠️ Native extraction returned no results, trying optimized metadata-cached approach');
+        return await this.extractAllSubtitlesOptimized(file);
       }
       
     } catch (error) {
-      console.error('❌ Native extractAllSubtitles failed, falling back to legacy implementation:', error.message);
+      console.error('❌ Native extractAllSubtitles failed, trying optimized metadata-cached approach:', error.message);
+      return await this.extractAllSubtitlesOptimized(file);
+    }
+  }
+
+  /**
+   * Optimized extraction using cached metadata to avoid double file reads
+   * @param {File} file - Video file to extract subtitles from
+   * @returns {Promise<Object>} Object with extractedFiles array and zipBlob
+   */
+  async extractAllSubtitlesOptimized(file) {
+    console.log(`🔄 Using optimized extraction with metadata caching for: ${file.name}`);
+    
+    try {
+      // Step 1: Extract metadata once (reads ~10MB)
+      const fileKey = `${file.name}_${file.size}_${file.lastModified}`;
+      let metadata = this.cachedMetadata.get(fileKey);
+      
+      if (!metadata) {
+        console.log(`📊 Extracting metadata (cached approach)...`);
+        metadata = await extractMetadata(file);
+        this.cachedMetadata.set(fileKey, metadata);
+        console.log(`💾 Cached metadata for ${metadata.streams ? metadata.streams.length : 0} streams`);
+      } else {
+        console.log(`✅ Using cached metadata (${metadata.streams ? metadata.streams.length : 0} streams)`);
+      }
+      
+      // Step 2: Find subtitle streams
+      const subtitleStreams = metadata.streams.filter(stream => stream.codec_type === 'subtitle');
+      
+      if (subtitleStreams.length === 0) {
+        console.log('📝 No subtitle streams found');
+        return { extractedFiles: [], zipBlob: null };
+      }
+      
+      console.log(`🎯 Found ${subtitleStreams.length} subtitle streams, extracting using cached metadata...`);
+      
+      // Step 3: Extract each subtitle stream efficiently
+      const extractedFiles = [];
+      
+      for (let i = 0; i < subtitleStreams.length; i++) {
+        const stream = subtitleStreams[i];
+        console.log(`🔄 Extracting stream ${i + 1}/${subtitleStreams.length}: ${stream.codec_name} (${stream.language || 'unknown'})`);
+        
+        try {
+          // Use the granular extractSubtitle API which should reuse metadata
+          const subtitleData = await extractSubtitle(file, stream.index, {
+            format: 'srt',
+            quick: true
+          });
+          
+          if (subtitleData && subtitleData.data && subtitleData.data.length > 0) {
+            const fileName = `video.${stream.language || 'unknown'}.${stream.index}.srt`;
+            
+            extractedFiles.push({
+              filename: fileName,
+              data: subtitleData.data,
+              size: subtitleData.data.length,
+              language: stream.language || 'unknown',
+              forced: stream.forced || false,
+              streamIndex: stream.index
+            });
+            
+            console.log(`✅ Extracted ${fileName} (${subtitleData.data.length} bytes)`);
+          }
+        } catch (streamError) {
+          console.warn(`⚠️ Failed to extract stream ${stream.index}: ${streamError.message}`);
+          // Continue with other streams
+        }
+      }
+      
+      console.log(`🎉 Optimized extraction completed: ${extractedFiles.length}/${subtitleStreams.length} subtitles`);
+      
+      // Create ZIP if we have files
+      let zipBlob = null;
+      if (extractedFiles.length > 0) {
+        try {
+          zipBlob = await this.createZipFromExtractedFiles(extractedFiles);
+        } catch (zipError) {
+          console.warn('⚠️ ZIP creation failed:', zipError.message);
+        }
+      }
+      
+      return { extractedFiles, zipBlob };
+      
+    } catch (error) {
+      console.error('❌ Optimized extraction failed, falling back to legacy:', error.message);
       return await this.extractAllSubtitlesLegacy(file);
     }
+  }
+
+  /**
+   * Create ZIP from extracted files (optimized format)
+   */
+  async createZipFromExtractedFiles(extractedFiles) {
+    const zip = new JSZip();
+    
+    for (const file of extractedFiles) {
+      zip.file(file.filename, file.data);
+    }
+    
+    const zipBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+    
+    console.log(`📦 Created ZIP: ${zipBlob.size} bytes`);
+    return zipBlob;
   }
 
   /**

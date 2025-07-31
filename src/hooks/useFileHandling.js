@@ -116,7 +116,9 @@ export const useFileHandling = (addDebugInfo, config = {}) => {
                 addDebugInfo(`Auto-extracted and paired: ${subtitleFile.name} (${subtitleFile.language}) from ${subtitleFile.originalMkvFile}`);
               },
               // addDebugInfo callback
-              addDebugInfo
+              addDebugInfo,
+              // config parameter
+              config
             ).then(() => {
               addDebugInfo(`🎉 MKV processing completed successfully`);
             }).catch(error => {

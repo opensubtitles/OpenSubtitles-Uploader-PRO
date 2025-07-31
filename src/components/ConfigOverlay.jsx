@@ -612,7 +612,7 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={localConfig.extractMkvSubtitles === true} // Default to false if not set
+                  checked={localConfig.extractMkvSubtitles === true} // Default to true, persists to localStorage
                   onChange={(e) => handleChange('extractMkvSubtitles', e.target.checked)}
                   className="sr-only peer"
                 />

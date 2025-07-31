@@ -165,8 +165,8 @@ function SubtitleUploaderInner() {
     skipped: 0
   });
   
-  // Config state
-  const [config, setConfig] = useState({
+  // Default config values
+  const defaultConfig = {
     uploadOptionsExpanded: false, // Default to collapsed (current behavior)
     globalComment: '', // Global comment for all subtitles
     defaultLanguage: '', // Default language for all subtitles (empty = auto-detect)
@@ -174,6 +174,21 @@ function SubtitleUploaderInner() {
     defaultTranslator: '', // Default translator for all subtitles (empty = no default)
     uploadMovieHashOnly: false, // Only update movie hashes, don't upload subtitles (default = false)
     extractMkvSubtitles: true // Enable MKV subtitle extraction by default (v1.8.1 API)
+  };
+
+  // Config state - initialize with defaults and immediately load from localStorage
+  const [config, setConfig] = useState(() => {
+    // Try to load config from localStorage during initialization
+    try {
+      const savedConfig = localStorage.getItem('opensubtitles-uploader-config');
+      if (savedConfig) {
+        const parsedConfig = JSON.parse(savedConfig);
+        return { ...defaultConfig, ...parsedConfig };
+      }
+    } catch (error) {
+      console.error('Error loading config during initialization:', error);
+    }
+    return defaultConfig;
   });
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -181,21 +196,10 @@ function SubtitleUploaderInner() {
   
   
 
-  // Initialize session security and load config from localStorage on mount
+  // Initialize session security on mount
   useEffect(() => {
-    // First, handle session ID security
+    // Handle session ID security
     SessionManager.initializeSession();
-    
-    // Then load config
-    try {
-      const savedConfig = localStorage.getItem('opensubtitles-uploader-config');
-      if (savedConfig) {
-        const parsedConfig = JSON.parse(savedConfig);
-        setConfig(prev => ({ ...prev, ...parsedConfig }));
-      }
-    } catch (error) {
-      console.error('Error loading config from localStorage:', error);
-    }
 
     // Start auto-updates if running as standalone app
     if (isStandalone) {
@@ -1101,7 +1105,9 @@ function SubtitleUploaderInner() {
                     addDebugInfo(`Auto-extracted and paired: ${subtitleFile.name} (${subtitleFile.language}) from ${subtitleFile.originalMkvFile}`);
                   },
                   // addDebugInfo callback
-                  addDebugInfo
+                  addDebugInfo,
+                  // config parameter
+                  config
                 );
               } catch (error) {
                 console.error('MKV processing failed:', error);
