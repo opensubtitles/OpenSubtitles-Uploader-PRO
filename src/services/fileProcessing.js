@@ -353,22 +353,10 @@ export class FileProcessingService {
             addDebugInfo(`🎯 Processing ${extractionResult.extractedFiles.length} extracted files...`);
           }
           
-          // Debug: Log the actual structure of extractedFiles to understand v1.8.1 API format
-          console.log(`🔍 DEBUG: First extracted file structure:`, extractionResult.extractedFiles[0]);
-          console.log(`🔍 DEBUG: Extracted file keys:`, Object.keys(extractionResult.extractedFiles[0] || {}));
           
           extractedCount = 0; // Reset counter (already declared above)
           
           for (const extractedFileData of extractionResult.extractedFiles) {
-            console.log(`🔍 DEBUG: Processing extractedFileData:`, {
-              hasFile: !!extractedFileData.file,
-              hasName: !!extractedFileData.name,
-              hasFilename: !!extractedFileData.filename,
-              hasSize: !!extractedFileData.size,
-              hasLanguage: !!extractedFileData.language,
-              hasData: !!extractedFileData.data,
-              keys: Object.keys(extractedFileData || {})
-            });
 
             // Handle different v1.8.1 API structures - file might be nested or direct
             let subtitleFile = null;

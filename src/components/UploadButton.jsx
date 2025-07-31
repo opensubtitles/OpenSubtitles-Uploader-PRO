@@ -57,10 +57,6 @@ export const UploadButton = ({
     enabledOrphanedSubtitles.forEach(subtitle => {
       const subtitleName = subtitle.name || subtitle.fullPath.split('/').pop();
       
-      // DEBUG: Log orphaned subtitle validation details
-      console.log(`🔍 DEBUG: Validating orphaned subtitle: ${subtitleName}`);
-      console.log(`   - Full path: ${subtitle.fullPath}`);
-      console.log(`   - Is enabled: ${getUploadEnabled(subtitle.fullPath)}`);
       
       // Helper function to create clickable error for orphaned subtitles
       const createClickableError = (message, subtitlePath) => {

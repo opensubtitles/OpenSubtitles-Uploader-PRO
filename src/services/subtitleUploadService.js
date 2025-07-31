@@ -572,16 +572,6 @@ export class SubtitleUploadService {
       // Get subtitle-specific upload options
       const subtitleOptions = uploadOptions?.[subtitle.fullPath] || {};
       
-      // DEBUG: Log upload options to verify they are being passed through
-      addDebugInfo(`🔍 DEBUG Upload Options for ${subtitle.name}:`);
-      addDebugInfo(`   - uploadOptions object keys: ${Object.keys(uploadOptions || {}).join(', ')}`);
-      addDebugInfo(`   - subtitle path: ${subtitle.fullPath}`);
-      addDebugInfo(`   - subtitleOptions: ${JSON.stringify(subtitleOptions, null, 2)}`);
-      if (subtitleOptions.movieaka) addDebugInfo(`   - movieaka: "${subtitleOptions.movieaka}"`);
-      if (subtitleOptions.moviereleasename) addDebugInfo(`   - moviereleasename: "${subtitleOptions.moviereleasename}"`);
-      if (subtitleOptions.subauthorcomment) addDebugInfo(`   - subauthorcomment: "${subtitleOptions.subauthorcomment}"`);
-      if (subtitleOptions.subtranslator) addDebugInfo(`   - subtranslator: "${subtitleOptions.subtranslator}"`);
-      
       // Auto-detect features from video and subtitle paths
       const videoFeatures = this.detectFeaturesFromPath(video.fullPath, addDebugInfo);
       const subtitleFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
@@ -787,16 +777,6 @@ export class SubtitleUploadService {
       
       // Get subtitle-specific upload options
       const subtitleOptions = uploadOptions?.[subtitle.fullPath] || {};
-      
-      // DEBUG: Log upload options to verify they are being passed through
-      addDebugInfo(`🔍 DEBUG Upload Options for ${subtitle.name}:`);
-      addDebugInfo(`   - uploadOptions object keys: ${Object.keys(uploadOptions || {}).join(', ')}`);
-      addDebugInfo(`   - subtitle path: ${subtitle.fullPath}`);
-      addDebugInfo(`   - subtitleOptions: ${JSON.stringify(subtitleOptions, null, 2)}`);
-      if (subtitleOptions.movieaka) addDebugInfo(`   - movieaka: "${subtitleOptions.movieaka}"`);
-      if (subtitleOptions.moviereleasename) addDebugInfo(`   - moviereleasename: "${subtitleOptions.moviereleasename}"`);
-      if (subtitleOptions.subauthorcomment) addDebugInfo(`   - subauthorcomment: "${subtitleOptions.subauthorcomment}"`);
-      if (subtitleOptions.subtranslator) addDebugInfo(`   - subtranslator: "${subtitleOptions.subtranslator}"`);
       
       // Auto-detect features from subtitle path for orphaned subtitles
       const autoDetectedFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
