@@ -346,6 +346,81 @@ export const MatchedPairs = ({
                       isMetadataLoading={isMetadataLoading}
                       getMetadataError={getMetadataError}
                     />
+                    
+                    {/* MKV Extraction Status */}
+                    {pair.video.hasMkvSubtitleExtraction && pair.video.mkvExtractionStatus && (
+                      <span>
+                        {pair.video.mkvExtractionStatus === 'pending' && (
+                          <span 
+                            className="px-2 py-1 text-xs rounded font-medium flex items-center gap-1"
+                            style={{
+                              backgroundColor: themeColors.warning + '20' || '#ffc10720',
+                              color: themeColors.warning || '#ffc107'
+                            }}
+                            title="MKV subtitle extraction will start..."
+                          >
+                            ⏳ MKV Pending
+                          </span>
+                        )}
+                        {(pair.video.mkvExtractionStatus === 'detecting' || pair.video.mkvExtractionStatus === 'extracting' || pair.video.mkvExtractionStatus === 'extracting_all') && (
+                          <span 
+                            className="px-2 py-1 text-xs rounded font-medium flex items-center gap-1"
+                            style={{
+                              backgroundColor: themeColors.link + '20' || '#2878C020',
+                              color: themeColors.link || '#2878C0'
+                            }}
+                            title={
+                              pair.video.mkvExtractionStatus === 'detecting' 
+                                ? "Detecting embedded subtitles in MKV..." 
+                                : pair.video.mkvExtractionStatus === 'extracting_all' 
+                                  ? `Extracting ${pair.video.extractedCount || 0}/${pair.video.streamCount || 0} subtitles from MKV...`
+                                  : "Extracting embedded subtitles from MKV..."
+                            }
+                          >
+                            <div className="w-3 h-3 border border-blue-300 border-t-transparent rounded-full animate-spin"></div>
+                            {pair.video.mkvExtractionStatus === 'detecting' && 'Detecting...'}
+                            {pair.video.mkvExtractionStatus === 'extracting_all' && `Extracting ${pair.video.extractedCount || 0}/${pair.video.streamCount || 0}`}
+                            {pair.video.mkvExtractionStatus === 'extracting' && 'Extracting...'}
+                          </span>
+                        )}
+                        {pair.video.mkvExtractionStatus === 'completed' && (
+                          <span 
+                            className="px-2 py-1 text-xs rounded font-medium"
+                            style={{
+                              backgroundColor: themeColors.success + '20' || '#9EC06820',
+                              color: themeColors.success || '#9EC068'
+                            }}
+                            title={`Extracted ${pair.video.extractedCount || 0}/${pair.video.streamCount || 0} subtitle(s) from MKV`}
+                          >
+                            ✅ {pair.video.extractedCount || 0}/{pair.video.streamCount || 0} Extracted
+                          </span>
+                        )}
+                        {(pair.video.mkvExtractionStatus === 'no_subtitles' || pair.video.mkvExtractionStatus === 'no_streams') && (
+                          <span 
+                            className="px-2 py-1 text-xs rounded font-medium"
+                            style={{
+                              backgroundColor: themeColors.textMuted + '20' || '#80808020',
+                              color: themeColors.textMuted || '#808080'
+                            }}
+                            title="No embedded subtitles found in MKV"
+                          >
+                            📝 No Subtitles
+                          </span>
+                        )}
+                        {pair.video.mkvExtractionStatus === 'error' && (
+                          <span 
+                            className="px-2 py-1 text-xs rounded font-medium"
+                            style={{
+                              backgroundColor: themeColors.error + '20' || '#dc354520',
+                              color: themeColors.error || '#dc3545'
+                            }}
+                            title={`MKV extraction failed: ${pair.video.mkvExtractionError || 'Unknown error'}`}
+                          >
+                            ❌ Error
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -571,6 +646,19 @@ export const MatchedPairs = ({
                                 }
                               })()}
                             </span>
+                            {/* MKV Extraction Indicator */}
+                            {subtitle.extractedFromMkv && (
+                              <span 
+                                className="px-2 py-1 text-xs rounded font-medium"
+                                style={{
+                                  backgroundColor: themeColors.success || '#9EC068',
+                                  color: '#fff'
+                                }}
+                                title={`Extracted from MKV: ${subtitle.originalMkvFile}`}
+                              >
+                                📹 MKV
+                              </span>
+                            )}
                             {/* Upload option badges */}
                             <div className="flex gap-1">
                               {(uploadOptions?.[subtitle.fullPath]?.hearingimpaired === '1' || localUploadStates?.[subtitle.fullPath]?.localHearingImpairedValue === '1') && 

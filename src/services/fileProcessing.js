@@ -87,8 +87,12 @@ export class FileProcessingService {
 
         // Check if this is an MKV file and mark it for subtitle extraction (if enabled)
         if (isVideo && file.name.toLowerCase().endsWith('.mkv')) {
-          // Check if MKV extraction is enabled in config (default: true with v1.8.1)
-          const extractMkvSubtitles = config.extractMkvSubtitles === true;
+          // Check if MKV extraction is enabled in config (handle different boolean representations)
+          const extractMkvSubtitles = config.extractMkvSubtitles === true || config.extractMkvSubtitles === 'true';
+          
+          console.log(`🔍 MKV Config Debug for ${file.name}:`);
+          console.log(`   - config.extractMkvSubtitles: ${config.extractMkvSubtitles} (type: ${typeof config.extractMkvSubtitles})`);
+          console.log(`   - extractMkvSubtitles resolved to: ${extractMkvSubtitles}`);
           
           if (extractMkvSubtitles) {
             // Mark this MKV file for subtitle extraction
@@ -99,6 +103,7 @@ export class FileProcessingService {
             console.log(`📺 Auto-extraction enabled - embedded subtitles will be detected and paired automatically`);
           } else {
             console.log(`⚠️ MKV file ${file.name} detected but extraction is disabled in settings`);
+            console.log(`   - To enable: Go to Settings → Processing → Extract Subtitles from MKV`);
           }
         } else if (file.name.toLowerCase().endsWith('.mkv')) {
           console.log(`⚠️ MKV file ${file.name} not flagged for extraction: isVideo=${isVideo}`);

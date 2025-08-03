@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { validateApiConfiguration } from './utils/constants.js'
 import './index.css'
+import './preload.js' // Preload WASM components for faster loading
 
 // Tauri v2 environment detection (cleaned up)
 console.log('🚀 OpenSubtitles Uploader PRO - Starting app initialization');

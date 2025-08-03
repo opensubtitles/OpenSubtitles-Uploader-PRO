@@ -151,7 +151,28 @@ class VideoMetadataService {
     const videoStreamMatch = logOutput.match(/Stream.*Video: ([^,]+)[^,]*,.*?(\d+x\d+)[^,]*,.*?(\d+\.?\d*) fps/);
     const videoCodec = videoStreamMatch ? videoStreamMatch[1] : 'unknown';
     const resolution = videoStreamMatch ? videoStreamMatch[2] : 'unknown';
-    const fps = videoStreamMatch ? parseFloat(videoStreamMatch[3]) : 25.0;
+    
+    // Extract and log FPS with detailed debugging
+    let fps = 25.0; // Default fallback
+    if (videoStreamMatch) {
+      const fpsString = videoStreamMatch[3];
+      fps = parseFloat(fpsString);
+      
+      console.log(`🎬 FFmpeg FPS Detection for ${file.name}:`);
+      console.log(`   - Raw FFmpeg FPS string: "${fpsString}"`);
+      console.log(`   - Parsed FPS value: ${fps}`);
+      console.log(`   - Full video stream match: "${videoStreamMatch[0]}"`);
+      
+      // Special handling for common problematic values
+      if (fpsString === '23.98' || Math.abs(fps - 23.98) < 0.001) {
+        console.log(`⚠️ Detected potentially incorrect FPS 23.98, should be 23.976`);
+        console.log(`   - Original: ${fps}`);
+        fps = 23.976; // Correct to proper NTSC film rate
+        console.log(`   - Corrected: ${fps}`);
+      }
+    } else {
+      console.log(`⚠️ No FPS found in FFmpeg output for ${file.name}, using default ${fps} fps`);
+    }
 
     // Parse duration
     const durationMatch = logOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);

@@ -81,6 +81,7 @@ import { useGuessIt } from "../hooks/useGuessIt.js";
 import { useUserSession } from "../hooks/useUserSession.js";
 import { useCheckSubHash } from "../hooks/useCheckSubHash.js";
 import { useVideoMetadata } from "../hooks/useVideoMetadata.js";
+import { useWasmInitialization } from "../hooks/useWasmInitialization.js";
 import { useAppUpdate } from "../hooks/useAppUpdate.js";
 import { CacheService } from "../services/cache.js";
 import { MovieHashService } from "../services/movieHash.js";
@@ -430,6 +431,18 @@ function SubtitleUploaderInner() {
     errorCount: metadataErrorCount,
     processedCount: metadataProcessedCount
   } = useVideoMetadata();
+
+  // Initialize all WASM components at startup
+  const {
+    isLoading: wasmLoading,
+    isInitialized: wasmInitialized,
+    percentage: wasmPercentage,
+    currentComponent: wasmCurrentComponent,
+    ffmpegLoaded,
+    guessitLoaded,
+    ffmpegError,
+    guessitError
+  } = useWasmInitialization();
   
   // Mock VideoMetadata functions to prevent errors (commented out)
   // const videoMetadata = {};
@@ -1311,17 +1324,13 @@ function SubtitleUploaderInner() {
         }
 
         // Extract video metadata (FPS, duration, etc.) for upload parameters
-        if (isFFmpegLoaded) {
-          try {
-            addDebugInfo(`🎬 Extracting video metadata for ${videoFile.name}`);
-            await extractVideoMetadata(videoFile.file, videoFile.fullPath);
-            addDebugInfo(`✅ Video metadata extracted successfully for ${videoFile.name}`);
-          } catch (metadataError) {
-            console.error(`Video metadata extraction error for ${videoFile.name}:`, metadataError);
-            addDebugInfo(`❌ Video metadata extraction failed: ${metadataError.message}`);
-          }
-        } else {
-          addDebugInfo(`⏳ FFmpeg not loaded yet, skipping video metadata extraction for ${videoFile.name}`);
+        try {
+          addDebugInfo(`🎬 Extracting video metadata for ${videoFile.name}`);
+          await extractVideoMetadata(videoFile.file, videoFile.fullPath);
+          addDebugInfo(`✅ Video metadata extracted successfully for ${videoFile.name}`);
+        } catch (metadataError) {
+          console.error(`Video metadata extraction error for ${videoFile.name}:`, metadataError);
+          addDebugInfo(`❌ Video metadata extraction failed: ${metadataError.message}`);
         }
 
         // Check if movie guess is needed
@@ -1852,6 +1861,22 @@ function SubtitleUploaderInner() {
 
   const hasUnpairedFiles = files.length > 0 && successfulPairs.length === 0;
 
+
+  // Show loading screen until all WASM components are loaded
+  if (wasmLoading || !wasmInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.background }}>
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+          </div>
+          <h2 className="text-xl font-semibold" style={{ color: colors.text }}>
+            Loading Components
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6" style={styles.background}>
