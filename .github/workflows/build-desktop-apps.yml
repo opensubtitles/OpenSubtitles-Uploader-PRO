@@ -225,24 +225,6 @@ jobs:
             echo "⚠️ No DMG file found"
           fi
           
-          # Find APP bundle (zip it first)
-          APP_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
-          if [ -n "$APP_FILE" ]; then
-            echo "✅ Found APP: $APP_FILE"
-            APP_NAME=$(basename "$APP_FILE" .app)
-            ZIP_FILE="src-tauri/target/universal-apple-darwin/release/bundle/${APP_NAME}_universal.app.zip"
-            
-            # Create zip of the app bundle
-            cd "$(dirname "$APP_FILE")"
-            zip -r "$(basename "$ZIP_FILE")" "$(basename "$APP_FILE")"
-            cd - > /dev/null
-            mv "$(dirname "$APP_FILE")/$(basename "$ZIP_FILE")" "$ZIP_FILE"
-            
-            echo "📦 Created app bundle zip: $ZIP_FILE"
-            gh release upload "${{ github.ref_name }}" "$ZIP_FILE" --clobber
-          else
-            echo "⚠️ No APP bundle found"
-          fi
           
           echo "✅ macOS Universal artifacts upload completed"
 
@@ -307,16 +289,14 @@ jobs:
             ### Download the appropriate version for your platform:
             
             **Windows:**
-            - `OpenSubtitles Uploader PRO_1.1.2_x64_en-US.exe` - Windows installer
-            - `OpenSubtitles Uploader PRO_1.1.2_x64_en-US.msi` - Windows MSI package
+            - `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer
             
             **macOS:**
-            - `OpenSubtitles Uploader PRO_1.1.2_aarch64.dmg` - Apple Silicon (M1/M2)
-            - `OpenSubtitles Uploader PRO_1.1.2_x64.dmg` - Intel Macs
+            - `OpenSubtitles Uploader PRO_x.x.x_universal.dmg` - Universal (Intel & Apple Silicon)
             
             **Linux:**
-            - `opensubtitles-uploader-pro_1.1.2_amd64.AppImage` - Universal Linux
-            - `opensubtitles-uploader-pro_1.1.2_amd64.deb` - Debian/Ubuntu
+            - `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
+            - `opensubtitles-uploader-pro_x.x.x_amd64.deb` - Debian/Ubuntu package
             
             ### Installation Instructions:
             

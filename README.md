@@ -52,7 +52,7 @@ Download and install the native desktop application:
 
 **📦 [Download from Releases](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/latest)**
 
-- **Windows x64**: `OpenSubtitles Uploader PRO_x.x.x_x64_en-US.exe` - Windows installer
+- **Windows x64**: `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer
 - **macOS (Universal)**: `OpenSubtitles Uploader PRO_x.x.x_universal.dmg` - Intel & Apple Silicon Macs
 - **Linux x64**: `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
 - **Linux x64**: `opensubtitles-uploader-pro_x.x.x_amd64.deb` - Debian/Ubuntu package
@@ -167,8 +167,7 @@ The application supports native desktop builds for macOS, Windows, and Linux usi
    - DMG Installer: `src-tauri/target/release/bundle/dmg/OpenSubtitles Uploader PRO_x.x.x_universal.dmg`
    
    **Windows**:
-   - Executable: `src-tauri/target/release/bundle/nsis/OpenSubtitles Uploader PRO_x.x.x_x64_en-US.exe`
-   - MSI Installer: `src-tauri/target/release/bundle/msi/OpenSubtitles Uploader PRO_x.x.x_x64_en-US.msi`
+   - NSIS Installer: `src-tauri/target/release/bundle/nsis/OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe`
    
    **Linux**:
    - AppImage: `src-tauri/target/release/bundle/appimage/opensubtitles-uploader-pro_x.x.x_amd64.AppImage`
