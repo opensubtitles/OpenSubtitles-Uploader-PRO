@@ -429,6 +429,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [OpenSubtitles.org](https://www.opensubtitles.org/) for the comprehensive subtitle database and APIs
+- [OpenSubtitles.com](https://www.opensubtitles.com/) for the modern API platform and developer resources
 - [React](https://reactjs.org/) for the excellent frontend framework
 - [Vite](https://vitejs.dev/) for the fast development experience
 - [Tailwind CSS](https://tailwindcss.com/) for the utility-first styling approach
