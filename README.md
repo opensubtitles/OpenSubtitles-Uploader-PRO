@@ -50,7 +50,7 @@ The easiest way to get started is with the web version:
 
 Download and install the native desktop application:
 
-**📦 [Download from Releases](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)**
+**📦 [Download from Releases](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/latest)**
 
 - **Windows x64**: `OpenSubtitles Uploader PRO_x.x.x_x64_en-US.exe` - Windows installer
 - **macOS (Universal)**: `OpenSubtitles Uploader PRO_x.x.x_universal.dmg` - Intel & Apple Silicon Macs
