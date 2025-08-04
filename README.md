@@ -52,11 +52,10 @@ Download and install the native desktop application:
 
 **📦 [Download from Releases](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)**
 
-- **Windows x64**: `OpenSubtitles Uploader PRO_1.1.2_x64_en-US.exe` - Windows installer
-- **macOS (Apple Silicon)**: `OpenSubtitles Uploader PRO_1.1.2_aarch64.dmg` - M1/M2 Macs
-- **macOS (Intel)**: `OpenSubtitles Uploader PRO_1.1.2_x64.dmg` - Intel Macs
-- **Linux x64**: `opensubtitles-uploader-pro_1.1.2_amd64.AppImage` - Universal Linux binary
-- **Linux x64**: `opensubtitles-uploader-pro_1.1.2_amd64.deb` - Debian/Ubuntu package
+- **Windows x64**: `OpenSubtitles Uploader PRO_x.x.x_x64_en-US.exe` - Windows installer
+- **macOS (Universal)**: `OpenSubtitles Uploader PRO_x.x.x_universal.dmg` - Intel & Apple Silicon Macs
+- **Linux x64**: `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
+- **Linux x64**: `opensubtitles-uploader-pro_x.x.x_amd64.deb` - Debian/Ubuntu package
 
 **✅ Automated Builds**: All desktop applications are automatically built using GitHub Actions for consistent, secure releases.
 
@@ -165,15 +164,15 @@ The application supports native desktop builds for macOS, Windows, and Linux usi
    
    **macOS**:
    - App Bundle: `src-tauri/target/release/bundle/macos/OpenSubtitles Uploader PRO.app`
-   - DMG Installer: `src-tauri/target/release/bundle/dmg/OpenSubtitles Uploader PRO_1.1.2_aarch64.dmg`
+   - DMG Installer: `src-tauri/target/release/bundle/dmg/OpenSubtitles Uploader PRO_x.x.x_universal.dmg`
    
    **Windows**:
-   - Executable: `src-tauri/target/release/bundle/nsis/OpenSubtitles Uploader PRO_1.1.2_x64_en-US.exe`
-   - MSI Installer: `src-tauri/target/release/bundle/msi/OpenSubtitles Uploader PRO_1.1.2_x64_en-US.msi`
+   - Executable: `src-tauri/target/release/bundle/nsis/OpenSubtitles Uploader PRO_x.x.x_x64_en-US.exe`
+   - MSI Installer: `src-tauri/target/release/bundle/msi/OpenSubtitles Uploader PRO_x.x.x_x64_en-US.msi`
    
    **Linux**:
-   - AppImage: `src-tauri/target/release/bundle/appimage/opensubtitles-uploader-pro_1.1.2_amd64.AppImage`
-   - DEB Package: `src-tauri/target/release/bundle/deb/opensubtitles-uploader-pro_1.1.2_amd64.deb`
+   - AppImage: `src-tauri/target/release/bundle/appimage/opensubtitles-uploader-pro_x.x.x_amd64.AppImage`
+   - DEB Package: `src-tauri/target/release/bundle/deb/opensubtitles-uploader-pro_x.x.x_amd64.deb`
 
 ### Cross-Platform Building
 
