@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -46,11 +46,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": {
-      "linux": ["appimage", "deb"],
-      "macos": ["dmg"],
-      "windows": ["nsis"]
-    },
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
