@@ -33,6 +33,82 @@ The application displays version information in multiple places:
 
 **Why this matters:** Without running the update script, the page will display the old version from `constants.js` while `package.json` has the new version, causing user confusion.
 
+## Release Process
+
+**CRITICAL**: When the user asks to "build artifacts" or "create builds", ALWAYS create a full GitHub release, not just trigger builds.
+
+### Why Create Releases Instead of Just Builds:
+- Builds without releases create artifacts that aren't accessible via GitHub Releases page
+- Users expect releases at https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/latest
+- Releases provide proper versioning, changelogs, and download links
+- Release builds automatically attach artifacts (Windows, macOS, Linux installers)
+
+### Complete Release Process:
+1. **Version Bump & Sync** (if needed):
+   ```bash
+   # Update version in package.json, src/utils/constants.js, README.md, src-tauri/tauri.conf.json
+   npm run update-version  # If this script works
+   # Or manually update all files
+   ```
+
+2. **Commit Version Changes**:
+   ```bash
+   git add .
+   git commit -m "bump version to vX.X.X"
+   git push
+   ```
+
+3. **Create GitHub Release** (ALWAYS DO THIS):
+   ```bash
+   gh release create vX.X.X \
+     --title "vX.X.X - Brief Description" \
+     --notes "Release notes with changes" \
+     --generate-notes
+   ```
+
+4. **Trigger Release Build**:
+   ```bash
+   gh workflow run "Build Desktop Apps" --ref vX.X.X
+   ```
+
+### Release Notes Template:
+```markdown
+## 🐛 Bug Fixes
+- Describe bug fixes
+
+## ✨ New Features  
+- Describe new features
+
+## 🔧 Technical Changes
+- Describe technical improvements
+
+## 📁 Files Changed
+- List key files modified
+
+---
+🚀 **Desktop Apps**: Builds are automatically created for Windows, macOS, and Linux
+📋 **Full Changelog**: https://github.com/opensubtitles/opensubtitles-uploader-pro/compare/vPREV...vCURRENT
+```
+
+### Files That Need Version Updates:
+- `package.json` - Main version source
+- `src/utils/constants.js` - APP_VERSION constant  
+- `README.md` - Version badge
+- `src-tauri/tauri.conf.json` - Tauri app version
+
+### What NOT To Do:
+- ❌ Don't just run `gh workflow run "Build Desktop Apps"` without creating a release
+- ❌ Don't build from main branch for distribution
+- ❌ Don't forget to update version in all files
+- ❌ Don't skip release notes
+
+### What TO Do:
+- ✅ Always create a proper GitHub release first
+- ✅ Build from the release tag, not main branch
+- ✅ Update all version references before releasing
+- ✅ Include meaningful release notes
+- ✅ Verify the release appears at /releases/latest
+
 ## Architecture
 
 ### Core Components
