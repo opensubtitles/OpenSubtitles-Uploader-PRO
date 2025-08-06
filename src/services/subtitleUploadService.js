@@ -583,11 +583,11 @@ export class SubtitleUploadService {
         foreignpartsonly: subtitleFeatures.foreignpartsonly === '1' || videoFeatures.foreignpartsonly === '1' ? '1' : '0'
       };
       
-      // Use the same simple logic for all features: manual override OR auto-detected OR default
-      // This matches what's working for HI and FP
-      const finalHigdefinition = subtitleOptions.highdefinition || autoDetectedFeatures.highdefinition || '0';
-      const finalHearingimpaired = subtitleOptions.hearingimpaired || autoDetectedFeatures.hearingimpaired || '0';
-      const finalForeignpartsonly = subtitleOptions.foreignpartsonly || autoDetectedFeatures.foreignpartsonly || '0';
+      // Consistent logic for all features: prioritize auto-detected '1' values over manual '0' values
+      // This ensures consistent behavior between paired and orphaned subtitles
+      const finalHigdefinition = autoDetectedFeatures.highdefinition === '1' ? '1' : (subtitleOptions.highdefinition || '0');
+      const finalHearingimpaired = autoDetectedFeatures.hearingimpaired === '1' ? '1' : (subtitleOptions.hearingimpaired || '0');
+      const finalForeignpartsonly = autoDetectedFeatures.foreignpartsonly === '1' ? '1' : (subtitleOptions.foreignpartsonly || '0');
       
       // Prepare baseinfo section
       const baseinfo = {
@@ -782,8 +782,8 @@ export class SubtitleUploadService {
       const autoDetectedFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
       
       
-      // Prioritize auto-detected '1' values over uploadOptions '0' values
-      // If auto-detected is '1', use it; otherwise use uploadOptions; otherwise default to '0'
+      // Consistent logic for all features: prioritize auto-detected '1' values over manual '0' values
+      // This ensures consistent behavior between paired and orphaned subtitles
       const finalHigdefinition = autoDetectedFeatures.highdefinition === '1' ? '1' : (subtitleOptions.highdefinition || '0');
       const finalHearingimpaired = autoDetectedFeatures.hearingimpaired === '1' ? '1' : (subtitleOptions.hearingimpaired || '0');
       const finalForeignpartsonly = autoDetectedFeatures.foreignpartsonly === '1' ? '1' : (subtitleOptions.foreignpartsonly || '0');
