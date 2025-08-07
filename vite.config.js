@@ -31,6 +31,13 @@ export default defineConfig({
     '__EMBEDDED_OPENSUBTITLES_API_KEY__': JSON.stringify(process.env.OPENSUBTITLES_API_KEY || process.env.VITE_OPENSUBTITLES_API_KEY || ''),
   },
   
+  // Resolve configuration to handle Node.js modules
+  resolve: {
+    alias: {
+      // Don't alias built-in Node.js modules, let Vite handle them
+    }
+  },
+  
   // Add worker configuration for FFmpeg WebAssembly
   worker: {
     format: 'es',
@@ -56,6 +63,16 @@ export default defineConfig({
     // Support for WebAssembly files
     assetsInclude: ['**/*.wasm'],
     rollupOptions: {
+      external: [],  // Don't externalize anything by default
+      onwarn(warning, warn) {
+        // Suppress specific externalization warnings for archive-wasm
+        if (warning.code === 'PLUGIN_WARNING' && 
+            warning.message.includes('Module "module" has been externalized') &&
+            warning.message.includes('archive-wasm')) {
+          return; // Suppress this warning
+        }
+        warn(warning); // Show other warnings
+      },
       output: {
         manualChunks: {
           // Vendor chunks
