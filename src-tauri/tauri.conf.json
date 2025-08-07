@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.5.11",
+  "version": "1.5.12",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -63,7 +63,22 @@
     "macOS": {
       "entitlements": "entitlements.plist",
       "frameworks": [],
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "dmg": {
+        "background": null,
+        "windowSize": {
+          "width": 600,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 140,
+          "y": 200
+        },
+        "applicationFolderPosition": {
+          "x": 460,
+          "y": 200
+        }
+      }
     }
   },
   "plugins": {
