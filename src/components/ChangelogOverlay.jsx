@@ -69,8 +69,11 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         }
         if (line.startsWith('## ')) {
           return (
-            <h2 key={index} className="text-xl font-bold mt-6 mb-3 pb-2 border-b" 
-                style={{ color: colors.textPrimary, borderBottomColor: colors.border }}>
+            <h2 key={index} className="text-xl font-bold mt-6 mb-3 pb-2" 
+                style={{ 
+                  color: colors.textPrimary, 
+                  borderBottom: `1px solid ${colors.border}` 
+                }}>
               {line.replace('## ', '')}
             </h2>
           );
@@ -86,7 +89,8 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         // Lists
         if (line.startsWith('- ')) {
           return (
-            <li key={index} className="ml-4 mb-1" style={{ color: colors.textSecondary }}>
+            <li key={index} className="ml-4 mb-1 list-disc list-inside" 
+                style={{ color: colors.textPrimary }}>
               {line.replace('- ', '')}
             </li>
           );
@@ -97,7 +101,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
           const parts = line.split(linkRegex);
           return (
-            <p key={index} className="mb-2" style={{ color: colors.textSecondary }}>
+            <p key={index} className="mb-2" style={{ color: colors.textPrimary }}>
               {parts.map((part, i) => {
                 if (i % 3 === 1) {
                   // This is link text
@@ -108,7 +112,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:underline"
+                      className="hover:underline transition-colors"
                       style={{ color: colors.primary }}
                     >
                       {part}
@@ -138,7 +142,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         
         // Regular paragraphs
         return (
-          <p key={index} className="mb-2" style={{ color: colors.textSecondary }}>
+          <p key={index} className="mb-2" style={{ color: colors.textPrimary }}>
             {line}
           </p>
         );
@@ -149,7 +153,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" 
-         style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}>
+         style={{ backgroundColor: isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.75)' }}>
       <div className="relative w-full max-w-4xl max-h-[90vh] rounded-lg shadow-2xl overflow-hidden"
            style={{ backgroundColor: colors.cardBackground }}>
         {/* Header */}
@@ -168,10 +172,11 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg transition-colors hover:bg-opacity-80"
+            className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105"
             style={{ 
-              backgroundColor: colors.border,
-              color: colors.textSecondary 
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
+              color: colors.textPrimary,
+              border: `1px solid ${colors.border}`
             }}
           >
             ✕
@@ -179,7 +184,12 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]" 
+             style={{
+               backgroundColor: isDark ? colors.background : colors.cardBackground,
+               scrollbarWidth: 'thin',
+               scrollbarColor: `${colors.border} ${colors.cardBackground}`
+             }}>
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-3">
@@ -212,7 +222,8 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           )}
 
           {changelog && !loading && !error && (
-            <div className="prose prose-sm max-w-none">
+            <div className="max-w-none leading-relaxed" 
+                 style={{ color: colors.textPrimary }}>
               {renderMarkdown(changelog)}
             </div>
           )}
