@@ -172,6 +172,13 @@ export class UpdateService {
 
     try {
       console.log('🔄 Checking for updates via Tauri updater...');
+      
+      // Ensure Tauri APIs are loaded before proceeding
+      if (!tauriUpdater) {
+        console.log('🔧 Tauri APIs not loaded yet, attempting to load...');
+        await loadTauriAPIs();
+      }
+      
       console.log('🔍 Debug - Tauri updater state:', {
         tauriUpdaterAvailable: !!tauriUpdater,
         updaterMethods: tauriUpdater ? Object.keys(tauriUpdater) : 'N/A',
