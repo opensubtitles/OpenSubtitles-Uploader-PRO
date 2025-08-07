@@ -14,7 +14,7 @@ export const AdBlockTestPage = () => {
   
   const [tests, setTests] = useState(() => {
     const baseTests = [
-      { name: 'Internet Connectivity', url: 'https://www.google.com/favicon.ico', status: 'pending', error: null, time: null, category: 'connectivity' },
+      { name: 'Internet Connectivity', url: 'https://httpbin.org/get', status: 'pending', error: null, time: null, category: 'connectivity' },
       { name: 'OpenSubtitles API', url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported', status: 'pending', error: null, time: null, category: 'api' },
       { name: 'XML-RPC API', url: 'https://api.opensubtitles.org/xml-rpc', status: 'pending', error: null, time: null, category: 'api' }
     ];
