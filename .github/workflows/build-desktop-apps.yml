@@ -241,6 +241,7 @@ jobs:
 
       - name: Build the app (Windows)
         if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: bash
         env:
           VITE_OPENSUBTITLES_API_KEY: ${{ secrets.VITE_OPENSUBTITLES_API_KEY }}
           NODE_ENV: production
