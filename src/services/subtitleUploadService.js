@@ -966,9 +966,9 @@ export class SubtitleUploadService {
       return false;
     }
     
-    // Then check for positive HI patterns
+    // Then check for positive HI patterns (removed CC, added PSDH)
     const hiPatterns = [
-      'hi', 'sdh', 'cc', 'hearing.impaired', 'hearing_impaired', 'hearingimpaired'
+      'hi', 'sdh', 'psdh', 'hearing.impaired', 'hearing_impaired', 'hearingimpaired'
     ];
     
     return hiPatterns.some(pattern => lowerStr.includes(pattern));
@@ -995,20 +995,20 @@ export class SubtitleUploadService {
       return false;
     }
     
-    // More specific filename patterns for hearing impaired
+    // More specific filename patterns for hearing impaired (removed CC patterns, added PSDH)
     const filenamePatterns = [
       /\.hi\./i,
       /\.sdh\./i,
-      /\.cc\./i,
+      /\.psdh\./i,
       /\bhi\b/i,
       /\bsdh\b/i,
-      /\bcc\b/i,
+      /\bpsdh\b/i,
       /_hi\./i,
       /_sdh\./i,
-      /_cc\./i,
+      /_psdh\./i,
       /[-.]hi[-.]?/i,
       /[-.]sdh[-.]?/i,
-      /[-.]cc[-.]?/i
+      /[-.]psdh[-.]?/i
     ];
     
     return filenamePatterns.some(pattern => pattern.test(lowerFilename));

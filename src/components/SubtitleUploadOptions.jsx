@@ -131,8 +131,8 @@ export const SubtitleUploadOptions = ({
       return false;
     }
     
-    // Then check for positive HI patterns
-    const hiRegex = /sdh|hi[_-]|[_-]hi/i;
+    // Then check for positive HI patterns (removed CC, added PSDH)
+    const hiRegex = /\bsdh\b|\bpsdh\b|\bhi\b|hi[_-]|[_-]hi/i;
     return hiRegex.test(str);
   };
 
