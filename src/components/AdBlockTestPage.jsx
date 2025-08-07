@@ -155,8 +155,8 @@ export const AdBlockTestPage = () => {
     
     if (!connectivityResult.success) {
       console.log('❌ No internet connectivity - skipping other tests');
-      // If no internet, skip other tests and show appropriate message
-      generateRecommendations();
+      // Let the final generateRecommendations handle this case
+      setTimeout(() => generateRecommendations(), 100);
       return;
     }
     
