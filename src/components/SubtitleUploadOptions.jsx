@@ -117,6 +117,21 @@ export const SubtitleUploadOptions = ({
   // Check if string indicates hearing impaired
   const checkHearingImpairedFromString = (str) => {
     if (!str) return false;
+    
+    const lowerStr = str.toLowerCase();
+    
+    // First check for negative patterns that explicitly indicate NOT hearing impaired
+    const negativePatterns = [
+      'nonhi', 'non-hi', 'non_hi', 'non.hi',
+      'nohi', 'no-hi', 'no_hi', 'no.hi',
+      'nothi', 'not-hi', 'not_hi', 'not.hi'
+    ];
+    
+    if (negativePatterns.some(pattern => lowerStr.includes(pattern))) {
+      return false;
+    }
+    
+    // Then check for positive HI patterns
     const hiRegex = /sdh|hi[_-]|[_-]hi/i;
     return hiRegex.test(str);
   };
@@ -127,6 +142,18 @@ export const SubtitleUploadOptions = ({
     
     // Remove file extension
     const nameWithoutExtension = filename.replace(/\.(srt|ass|ssa|vtt|sub|idx|sup)$/i, '');
+    const lowerName = nameWithoutExtension.toLowerCase();
+    
+    // First check for negative patterns
+    const negativePatterns = [
+      'nonhi', 'non-hi', 'non_hi', 'non.hi',
+      'nohi', 'no-hi', 'no_hi', 'no.hi', 
+      'nothi', 'not-hi', 'not_hi', 'not.hi'
+    ];
+    
+    if (negativePatterns.some(pattern => lowerName.includes(pattern))) {
+      return false;
+    }
     
     // Check if it ends with HI pattern: [-_.]HI (case insensitive)
     const hiEndRegex = /[-_.]hi$/i;

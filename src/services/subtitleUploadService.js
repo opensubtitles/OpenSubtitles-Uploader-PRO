@@ -954,6 +954,19 @@ export class SubtitleUploadService {
     if (!str) return false;
     
     const lowerStr = str.toLowerCase();
+    
+    // First check for negative patterns that explicitly indicate NOT hearing impaired
+    const negativePatterns = [
+      'nonhi', 'non-hi', 'non_hi', 'non.hi',
+      'nohi', 'no-hi', 'no_hi', 'no.hi',
+      'nothi', 'not-hi', 'not_hi', 'not.hi'
+    ];
+    
+    if (negativePatterns.some(pattern => lowerStr.includes(pattern))) {
+      return false;
+    }
+    
+    // Then check for positive HI patterns
     const hiPatterns = [
       'hi', 'sdh', 'cc', 'hearing.impaired', 'hearing_impaired', 'hearingimpaired'
     ];
@@ -970,6 +983,17 @@ export class SubtitleUploadService {
     if (!filename) return false;
     
     const lowerFilename = filename.toLowerCase();
+    
+    // First check for negative patterns that explicitly indicate NOT hearing impaired
+    const negativePatterns = [
+      'nonhi', 'non-hi', 'non_hi', 'non.hi',
+      'nohi', 'no-hi', 'no_hi', 'no.hi',
+      'nothi', 'not-hi', 'not_hi', 'not.hi'
+    ];
+    
+    if (negativePatterns.some(pattern => lowerFilename.includes(pattern))) {
+      return false;
+    }
     
     // More specific filename patterns for hearing impaired
     const filenamePatterns = [
