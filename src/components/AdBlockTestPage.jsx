@@ -191,13 +191,20 @@ export const AdBlockTestPage = () => {
     
     // Wait for all tests to complete before generating recommendations
     const checkTestsComplete = () => {
-      const allComplete = tests.every(test => test.status !== 'pending' && test.status !== 'testing');
-      if (allComplete) {
-        generateRecommendations();
-      } else {
-        // Check again in 100ms if tests aren't complete yet
-        setTimeout(checkTestsComplete, 100);
-      }
+      setTests(currentTests => {
+        const allComplete = currentTests.every(test => test.status !== 'pending' && test.status !== 'testing');
+        console.log('🔍 Checking test completion:', currentTests.map(t => `${t.name}: ${t.status}`));
+        
+        if (allComplete) {
+          console.log('✅ All tests complete, generating recommendations');
+          setTimeout(() => generateRecommendations(), 50);
+        } else {
+          console.log('⏳ Tests still running, checking again in 100ms');
+          setTimeout(checkTestsComplete, 100);
+        }
+        
+        return currentTests; // Return unchanged state
+      });
     };
     
     setTimeout(checkTestsComplete, 200);
