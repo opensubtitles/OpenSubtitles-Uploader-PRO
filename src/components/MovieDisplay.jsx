@@ -139,15 +139,38 @@ export const MovieDisplay = ({
     const featuresData = movieData?.imdbid ? featuresByImdbId?.[movieData.imdbid] : null;
     const guessItVideoData = guessItData?.[videoPath];
 
-    // Clear enhanced episode data when movie data changes (for manual movie selection)
-    if (movieData?.reason === 'User selected') {
-      console.log('Clearing enhanced episode data for user-selected movie');
-      setEnhancedEpisodeData(null);
-      return; // Don't process episode enhancement for manually selected movies
+    // Handle manually selected episodes - check if features data shows this is an episode
+    if (movieData?.reason === 'User selected' && featuresData?.data?.[0]?.attributes?.feature_type === 'Episode') {
+      const episodeAttrs = featuresData.data[0].attributes;
+      
+      // Create enhanced episode data from features API response
+      const enhancedData = {
+        ...movieData,
+        imdbid: movieData.imdbid, // Keep the episode IMDB ID for upload
+        title: `${episodeAttrs.parent_title} - S${(episodeAttrs.season_number || 0).toString().padStart(2, '0')}E${(episodeAttrs.episode_number || 0).toString().padStart(2, '0')} - ${episodeAttrs.title}`,
+        year: episodeAttrs.year || movieData.year,
+        kind: 'episode',
+        season: episodeAttrs.season_number,
+        episode: episodeAttrs.episode_number,
+        episode_title: episodeAttrs.title,
+        show_title: episodeAttrs.parent_title,
+        parent_imdb_id: episodeAttrs.parent_imdb_id,
+        feature_id: episodeAttrs.feature_id,
+        reason: 'User selected episode with features API data'
+      };
+      
+      setEnhancedEpisodeData(enhancedData);
+      return;
     }
 
-    // Only process if we have all the required data and it's a TV series
-    if (movieData && featuresData && guessItVideoData && typeof guessItVideoData === 'object') {
+    // Clear enhanced episode data when movie data changes to non-episode
+    if (movieData?.reason === 'User selected' && featuresData?.data?.[0]?.attributes?.feature_type !== 'Episode') {
+      setEnhancedEpisodeData(null);
+      return;
+    }
+
+    // Only process if we have all the required data and it's a TV series (for auto-detected episodes)
+    if (movieData && featuresData && guessItVideoData && typeof guessItVideoData === 'object' && movieData.reason !== 'User selected') {
       // Check if this is a TV show with episode info
       if (featuresData?.data?.[0]?.attributes?.feature_type === 'Tvshow' && 
           featuresData?.data?.[0]?.attributes?.seasons &&
@@ -511,19 +534,17 @@ export const MovieDisplay = ({
                     //   'finalMovieData': finalMovieData
                     // });
                     
-                    // If we have episode-specific features data, use parent_title + original_title (filter out null/empty values)
+                    // If we have episode-specific features data, use parent_title + season/episode + episode title
                     if (episodeFeaturesData?.data?.[0]?.attributes) {
                       const episodeAttrs = episodeFeaturesData.data[0].attributes;
-                      const parentTitle = episodeAttrs.parent_title;
-                      const originalTitle = episodeAttrs.original_title;
-                      const seasonEpisode = `S${episodeAttrs.season_number?.toString().padStart(2, '0') || '??'}E${episodeAttrs.episode_number?.toString().padStart(2, '0') || '??'}`;
-                      // DISABLED: console.log to prevent setState during render
-                      // console.log('Using episode features data:', { parentTitle, originalTitle, seasonEpisode, episodeAttrs });
+                      const parentTitle = episodeAttrs.parent_title || 'Unknown Series';
+                      const seasonEpisode = `S${(episodeAttrs.season_number || 0).toString().padStart(2, '0')}E${(episodeAttrs.episode_number || 0).toString().padStart(2, '0')}`;
                       
-                      // Filter out null/empty original_title - use episode title or fallback
-                      const episodeTitle = originalTitle && originalTitle !== 'null' && originalTitle.trim() !== '' 
-                        ? originalTitle 
-                        : episodeAttrs.title || `Episode ${episodeAttrs.episode_number || '?'}`;
+                      // Use episode title (original_title if available, otherwise title, otherwise fallback)
+                      let episodeTitle = episodeAttrs.title || `Episode ${episodeAttrs.episode_number || '?'}`;
+                      if (episodeAttrs.original_title && episodeAttrs.original_title !== 'null' && episodeAttrs.original_title.trim() !== '') {
+                        episodeTitle = episodeAttrs.original_title;
+                      }
                       
                       return `${parentTitle} - ${seasonEpisode} - ${episodeTitle}`;
                     }
@@ -606,7 +627,6 @@ export const MovieDisplay = ({
               {(() => {
                 const mainTitle = bestMovieData.title;
                 const originalTitle = featuresData?.data?.[0]?.attributes?.original_title;
-                const englishTitle = featuresData?.data?.[0]?.attributes?.title;
                 
                 // Show original title if it's different from the main title
                 const showOriginal = originalTitle && mainTitle && !areTitlesSimilar(originalTitle, mainTitle);
@@ -737,7 +757,7 @@ export const MovieDisplay = ({
                       
                       <span style={{color: themeColors.link}}>TV Series:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${originalMovieData.imdbid}/`}
+                        href={`https://www.imdb.com/title/tt${finalMovieData.parent_imdb_id || originalMovieData.imdbid}/`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono"
@@ -745,7 +765,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.link}
                         onMouseLeave={(e) => e.target.style.color = themeColors.linkHover}
                       >
-                        {originalMovieData.imdbid}
+                        {finalMovieData.parent_imdb_id || originalMovieData.imdbid}
                       </a>
                     </div>
                     
@@ -852,7 +872,7 @@ export const MovieDisplay = ({
                       
                       <span style={{color: themeColors.link}}>TV Series:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${originalMovieData.imdbid}/`}
+                        href={`https://www.imdb.com/title/tt${finalMovieData.parent_imdb_id || originalMovieData.imdbid}/`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono"
@@ -860,7 +880,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.link}
                         onMouseLeave={(e) => e.target.style.color = themeColors.linkHover}
                       >
-                        {originalMovieData.imdbid}
+                        {finalMovieData.parent_imdb_id || originalMovieData.imdbid}
                       </a>
                     </div>
                     

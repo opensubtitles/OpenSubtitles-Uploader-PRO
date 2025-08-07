@@ -87,8 +87,28 @@ export const MovieSearch = ({
                 )}
                 <div className="flex-1">
                   <div className="font-medium">
-                    {movie.name || movie.title || 'Unknown Title'}
-                    {(movie.year) && ` (${movie.year})`}
+                    {/* Enhanced display for episodes with parent series information */}
+                    {movie.kind === 'episode' && (movie.parent_title || movie.series_title) ? (
+                      <>
+                        <span style={{color: themeColors.primary || themeColors.link}}>{movie.parent_title || movie.series_title}</span>
+                        {(movie.season_number || movie.episode_number) && (
+                          <span style={{color: themeColors.textSecondary}}>
+                            {' - '}
+                            {movie.season_number && `S${movie.season_number.toString().padStart(2, '0')}`}
+                            {movie.episode_number && `E${movie.episode_number.toString().padStart(2, '0')}`}
+                          </span>
+                        )}
+                        {(movie.name || movie.title) && (
+                          <span style={{color: themeColors.text}}> - {movie.name || movie.title}</span>
+                        )}
+                        {movie.year && ` (${movie.year})`}
+                      </>
+                    ) : (
+                      <>
+                        {movie.name || movie.title || 'Unknown Title'}
+                        {movie.year && ` (${movie.year})`}
+                      </>
+                    )}
                   </div>
                   <div className="text-xs" style={{ color: themeColors.textMuted }}>
                     {movie.kind && `${movie.kind} • `}
@@ -108,7 +128,7 @@ export const MovieSearch = ({
       )}
       
       <div className="mt-2 text-xs" style={{ color: themeColors.textSecondary }}>
-        Examples: "The Matrix", "tt0133093", "https://www.imdb.com/title/tt0133093/"
+        Examples: "The Matrix", "133093", "0133093", "tt0133093", "https://www.imdb.com/title/tt0133093/"
       </div>
     </div>
   );

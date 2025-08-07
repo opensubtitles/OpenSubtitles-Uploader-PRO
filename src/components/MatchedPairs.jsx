@@ -463,7 +463,7 @@ export const MatchedPairs = ({
                         <div className="text-sm mb-2" style={{color: themeColors.text}}>
                           Search by movie title, IMDB ID, or IMDB URL:
                           <div className="text-xs mt-1" style={{color: themeColors.textSecondary}}>
-                            Examples: "The Matrix", "tt0133093", "https://www.imdb.com/title/tt0133093/"
+                            Examples: "The Matrix", "133093", "0133093", "tt0133093", "https://www.imdb.com/title/tt0133093/"
                           </div>
                         </div>
                         <div className="relative">
@@ -566,7 +566,25 @@ export const MatchedPairs = ({
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium truncate" style={{color: themeColors.text}}>
-                                      {movie.name} ({movie.year})
+                                      {/* Enhanced display for episodes with parent series information */}
+                                      {movie.kind === 'episode' && (movie.parent_title || movie.series_title) ? (
+                                        <>
+                                          <span style={{color: themeColors.link}}>{movie.parent_title || movie.series_title}</span>
+                                          {(movie.season_number || movie.episode_number) && (
+                                            <span style={{color: themeColors.textSecondary}}>
+                                              {' - '}
+                                              {movie.season_number && `S${movie.season_number.toString().padStart(2, '0')}`}
+                                              {movie.episode_number && `E${movie.episode_number.toString().padStart(2, '0')}`}
+                                            </span>
+                                          )}
+                                          {movie.name && (
+                                            <span style={{color: themeColors.text}}> - {movie.name}</span>
+                                          )}
+                                          {movie.year && ` (${movie.year})`}
+                                        </>
+                                      ) : (
+                                        `${movie.name} (${movie.year})`
+                                      )}
                                     </div>
                                     <div className="text-xs capitalize flex items-center gap-2" style={{color: themeColors.textSecondary}}>
                                       <span>{movie.kind}</span>
