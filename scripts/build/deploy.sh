@@ -418,9 +418,21 @@ cleanup() {
 # Set up cleanup trap
 trap cleanup EXIT
 
+# Detect and change to project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+print_step "🔍 Detecting project root directory..."
+print_step "Script location: $SCRIPT_DIR"
+print_step "Project root: $PROJECT_ROOT"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+print_step "✅ Changed to project root directory: $(pwd)"
+
 # Check if we're in the right directory
 if [ ! -f "package.json" ]; then
-  print_error "package.json not found. Are you in the correct directory?"
+  print_error "package.json not found in $PROJECT_ROOT. Project structure may be incorrect."
   exit 1
 fi
 
