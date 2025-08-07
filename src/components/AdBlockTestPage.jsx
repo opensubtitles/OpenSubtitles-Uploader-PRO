@@ -197,7 +197,7 @@ export const AdBlockTestPage = () => {
         
         if (allComplete) {
           console.log('✅ All tests complete, generating recommendations');
-          setTimeout(() => generateRecommendations(), 50);
+          setTimeout(() => generateRecommendationsWithCurrentState(currentTests), 50);
         } else {
           console.log('⏳ Tests still running, checking again in 100ms');
           setTimeout(checkTestsComplete, 100);
@@ -211,13 +211,13 @@ export const AdBlockTestPage = () => {
     setIsRunning(false);
   };
 
-  const generateRecommendations = () => {
+  const generateRecommendationsWithCurrentState = (currentTests) => {
     const recs = [];
-    const connectivityTest = tests.find(t => t.category === 'connectivity');
-    const apiTests = tests.filter(t => t.category === 'api');
-    const adBlockTest = tests.find(t => t.category === 'adblock');
+    const connectivityTest = currentTests.find(t => t.category === 'connectivity');
+    const apiTests = currentTests.filter(t => t.category === 'api');
+    const adBlockTest = currentTests.find(t => t.category === 'adblock');
     
-    console.log('🔍 Generating recommendations with test statuses:', {
+    console.log('🔍 Generating recommendations with current test statuses:', {
       connectivity: connectivityTest?.status,
       api: apiTests.map(t => `${t.name}: ${t.status}`),
       adblock: adBlockTest?.status
@@ -318,8 +318,9 @@ export const AdBlockTestPage = () => {
           'Internet connectivity: ✅ Working',
           'OpenSubtitles APIs: ✅ Accessible',
           !isTauriDetected && adBlockTest ? `Ad blocker test: ${adBlockTest.status === 'success' ? '✅ No blocking detected' : '⚠️ Some blocking detected (may not affect uploader)'}` : '✅ Desktop app (no ad blocker concerns)',
-          'You can safely use the OpenSubtitles Uploader'
-        ].filter(Boolean)
+          '📤 Ready to upload subtitles!'
+        ].filter(Boolean),
+        showUploaderLink: true
       });
     }
     
@@ -480,6 +481,17 @@ export const AdBlockTestPage = () => {
                         <span className="text-gray-700">{step}</span>
                       </div>
                     ))}
+                    {rec.showUploaderLink && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <a
+                          href="/"
+                          className="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                        >
+                          <span>📤</span>
+                          <span>Go to OpenSubtitles Uploader</span>
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
