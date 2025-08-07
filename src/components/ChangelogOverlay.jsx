@@ -164,10 +164,10 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           <div className="flex items-center gap-3">
             <span className="text-2xl">📋</span>
             <div>
-              <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+              <h2 className="text-xl font-bold" style={{ color: isDark ? '#f5f5f5' : colors.textPrimary }}>
                 Changelog
               </h2>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
+              <p className="text-sm" style={{ color: isDark ? '#d1d1d1' : colors.textSecondary }}>
                 Version {APP_VERSION} - What's new and improved
               </p>
             </div>
