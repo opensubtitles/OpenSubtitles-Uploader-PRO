@@ -62,7 +62,8 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         // Headers
         if (line.startsWith('### ')) {
           return (
-            <h3 key={index} className="text-lg font-semibold mt-4 mb-2" style={{ color: colors.textPrimary }}>
+            <h3 key={index} className="text-lg font-semibold mt-4 mb-2" 
+                style={{ color: isDark ? '#e5e5e5' : colors.textPrimary }}>
               {line.replace('### ', '')}
             </h3>
           );
@@ -71,7 +72,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           return (
             <h2 key={index} className="text-xl font-bold mt-6 mb-3 pb-2" 
                 style={{ 
-                  color: colors.textPrimary, 
+                  color: isDark ? '#f0f0f0' : colors.textPrimary, 
                   borderBottom: `1px solid ${colors.border}` 
                 }}>
               {line.replace('## ', '')}
@@ -80,7 +81,8 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         }
         if (line.startsWith('# ')) {
           return (
-            <h1 key={index} className="text-2xl font-bold mt-8 mb-4" style={{ color: colors.textPrimary }}>
+            <h1 key={index} className="text-2xl font-bold mt-8 mb-4" 
+                style={{ color: isDark ? '#f5f5f5' : colors.textPrimary }}>
               {line.replace('# ', '')}
             </h1>
           );
@@ -90,7 +92,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         if (line.startsWith('- ')) {
           return (
             <li key={index} className="ml-4 mb-1 list-disc list-inside" 
-                style={{ color: colors.textPrimary }}>
+                style={{ color: isDark ? '#d1d1d1' : colors.textPrimary }}>
               {line.replace('- ', '')}
             </li>
           );
@@ -101,7 +103,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
           const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
           const parts = line.split(linkRegex);
           return (
-            <p key={index} className="mb-2" style={{ color: colors.textPrimary }}>
+            <p key={index} className="mb-2" style={{ color: isDark ? '#d1d1d1' : colors.textPrimary }}>
               {parts.map((part, i) => {
                 if (i % 3 === 1) {
                   // This is link text
@@ -113,7 +115,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:underline transition-colors"
-                      style={{ color: colors.primary }}
+                      style={{ color: isDark ? '#60a5fa' : colors.primary }}
                     >
                       {part}
                     </a>
@@ -142,7 +144,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
         
         // Regular paragraphs
         return (
-          <p key={index} className="mb-2" style={{ color: colors.textPrimary }}>
+          <p key={index} className="mb-2" style={{ color: isDark ? '#d1d1d1' : colors.textPrimary }}>
             {line}
           </p>
         );
@@ -223,7 +225,7 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
 
           {changelog && !loading && !error && (
             <div className="max-w-none leading-relaxed" 
-                 style={{ color: colors.textPrimary }}>
+                 style={{ color: isDark ? '#d1d1d1' : colors.textPrimary }}>
               {renderMarkdown(changelog)}
             </div>
           )}
