@@ -79,13 +79,25 @@ export const MovieSearch = ({
                 e.target.style.backgroundColor = themeColors.background;
               }}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {movieUpdateLoading?.[itemPath] ? (
                   <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
                 ) : (
-                  <span>🎬</span>
+                  <>
+                    {movie.pic ? (
+                      <img
+                        src={movie.pic}
+                        alt={movie.name || movie.title || 'Movie poster'}
+                        className="w-8 h-12 object-cover rounded"
+                        style={{border: `1px solid ${themeColors.border}`}}
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                    ) : (
+                      <span>🎬</span>
+                    )}
+                  </>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="font-medium">
                     {/* Enhanced display for episodes with parent series information */}
                     {movie.kind === 'episode' && (movie.parent_title || movie.series_title) ? (

@@ -250,9 +250,13 @@ jobs:
           CARGO_INCREMENTAL: '0'
           RUST_BACKTRACE: '1'
         run: |
-          echo "🪟 Building Windows setup installer..."
+          echo "🪟 Building Windows installer and updater files..."
           set -o pipefail
-          npm run tauri build -- --bundles nsis 2>&1 | tee build.log
+          npm run tauri build -- --bundles nsis,updater 2>&1 | tee build.log || {
+            echo "❌ Tauri build failed, checking logs..."
+            tail -50 build.log
+            exit 1
+          }
           
           echo "🔍 Debug: Searching for all generated files..."
           find src-tauri/target -name "*.exe" -o -name "*.json" -o -name "*.sig" | head -20 || true
@@ -284,35 +288,59 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "📦 Uploading Windows setup installer to release..."
-          echo "🔍 Debug: Checking target directory structure..."
-          find src-tauri/target -type f -name "*setup.exe" 2>/dev/null || echo "No setup.exe files found anywhere"
-          find src-tauri/target -type f -name "latest.json" 2>/dev/null || echo "No latest.json files found anywhere"
-          ls -la src-tauri/target/*/release/bundle/ 2>/dev/null || echo "Bundle directory not found"
+          set -o pipefail
+          echo "📦 Uploading Windows artifacts to release..."
           
-          # Upload NSIS installer
-          NSIS_FILE=$(find src-tauri/target -name "*setup.exe" | head -1)
-          if [ -n "$NSIS_FILE" ]; then
+          # Debug: Check what files were generated
+          echo "🔍 Debug: Checking target directory structure..."
+          find src-tauri/target -type f -name "*setup.exe" 2>/dev/null || echo "No setup.exe files found"
+          find src-tauri/target -type f -name "*.json" -path "*/bundle/*" 2>/dev/null || echo "No updater JSON files found"
+          
+          # Find and upload NSIS installer
+          NSIS_FILE=""
+          for file in $(find src-tauri/target -name "*setup.exe" 2>/dev/null); do
+            if [ -f "$file" ]; then
+              NSIS_FILE="$file"
+              break
+            fi
+          done
+          
+          if [ -n "$NSIS_FILE" ] && [ -f "$NSIS_FILE" ]; then
             echo "✅ Found NSIS installer: $NSIS_FILE"
-            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber
+            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber || {
+              echo "❌ Failed to upload NSIS installer"
+              exit 1
+            }
           else
             echo "❌ No NSIS installer found"
+            echo "🔍 Files in target directory:"
+            find src-tauri/target -name "*.exe" 2>/dev/null || true
             exit 1
           fi
           
-          # Also upload updater JSON for auto-updates
-          echo "🔍 Searching for updater JSON files..."
-          find src-tauri/target -name "*.json" -type f | head -10
+          # Find and upload updater JSON
+          UPDATER_JSON=""
+          for json_file in $(find src-tauri/target -name "*.json" -path "*/bundle/*" 2>/dev/null); do
+            if [ -f "$json_file" ] && grep -q "version" "$json_file" 2>/dev/null; then
+              UPDATER_JSON="$json_file"
+              break
+            fi
+          done
           
-          UPDATER_JSON=$(find src-tauri/target -name "latest.json" | head -1)
-          if [ -n "$UPDATER_JSON" ]; then
+          if [ -n "$UPDATER_JSON" ] && [ -f "$UPDATER_JSON" ]; then
             echo "✅ Found updater JSON: $UPDATER_JSON"
-            gh release upload "${{ github.ref_name }}" "$UPDATER_JSON" --clobber
+            # Rename to latest.json for consistency
+            cp "$UPDATER_JSON" latest.json
+            gh release upload "${{ github.ref_name }}" latest.json --clobber || {
+              echo "⚠️ Failed to upload updater JSON, continuing..."
+            }
           else
-            echo "⚠️ No latest.json found for auto-updater"
-            echo "🔍 Available JSON files in target directory:"
-            find src-tauri/target -name "*.json" -type f || echo "No JSON files found"
+            echo "⚠️ No updater JSON found - auto-updates may not work"
+            echo "🔍 JSON files in bundle directories:"
+            find src-tauri/target -name "*.json" -path "*/bundle/*" 2>/dev/null || echo "None found"
           fi
+          
+          echo "✅ Windows artifacts upload completed"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

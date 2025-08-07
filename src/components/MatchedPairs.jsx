@@ -123,20 +123,15 @@ export const MatchedPairs = ({
   };
   const successfulPairs = pairedFiles.filter(pair => pair.video && pair.subtitles.length > 0);
 
-  // Movie search state - RE-ENABLED AFTER DEBUG MODE FIX
+  // Movie search state - Simplified to use MovieSearch component
   const [openMovieSearch, setOpenMovieSearch] = React.useState(null);
-  const [movieSearchQuery, setMovieSearchQuery] = React.useState('');
-  const [movieSearchResults, setMovieSearchResults] = React.useState([]);
-  const [movieSearchLoading, setMovieSearchLoading] = React.useState(false);
   const [movieUpdateLoading, setMovieUpdateLoading] = React.useState({});
   const [localUploadStates, setLocalUploadStates] = React.useState({});
   const [uploadOptionsExpanded, setUploadOptionsExpanded] = React.useState({});  // RE-ENABLED
 
-  // Clear search state when closing - RE-ENABLED
+  // Clear search state when closing - Simplified for MovieSearch component
   const closeMovieSearch = () => {
     setOpenMovieSearch(null);
-    setMovieSearchQuery('');
-    setMovieSearchResults([]);
   };
 
   // Handle local state changes from SubtitleUploadOptions - RE-ENABLED
@@ -155,116 +150,12 @@ export const MatchedPairs = ({
     }));
   }, []);
 
-  // Debounced movie search - RE-ENABLED
-  React.useEffect(() => {
-    if (!movieSearchQuery.trim()) {
-      setMovieSearchResults([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      setMovieSearchLoading(true);
-      try {
-        const query = movieSearchQuery.trim();
-        const imdbId = extractImdbId(query);
-        
-        // If it's an IMDB ID input, search using the IMDB ID directly
-        if (imdbId) {
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`);
-          const results = await response.json();
-          setMovieSearchResults(results || []);
-        } else {
-          // Regular text search
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`);
-          const results = await response.json();
-          setMovieSearchResults(results || []);
-        }
-      } catch (error) {
-        console.error('Movie search error:', error);
-        setMovieSearchResults([]);
-      } finally {
-        setMovieSearchLoading(false);
-      }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [movieSearchQuery]);
-
-  // Utility function to extract IMDB ID from various input formats
-  const extractImdbId = (input) => {
-    if (!input) return null;
-    
-    // Remove whitespace
-    const trimmed = input.trim();
-    
-    // Match full IMDB URLs: https://www.imdb.com/title/tt1133589/
-    const urlMatch = trimmed.match(/imdb\.com\/title\/(tt\d+)/i);
-    if (urlMatch) {
-      return urlMatch[1];
-    }
-    
-    // Match tt + number format: tt1133589
-    const ttMatch = trimmed.match(/^(tt\d+)$/i);
-    if (ttMatch) {
-      return ttMatch[1];
-    }
-    
-    // Match just numbers (assume it needs tt prefix): 1133589
-    const numberMatch = trimmed.match(/^\d+$/);
-    if (numberMatch) {
-      return `tt${numberMatch[0]}`;
-    }
-    
-    return null;
-  };
-
-  // Check if input looks like an IMDB ID
-  const isImdbInput = (input) => {
-    return extractImdbId(input) !== null;
-  };
-
   // Get the best movie data (episode-specific if available, otherwise main show) - TEMPORARILY DISABLED
   const getBestMovieData = (videoPath) => {
     // Return basic movie data only to isolate setState during render issue
     return movieGuesses[videoPath];
   };
 
-  // Handle movie search input - RE-ENABLED
-  const handleMovieSearch = (query) => {
-    setMovieSearchQuery(query);
-  };
-
-  // Handle movie selection - RE-ENABLED
-  const handleMovieSelect = async (videoPath, movie) => {
-    // Close search interface
-    closeMovieSearch();
-
-    // Set loading state
-    setMovieUpdateLoading(prev => ({ ...prev, [videoPath]: true }));
-
-    try {
-      // Create new movie guess object
-      const newMovieGuess = {
-        imdbid: movie.id,
-        title: movie.name,
-        year: movie.year,
-        kind: movie.kind,
-        reason: 'User selected'
-      };
-
-      // Call the parent component's movie change handler
-      if (onMovieChange) {
-        await onMovieChange(videoPath, newMovieGuess);
-      }
-
-      console.log('Movie updated successfully:', newMovieGuess);
-    } catch (error) {
-      console.error('Error updating movie:', error);
-    } finally {
-      // Clear loading state
-      setMovieUpdateLoading(prev => ({ ...prev, [videoPath]: false }));
-    }
-  };
 
   // Handle opening movie search - RE-ENABLED
   const handleOpenMovieSearch = React.useCallback((videoPath) => {
@@ -452,177 +343,16 @@ export const MatchedPairs = ({
                   isDark={isDark}
                 />
                 
-                {/* Movie Search Interface for no-match and change movie - RE-ENABLED */}
-                {openMovieSearch === pair.video.fullPath && (
-                  <div className="mt-3 p-3 rounded-lg" 
-                       style={{
-                         backgroundColor: isDark ? '#3a3a3a' : '#f8f9fa',
-                         border: `1px solid ${themeColors.border}`
-                       }}
-                       data-movie-search>
-                        <div className="text-sm mb-2" style={{color: themeColors.text}}>
-                          Search by movie title, IMDB ID, or IMDB URL:
-                          <div className="text-xs mt-1" style={{color: themeColors.textSecondary}}>
-                            Examples: "The Matrix", "133093", "0133093", "tt0133093", "https://www.imdb.com/title/tt0133093/"
-                          </div>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Movie title, IMDB ID (tt0133093), or IMDB URL..."
-                            value={movieSearchQuery}
-                            onChange={(e) => handleMovieSearch(e.target.value)}
-                            className="w-full text-sm px-3 py-2 rounded border focus:outline-none focus:ring-1"
-                            style={{
-                              backgroundColor: themeColors.cardBackground,
-                              color: themeColors.text,
-                              borderColor: themeColors.border
-                            }}
-                            onFocus={(e) => {
-                              e.target.style.boxShadow = `0 0 0 1px ${themeColors.link}`;  // isImdbInput disabled
-                            }}
-                            onBlur={(e) => {
-                              e.target.style.boxShadow = 'none';
-                            }}
-                            autoFocus
-                          />
-                          {/* Visual indicator for IMDB input - DISABLED */}
-                          {false && (
-                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                              <span className="text-xs px-2 py-1 rounded" 
-                                    style={{
-                                      color: themeColors.success, 
-                                      backgroundColor: isDark ? '#1a3315' : '#f0f9e8', 
-                                      border: `1px solid ${themeColors.success}`
-                                    }}>
-                                IMDB ID: {extractImdbId(movieSearchQuery)}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Loading indicator - RE-ENABLED */}
-                          {movieSearchLoading && (
-                            <div className="absolute top-full left-0 right-0 mt-1 rounded shadow-lg z-20 p-3"
-                                 style={{
-                                   backgroundColor: themeColors.cardBackground,
-                                   border: `1px solid ${themeColors.border}`
-                                 }}>
-                              <div className="flex items-center gap-2 text-sm" style={{color: themeColors.textSecondary}}>
-                                <div className="w-4 h-4 border rounded-full animate-spin" style={{borderColor: themeColors.link, borderTopColor: 'transparent'}}></div>
-                                <span>
-                                  {isImdbInput(movieSearchQuery) 
-                                    ? `Looking up IMDB ID: ${extractImdbId(movieSearchQuery)}...`
-                                    : 'Searching movies...'
-                                  }
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* No results message - DISABLED */}
-                          {false && (
-                            <div className="absolute top-full left-0 right-0 mt-1 rounded shadow-lg z-20 p-3"
-                                 style={{
-                                   backgroundColor: themeColors.cardBackground,
-                                   border: `1px solid ${themeColors.border}`
-                                 }}>
-                              <div className="text-sm" style={{color: themeColors.textSecondary}}>
-                                {isImdbInput(movieSearchQuery) 
-                                  ? `No movie found for IMDB ID: ${extractImdbId(movieSearchQuery)}`
-                                  : `No movies found for "${movieSearchQuery}"`
-                                }
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Search Results Dropdown - RE-ENABLED */}
-                          {!movieSearchLoading && movieSearchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-1 rounded shadow-lg z-20 max-h-64 overflow-y-auto"
-                                 style={{
-                                   backgroundColor: themeColors.cardBackground,
-                                   border: `1px solid ${themeColors.border}`
-                                 }}>
-                              {movieSearchResults.map((movie) => (
-                                <button
-                                  key={movie.id}
-                                  onClick={() => handleMovieSelect(pair.video.fullPath, movie)}
-                                  className="w-full text-left px-3 py-2 flex items-center gap-3 last:border-b-0"
-                                  style={{
-                                    backgroundColor: 'transparent',
-                                    borderBottom: `1px solid ${themeColors.border}`
-                                  }}
-                                  onMouseEnter={(e) => e.target.style.backgroundColor = isDark ? '#444444' : '#f8f9fa'}
-                                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                  disabled={movieUpdateLoading[pair.video.fullPath]}
-                                >
-                                  {movie.pic && (
-                                    <img
-                                      src={movie.pic}
-                                      alt={movie.name}
-                                      className="w-8 h-12 object-cover rounded"
-                                      style={{border: `1px solid ${themeColors.border}`}}
-                                      onError={(e) => e.target.style.display = 'none'}
-                                    />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate" style={{color: themeColors.text}}>
-                                      {/* Enhanced display for episodes with parent series information */}
-                                      {movie.kind === 'episode' && (movie.parent_title || movie.series_title) ? (
-                                        <>
-                                          <span style={{color: themeColors.link}}>{movie.parent_title || movie.series_title}</span>
-                                          {(movie.season_number || movie.episode_number) && (
-                                            <span style={{color: themeColors.textSecondary}}>
-                                              {' - '}
-                                              {movie.season_number && `S${movie.season_number.toString().padStart(2, '0')}`}
-                                              {movie.episode_number && `E${movie.episode_number.toString().padStart(2, '0')}`}
-                                            </span>
-                                          )}
-                                          {movie.name && (
-                                            <span style={{color: themeColors.text}}> - {movie.name}</span>
-                                          )}
-                                          {movie.year && ` (${movie.year})`}
-                                        </>
-                                      ) : (
-                                        `${movie.name} (${movie.year})`
-                                      )}
-                                    </div>
-                                    <div className="text-xs capitalize flex items-center gap-2" style={{color: themeColors.textSecondary}}>
-                                      <span>{movie.kind}</span>
-                                      <span>•</span>
-                                      <span>IMDb:</span>
-                                      <a 
-                                        href={`https://www.imdb.com/title/tt${movie.id}/`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="underline"
-                                        style={{color: themeColors.link}}
-                                        onMouseEnter={(e) => e.target.style.color = themeColors.linkHover}
-                                        onMouseLeave={(e) => e.target.style.color = themeColors.link}
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        {movie.id}
-                                      </a>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex justify-end mt-2">
-                          <button
-                            onClick={() => closeMovieSearch()}
-                            className="text-xs px-2 py-1"
-                            style={{color: themeColors.textSecondary}}
-                            onMouseEnter={(e) => e.target.style.color = themeColors.text}
-                            onMouseLeave={(e) => e.target.style.color = themeColors.textSecondary}
-                          >
-                            Cancel
-                          </button>
-                    </div>
-                  </div>
-                )}
+                {/* Movie Search Component - Reusable */}
+                <MovieSearch
+                  isOpen={openMovieSearch === pair.video.fullPath}
+                  onMovieChange={onMovieChange}
+                  onClose={closeMovieSearch}
+                  itemPath={pair.video.fullPath}
+                  movieUpdateLoading={movieUpdateLoading}
+                  themeColors={themeColors}
+                  isDark={isDark}
+                />
                 
                 {/* Subtitle Files */}
                 <div className="ml-8 space-y-2">
