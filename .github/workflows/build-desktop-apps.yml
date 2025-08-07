@@ -256,7 +256,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📦 Uploading Linux AppImage to release..."
-          APPIMAGE_FILE=$(find src-tauri/target/*/release/bundle/appimage -name "*.AppImage" | head -1)
+          echo "🔍 Debug: Checking target directory structure..."
+          find src-tauri/target -type f -name "*.AppImage" 2>/dev/null || echo "No AppImage files found anywhere"
+          ls -la src-tauri/target/*/release/bundle/ 2>/dev/null || echo "Bundle directory not found"
+          
+          APPIMAGE_FILE=$(find src-tauri/target -name "*.AppImage" | head -1)
           if [ -n "$APPIMAGE_FILE" ]; then
             echo "✅ Found AppImage: $APPIMAGE_FILE"
             gh release upload "${{ github.ref_name }}" "$APPIMAGE_FILE" --clobber
@@ -272,9 +276,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📦 Uploading Windows setup installer to release..."
+          echo "🔍 Debug: Checking target directory structure..."
+          find src-tauri/target -type f -name "*setup.exe" 2>/dev/null || echo "No setup.exe files found anywhere"
+          find src-tauri/target -type f -name "latest.json" 2>/dev/null || echo "No latest.json files found anywhere"
+          ls -la src-tauri/target/*/release/bundle/ 2>/dev/null || echo "Bundle directory not found"
           
           # Upload NSIS installer
-          NSIS_FILE=$(find src-tauri/target/*/release/bundle/nsis -name "*setup.exe" | head -1)
+          NSIS_FILE=$(find src-tauri/target -name "*setup.exe" | head -1)
           if [ -n "$NSIS_FILE" ]; then
             echo "✅ Found NSIS installer: $NSIS_FILE"
             gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber
@@ -284,7 +292,7 @@ jobs:
           fi
           
           # Also upload updater JSON for auto-updates
-          UPDATER_JSON=$(find src-tauri/target/*/release/bundle -name "latest.json" | head -1)
+          UPDATER_JSON=$(find src-tauri/target -name "latest.json" | head -1)
           if [ -n "$UPDATER_JSON" ]; then
             echo "✅ Found updater JSON: $UPDATER_JSON"
             gh release upload "${{ github.ref_name }}" "$UPDATER_JSON" --clobber
