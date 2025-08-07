@@ -228,23 +228,66 @@ jobs:
           
           echo "✅ macOS Universal artifacts upload completed"
 
-      - name: Build the app (Standard)
-        if: matrix.target != 'universal-apple-darwin'
-        uses: tauri-apps/tauri-action@v0.5
+      - name: Build the app (Linux AppImage only)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           VITE_OPENSUBTITLES_API_KEY: ${{ secrets.VITE_OPENSUBTITLES_API_KEY }}
           NODE_ENV: production
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'OpenSubtitles Uploader PRO v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.args }}
-          includeUpdaterJson: true
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        run: |
+          echo "🐧 Building Linux AppImage only..."
+          npm run tauri build -- --bundles appimage
+
+      - name: Build the app (Windows)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        env:
+          VITE_OPENSUBTITLES_API_KEY: ${{ secrets.VITE_OPENSUBTITLES_API_KEY }}
+          NODE_ENV: production
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        run: |
+          echo "🪟 Building Windows setup installer..."
+          npm run tauri build -- --bundles nsis
+
+      - name: Upload Linux artifacts to release
+        if: matrix.target == 'x86_64-unknown-linux-gnu' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📦 Uploading Linux AppImage to release..."
+          APPIMAGE_FILE=$(find src-tauri/target/*/release/bundle/appimage -name "*.AppImage" | head -1)
+          if [ -n "$APPIMAGE_FILE" ]; then
+            echo "✅ Found AppImage: $APPIMAGE_FILE"
+            gh release upload "${{ github.ref_name }}" "$APPIMAGE_FILE" --clobber
+          else
+            echo "❌ No AppImage file found"
+            exit 1
+          fi
+
+      - name: Upload Windows artifacts to release
+        if: matrix.target == 'x86_64-pc-windows-msvc' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📦 Uploading Windows setup installer to release..."
+          
+          # Upload NSIS installer
+          NSIS_FILE=$(find src-tauri/target/*/release/bundle/nsis -name "*setup.exe" | head -1)
+          if [ -n "$NSIS_FILE" ]; then
+            echo "✅ Found NSIS installer: $NSIS_FILE"
+            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber
+          else
+            echo "❌ No NSIS installer found"
+            exit 1
+          fi
+          
+          # Also upload updater JSON for auto-updates
+          UPDATER_JSON=$(find src-tauri/target/*/release/bundle -name "latest.json" | head -1)
+          if [ -n "$UPDATER_JSON" ]; then
+            echo "✅ Found updater JSON: $UPDATER_JSON"
+            gh release upload "${{ github.ref_name }}" "$UPDATER_JSON" --clobber
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -320,13 +363,12 @@ jobs:
             
             **Linux:**
             - `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
-            - `opensubtitles-uploader-pro_x.x.x_amd64.deb` - Debian/Ubuntu package
             
             ### Installation Instructions:
             
-            **Windows:** Download and run the `.exe` installer
+            **Windows:** Download and run the `.exe` setup file
             **macOS:** Download the `.dmg` file and drag the app to Applications
-            **Linux:** Download the `.AppImage` and make it executable, or install the `.deb` package
+            **Linux:** Download the `.AppImage`, make it executable (`chmod +x *.AppImage`), then run
             
             ### Features:
             - Native file system access
