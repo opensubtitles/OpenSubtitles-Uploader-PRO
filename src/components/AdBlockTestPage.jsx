@@ -156,7 +156,7 @@ export const AdBlockTestPage = () => {
     if (!connectivityResult.success) {
       console.log('❌ No internet connectivity - skipping other tests');
       // Let the final generateRecommendations handle this case
-      setTimeout(() => generateRecommendations(), 100);
+      setTimeout(() => generateRecommendations(), 500);
       return;
     }
     
@@ -180,10 +180,10 @@ export const AdBlockTestPage = () => {
       }
     }
     
-    // Generate recommendations after all tests
+    // Generate recommendations after all tests (longer delay for initial load)
     setTimeout(() => {
       generateRecommendations();
-    }, 100);
+    }, 500);
   };
 
   const generateRecommendations = () => {
@@ -191,6 +191,12 @@ export const AdBlockTestPage = () => {
     const connectivityTest = tests.find(t => t.category === 'connectivity');
     const apiTests = tests.filter(t => t.category === 'api');
     const adBlockTest = tests.find(t => t.category === 'adblock');
+    
+    console.log('🔍 Generating recommendations with test statuses:', {
+      connectivity: connectivityTest?.status,
+      api: apiTests.map(t => `${t.name}: ${t.status}`),
+      adblock: adBlockTest?.status
+    });
     
     // Check connectivity first
     if (connectivityTest?.status !== 'success') {
