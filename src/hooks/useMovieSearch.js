@@ -37,9 +37,19 @@ export const useMovieSearch = (onMovieChange) => {
       return ttMatch[1];
     }
     
-    // Match just numbers (assume it needs tt prefix): 1133589
+    // Match just numbers (assume it needs tt prefix): 1133589 or 749451
     const numberMatch = trimmed.match(/^\d+$/);
     if (numberMatch) {
+      const number = parseInt(numberMatch[0], 10);
+      
+      // For numbers >= 3000, pad to 7 digits with leading zeros
+      // This handles cases like 749451 -> tt0749451
+      if (number >= 3000) {
+        const paddedNumber = number.toString().padStart(7, '0');
+        return `tt${paddedNumber}`;
+      }
+      
+      // For smaller numbers, use as-is (legacy behavior)
       return `tt${numberMatch[0]}`;
     }
     
