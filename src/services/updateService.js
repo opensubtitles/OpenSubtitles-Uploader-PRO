@@ -172,18 +172,31 @@ export class UpdateService {
 
     try {
       console.log('🔄 Checking for updates via Tauri updater...');
+      console.log('🔍 Debug - Tauri updater state:', {
+        tauriUpdaterAvailable: !!tauriUpdater,
+        updaterMethods: tauriUpdater ? Object.keys(tauriUpdater) : 'N/A',
+        currentVersion: APP_VERSION
+      });
       
       if (!tauriUpdater) {
-        throw new Error('Tauri updater not available');
+        throw new Error('Tauri updater not available - APIs not loaded');
       }
 
+      if (!tauriUpdater.checkUpdate) {
+        throw new Error('Tauri checkUpdate method not available');
+      }
+
+      console.log('🔄 Calling tauriUpdater.checkUpdate()...');
       const updateInfo = await tauriUpdater.checkUpdate();
+      console.log('✅ Raw Tauri update response:', JSON.stringify(updateInfo, null, 2));
+
       const hasUpdate = updateInfo.shouldUpdate || false;
 
       console.log('🔄 Tauri update check result:', { 
         hasUpdate, 
         currentVersion: APP_VERSION, 
-        manifest: updateInfo.manifest 
+        manifest: updateInfo.manifest,
+        fullResponse: updateInfo
       });
 
       const result = {
@@ -213,7 +226,30 @@ export class UpdateService {
         cached: false
       };
     } catch (error) {
-      console.error('❌ Tauri update check failed:', error);
+      // Enhanced error logging
+      console.error('❌ Tauri update check failed:', {
+        errorMessage: error?.message || 'Unknown error',
+        errorName: error?.name || 'Unknown',
+        errorStack: error?.stack || 'No stack trace',
+        errorToString: error?.toString() || 'Cannot convert to string',
+        fullError: error,
+        errorType: typeof error,
+        errorKeys: error ? Object.keys(error) : 'N/A'
+      });
+
+      // Try to extract meaningful error message
+      let errorMessage = 'Unknown update check error';
+      if (error && typeof error === 'object') {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.toString && error.toString() !== '[object Object]') {
+          errorMessage = error.toString();
+        } else if (JSON.stringify(error) !== '{}') {
+          errorMessage = `Update check error: ${JSON.stringify(error)}`;
+        }
+      } else if (error) {
+        errorMessage = String(error);
+      }
       
       // Update cache with error
       cache.lastChecked = now;
@@ -222,12 +258,12 @@ export class UpdateService {
 
       this.notifyListeners({
         type: 'update_check_error',
-        error: error.message
+        error: errorMessage
       });
 
       return {
         updateAvailable: false,
-        error: error.message,
+        error: errorMessage,
         errorType: 'tauri_updater_error'
       };
     }

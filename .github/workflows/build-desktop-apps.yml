@@ -249,6 +249,11 @@ jobs:
         run: |
           echo "🪟 Building Windows setup installer..."
           npm run tauri build -- --bundles nsis
+          
+          echo "🔍 Debug: Searching for all generated files..."
+          find src-tauri/target -name "*.exe" -o -name "*.json" -o -name "*.sig" | head -20
+          echo "📁 Bundle directory contents:"
+          find src-tauri/target -type d -name "bundle" -exec ls -la {} \;
 
       - name: Upload Linux artifacts to release
         if: matrix.target == 'x86_64-unknown-linux-gnu' && startsWith(github.ref, 'refs/tags/')
@@ -292,10 +297,17 @@ jobs:
           fi
           
           # Also upload updater JSON for auto-updates
+          echo "🔍 Searching for updater JSON files..."
+          find src-tauri/target -name "*.json" -type f | head -10
+          
           UPDATER_JSON=$(find src-tauri/target -name "latest.json" | head -1)
           if [ -n "$UPDATER_JSON" ]; then
             echo "✅ Found updater JSON: $UPDATER_JSON"
             gh release upload "${{ github.ref_name }}" "$UPDATER_JSON" --clobber
+          else
+            echo "⚠️ No latest.json found for auto-updater"
+            echo "🔍 Available JSON files in target directory:"
+            find src-tauri/target -name "*.json" -type f || echo "No JSON files found"
           fi
 
       - name: Upload artifacts
