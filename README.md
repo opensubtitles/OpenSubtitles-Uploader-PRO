@@ -11,9 +11,6 @@ A professional subtitle uploader application that integrates with OpenSubtitles 
 
 ## 📦 Downloads
 
-### Web Application (Recommended)
-**🚀 [Launch Web App](https://uploader.opensubtitles.org)** - No installation required, works in all modern browsers
-
 ### Desktop Application
 **📦 [Download Latest Release](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/latest)**
 
