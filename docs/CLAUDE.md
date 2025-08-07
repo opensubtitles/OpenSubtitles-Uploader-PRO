@@ -19,19 +19,43 @@ This is a React-based subtitle uploader application that integrates with the Ope
 
 ## Version Management
 
-**CRITICAL**: When updating the version in `package.json`, you MUST run `npm run update-version` to sync version references across the codebase.
+**CRITICAL**: When bumping/changing the version, you MUST use the automated script to prevent synchronization issues.
+
+### ⚠️ ALWAYS Use the Version Update Script
+
+**DO NOT manually edit version numbers!** Use the script instead:
+
+```bash
+# Method 1: Update package.json first, then sync all files
+npm version patch|minor|major  # Updates package.json
+npm run update-version         # Syncs to all other files
+
+# Method 2: Use the script directly
+node scripts/build/update-version.js  # Reads package.json and syncs all files
+```
+
+### Files That Must Stay Synchronized
 
 The application displays version information in multiple places:
-- `src/utils/constants.js` - APP_VERSION constant (displayed on the page)
+- `package.json` - Main version source (NPM)
+- `src-tauri/tauri.conf.json` - Tauri desktop app version  
+- `src/utils/constants.js` - APP_VERSION constant (displayed in app UI)
 - `README.md` - Version badge
-- `package.json` - Main version source
+
+### Version Update Script Details
+
+The script `scripts/build/update-version.js` automatically:
+1. ✅ Reads the current version from `package.json`
+2. ✅ Updates `src/utils/constants.js` APP_VERSION constant
+3. ✅ Updates `src-tauri/tauri.conf.json` version field
+4. ✅ Updates `README.md` version badge
 
 **Process for version updates:**
-1. Update version in `package.json`
-2. Run `npm run update-version` to sync all version references
+1. Update version in `package.json` (manually or with `npm version`)
+2. Run `npm run update-version` to sync ALL other files
 3. Commit and push changes
 
-**Why this matters:** Without running the update script, the page will display the old version from `constants.js` while `package.json` has the new version, causing user confusion.
+**Why this matters:** If you skip the script, the app UI will show the old version from `constants.js` while `package.json` has the new version. This confuses users and makes debugging harder.
 
 ## Release Process
 
