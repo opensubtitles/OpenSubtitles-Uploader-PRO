@@ -274,6 +274,28 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -la ./artifacts/
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Generate changelog
+        run: |
+          node scripts/generate-changelog.js
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "Update changelog for release v1.1.2-build${{ github.run_number }}" || echo "No changes to commit"
+          
+      - name: Extract changelog for release
+        id: changelog
+        run: |
+          # Extract the latest version section from CHANGELOG.md
+          CHANGELOG_SECTION=$(awk '/^## \[/{if(first){exit} first=1; print; next} first{print}' CHANGELOG.md | sed '/^$/d')
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_SECTION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
@@ -282,6 +304,8 @@ jobs:
           tag_name: v1.1.2-build${{ github.run_number }}
           name: OpenSubtitles Uploader PRO v1.1.2-build${{ github.run_number }}
           body: |
+            ${{ steps.changelog.outputs.CHANGELOG }}
+            
             ## OpenSubtitles Uploader PRO Desktop Apps
             
             Native desktop applications for Windows, macOS, and Linux.

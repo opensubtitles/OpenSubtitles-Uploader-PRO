@@ -11,7 +11,23 @@ const loadTauriAPIs = async () => {
       console.log('🔄 Tauri APIs available - window.__TAURI__ detected!');
       console.log('✅ Tauri environment confirmed');
       
-      // For now, just create dummy objects to avoid build issues
+      // Import the actual Tauri updater APIs
+      const { checkUpdate, installUpdate, onUpdaterEvent } = await import('@tauri-apps/plugin-updater');
+      const { relaunch } = await import('@tauri-apps/plugin-process');
+      
+      tauriUpdater = { 
+        checkUpdate, 
+        installUpdate, 
+        onUpdaterEvent
+      };
+      tauriProcess = { 
+        relaunch 
+      };
+      
+      console.log('✅ Tauri updater APIs loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load Tauri updater APIs:', error);
+      // Fallback to dummy objects if import fails
       tauriUpdater = { 
         checkUpdate: () => Promise.resolve({ shouldUpdate: false }), 
         installUpdate: () => Promise.resolve(), 
@@ -20,10 +36,7 @@ const loadTauriAPIs = async () => {
       tauriProcess = { 
         relaunch: () => Promise.resolve() 
       };
-      
-      console.log('✅ Tauri placeholders created');
-    } catch (error) {
-      console.error('❌ Failed to setup Tauri placeholders:', error);
+      console.log('⚠️ Using fallback dummy updater APIs');
     }
   } else {
     console.log('🔍 Tauri API loading conditions:', {
@@ -139,20 +152,97 @@ export class UpdateService {
   }
 
   /**
-   * Check for updates with caching - Custom GitHub API implementation
+   * Check for updates using Tauri's native updater
+   * @param {boolean} force - Force check even if cached
+   * @returns {Promise<Object>} Update check result
+   */
+  async checkForUpdatesViaTauri(force = false) {
+    const now = Date.now();
+    const cache = UpdateService.updateCache;
+
+    // Return cached result if not forcing and cache is valid
+    if (!force && cache.lastChecked && (now - cache.lastChecked) < cache.cacheTimeout) {
+      console.log('📦 Using cached Tauri update check result');
+      return {
+        updateAvailable: cache.updateAvailable,
+        updateInfo: cache.updateInfo,
+        cached: true
+      };
+    }
+
+    try {
+      console.log('🔄 Checking for updates via Tauri updater...');
+      
+      if (!tauriUpdater) {
+        throw new Error('Tauri updater not available');
+      }
+
+      const updateInfo = await tauriUpdater.checkUpdate();
+      const hasUpdate = updateInfo.shouldUpdate || false;
+
+      console.log('🔄 Tauri update check result:', { 
+        hasUpdate, 
+        currentVersion: APP_VERSION, 
+        manifest: updateInfo.manifest 
+      });
+
+      const result = {
+        shouldUpdate: hasUpdate,
+        currentVersion: APP_VERSION,
+        latestVersion: updateInfo.manifest?.version || 'unknown',
+        releaseNotes: updateInfo.manifest?.body || 'No release notes available',
+        publishedAt: updateInfo.manifest?.date || null,
+        manifest: updateInfo.manifest
+      };
+
+      // Update cache
+      cache.lastChecked = now;
+      cache.updateAvailable = hasUpdate;
+      cache.updateInfo = result;
+
+      // Notify listeners
+      this.notifyListeners({
+        type: 'update_check_complete',
+        updateAvailable: hasUpdate,
+        updateInfo: result
+      });
+
+      return {
+        updateAvailable: hasUpdate,
+        updateInfo: result,
+        cached: false
+      };
+    } catch (error) {
+      console.error('❌ Tauri update check failed:', error);
+      
+      // Update cache with error
+      cache.lastChecked = now;
+      cache.updateAvailable = false;
+      cache.updateInfo = null;
+
+      this.notifyListeners({
+        type: 'update_check_error',
+        error: error.message
+      });
+
+      return {
+        updateAvailable: false,
+        error: error.message,
+        errorType: 'tauri_updater_error'
+      };
+    }
+  }
+
+  /**
+   * Check for updates with caching - Uses Tauri updater in standalone mode
    * @param {boolean} force - Force check even if cached
    * @returns {Promise<Object>} Update check result
    */
   async checkForUpdates(force = false) {
-    // Skip update checks entirely in Tauri environment to prevent SSL/CORS errors
+    // Use Tauri's native updater in standalone environment
     if (this.isStandalone) {
-      console.log('ℹ️ Update checks disabled in Tauri environment (SSL/CORS restrictions)');
-      return {
-        updateAvailable: false,
-        updateInfo: null,
-        disabled: true,
-        error: 'Update checks disabled in desktop app'
-      };
+      console.log('🔄 Checking for updates using Tauri native updater...');
+      return await this.checkForUpdatesViaTauri(force);
     }
 
     const now = Date.now();
@@ -363,12 +453,6 @@ export class UpdateService {
    * Start automatic update checks (every 1 hour)
    */
   startAutoUpdateChecks() {
-    // Disable automatic update checks in Tauri environment due to SSL/CORS restrictions
-    if (this.isStandalone) {
-      console.log('ℹ️ Auto-update checks disabled in Tauri environment (SSL/CORS restrictions)');
-      return;
-    }
-
     if (this.autoCheckInterval) {
       console.log('⚠️ Auto-update checks already running');
       return;
@@ -376,8 +460,10 @@ export class UpdateService {
 
     console.log('🔄 Starting automatic update checks...');
     
-    // Check immediately
-    this.checkForUpdates(false);
+    // Check immediately on start (with a small delay to let the app initialize)
+    setTimeout(() => {
+      this.checkForUpdates(false);
+    }, 5000); // Wait 5 seconds after app start
     
     // Then check every hour
     this.autoCheckInterval = setInterval(() => {

@@ -2369,9 +2369,17 @@ function SubtitleUploaderInner() {
              style={{borderTopColor: colors.border, color: colors.textSecondary}}>
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-4">
-              <span>
-                OpenSubtitles Uploader PRO v{APP_VERSION}
-              </span>
+              <a 
+                href="https://github.com/opensubtitles/opensubtitles-uploader-pro/blob/main/CHANGELOG.md" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:underline transition-all flex items-center gap-1"
+                style={styles.link}
+                {...createHoverHandlers(colors, styles.link, styles.linkHover)}
+              >
+                <span>📋</span>
+                Changelog v{APP_VERSION}
+              </a>
               <span className="text-xs opacity-60">•</span>
               <a 
                 href="/#/adblock"
