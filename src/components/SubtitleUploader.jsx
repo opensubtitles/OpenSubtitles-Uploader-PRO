@@ -109,6 +109,7 @@ import { useAuth } from "../contexts/AuthContext.jsx";
 
 // Lazy load the DebugPanel component
 const DebugPanel = lazy(() => import("./DebugPanel.jsx").then(module => ({ default: module.DebugPanel })));
+const ChangelogOverlay = lazy(() => import("./ChangelogOverlay.jsx"));
 
 function SubtitleUploaderInner() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -117,6 +118,7 @@ function SubtitleUploaderInner() {
   const { isStandalone, startAutoUpdates } = useAppUpdate();
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null); // For temporary info messages
+  const [showChangelogOverlay, setShowChangelogOverlay] = useState(false);
   
   // Ref for auto-scrolling to matched pairs section
   const matchedPairsRef = useRef(null);
@@ -2369,17 +2371,15 @@ function SubtitleUploaderInner() {
              style={{borderTopColor: colors.border, color: colors.textSecondary}}>
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-4">
-              <a 
-                href="https://github.com/opensubtitles/opensubtitles-uploader-pro/blob/main/CHANGELOG.md" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <button 
+                onClick={() => setShowChangelogOverlay(true)}
                 className="hover:underline transition-all flex items-center gap-1"
                 style={styles.link}
                 {...createHoverHandlers(colors, styles.link, styles.linkHover)}
               >
                 <span>📋</span>
                 Changelog v{APP_VERSION}
-              </a>
+              </button>
               <span className="text-xs opacity-60">•</span>
               <a 
                 href="/#/adblock"
@@ -2433,6 +2433,16 @@ function SubtitleUploaderInner() {
           addDebugInfo(`🧪 Started test case: ${description}`);
         }}
       />
+
+      {/* Changelog Overlay */}
+      <Suspense fallback={null}>
+        <ChangelogOverlay
+          isOpen={showChangelogOverlay}
+          onClose={() => setShowChangelogOverlay(false)}
+          colors={colors}
+          isDark={isDark}
+        />
+      </Suspense>
     </div>
   );
 }
