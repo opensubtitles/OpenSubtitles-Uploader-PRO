@@ -239,16 +239,10 @@ export class UpdateService {
    * @returns {Promise<Object>} Update check result
    */
   async checkForUpdates(force = false) {
-    // Skip update checks if updater is disabled (no code signing)
+    // Use Tauri's native updater in standalone environment
     if (this.isStandalone) {
-      console.log('ℹ️ Auto-updater disabled (requires code signing certificates)');
-      console.log('📝 To enable auto-updates: Configure TAURI_PRIVATE_KEY and TAURI_KEY_PASSWORD in GitHub Secrets');
-      console.log('🔧 Auto-updater will work once code signing certificates are properly configured');
-      return {
-        updateAvailable: false,
-        message: 'Auto-updater disabled - requires code signing certificates',
-        disabled: true
-      };
+      console.log('🔄 Checking for updates using Tauri native updater...');
+      return await this.checkForUpdatesViaTauri(force);
     }
 
     const now = Date.now();

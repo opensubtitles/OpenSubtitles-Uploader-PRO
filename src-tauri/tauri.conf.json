@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.5.14",
+  "version": "1.5.15",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -38,7 +38,8 @@
             "shell:allow-open",
             "fs:default",
             "dialog:default",
-            "http:default"
+            "http:default",
+            "updater:default"
           ]
         }
       ]
@@ -88,12 +89,12 @@
       "requireLiteralLeadingDot": false
     },
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/latest/download/latest.json"
       ],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEMjU1MTkKUldSQ1JBc1BqWnk2TjUyL3Qva09YbDB6anRDbXlUM0R5Y0NjdDhwVE9hU0tuSU1zRAo="
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2QjQzOTlFMTA3QkFFMDMKUldRRHJuc1Fuam0wTm9zSGJLcjFJdU5ZNzljNGo0L1puUU5sOWlxbnE2WDNjaXBLaXE4OFl6V2MK"
     }
   }
 }
