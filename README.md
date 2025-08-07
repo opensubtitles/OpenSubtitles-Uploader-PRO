@@ -61,6 +61,7 @@ A professional subtitle uploader application that integrates with OpenSubtitles 
 ### Supported File Formats
 
 **Video Files**: `.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.flv`, `.wmv`, etc.
+
 **Subtitle Files**: `.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.txt`, etc.
 
 ### Browser Compatibility
