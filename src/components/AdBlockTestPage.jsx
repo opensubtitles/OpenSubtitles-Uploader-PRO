@@ -29,6 +29,7 @@ export const AdBlockTestPage = () => {
   
   const [browserInfo, setBrowserInfo] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     // Detect browser
@@ -145,6 +146,13 @@ export const AdBlockTestPage = () => {
   };
 
   const runTests = async () => {
+    // Prevent multiple simultaneous runs
+    if (isRunning) {
+      console.log('⚠️ Tests already running, skipping...');
+      return;
+    }
+    
+    setIsRunning(true);
     // Reset all tests to pending
     setTests(prev => prev.map(t => ({ ...t, status: 'pending', error: null, time: null })));
     setRecommendations([]);
@@ -155,8 +163,9 @@ export const AdBlockTestPage = () => {
     
     if (!connectivityResult.success) {
       console.log('❌ No internet connectivity - skipping other tests');
-      // Let the final generateRecommendations handle this case
-      setTimeout(() => generateRecommendations(), 500);
+      // Let the final generateRecommendations handle this case after state update
+      setTimeout(() => generateRecommendations(), 200);
+      setIsRunning(false);
       return;
     }
     
@@ -180,10 +189,19 @@ export const AdBlockTestPage = () => {
       }
     }
     
-    // Generate recommendations after all tests (longer delay for initial load)
-    setTimeout(() => {
-      generateRecommendations();
-    }, 500);
+    // Wait for all tests to complete before generating recommendations
+    const checkTestsComplete = () => {
+      const allComplete = tests.every(test => test.status !== 'pending' && test.status !== 'testing');
+      if (allComplete) {
+        generateRecommendations();
+      } else {
+        // Check again in 100ms if tests aren't complete yet
+        setTimeout(checkTestsComplete, 100);
+      }
+    };
+    
+    setTimeout(checkTestsComplete, 200);
+    setIsRunning(false);
   };
 
   const generateRecommendations = () => {
