@@ -267,6 +267,7 @@ jobs:
 
       - name: Upload Windows artifacts to release
         if: matrix.target == 'x86_64-pc-windows-msvc' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
