@@ -96,14 +96,22 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
-          echo "🏗️ Attempting Universal Binary build for macOS..."
+          echo "🍎 Building macOS with basic debugging..."
+          echo "Debug - Environment info:"
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Rust: $(rustc --version)"
+          echo "Cargo: $(cargo --version)"
+          echo "Architecture: $(uname -m)"
+          echo "Available disk space: $(df -h . | tail -1)"
           
-          # Try simple single-target build first as fallback
-          echo "🔧 Trying single-target build as fallback (current host architecture)..."
-          if npm run tauri build -- --bundles dmg 2>&1 | tee build.log; then
-            echo "✅ Single-target macOS build completed"
+          echo "🔧 Trying basic macOS build..."
+          if npm run tauri build -- --bundles dmg --verbose 2>&1 | tee macos-build.log; then
+            echo "✅ macOS build successful"
+            echo "🔍 Generated files:"
+            find src-tauri/target -name "*.dmg" -o -name "*.app" | head -10
             
-            # Move the result to universal directory for consistency
+            # Move for consistency with upload logic
             mkdir -p src-tauri/target/universal-apple-darwin/release/bundle
             if [ -d "src-tauri/target/release/bundle" ]; then
               cp -R src-tauri/target/release/bundle/* src-tauri/target/universal-apple-darwin/release/bundle/
@@ -111,14 +119,9 @@ jobs:
             fi
           else
             echo "❌ macOS build failed, showing logs:"
-            tail -50 build.log
-            
-            echo "🔍 Debug: Available Rust targets:"
-            rustup target list --installed || true
-            echo "🔍 Debug: Host info:"
-            uname -a || true
-            rustc -Vv || true
-            
+            tail -100 macos-build.log
+            echo "=== Checking for specific error patterns ==="
+            grep -i "error\|failed\|panic" macos-build.log | tail -10 || echo "No obvious errors found"
             exit 1
           fi
 
@@ -168,8 +171,27 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
-          echo "🐧 Building Linux AppImage only..."
-          npm run tauri build -- --bundles appimage
+          echo "🐧 Building Linux with basic debugging..."
+          echo "Debug - Environment info:"
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Rust: $(rustc --version)"
+          echo "Cargo: $(cargo --version)"
+          echo "PWD: $(pwd)"
+          echo "Available disk space: $(df -h . | tail -1)"
+          
+          echo "🔧 Trying minimal Linux build..."
+          if npm run tauri build -- --bundles appimage --verbose 2>&1 | tee linux-build.log; then
+            echo "✅ Linux build successful"
+            echo "🔍 Generated files:"
+            find src-tauri/target -name "*.AppImage" -o -name "*.deb" | head -10
+          else
+            echo "❌ Linux build failed, showing logs:"
+            tail -100 linux-build.log
+            echo "=== Checking for specific error patterns ==="
+            grep -i "error\|failed\|panic" linux-build.log | tail -10 || echo "No obvious errors found"
+            exit 1
+          fi
 
       - name: Build the app (Windows)
         if: matrix.target == 'x86_64-pc-windows-msvc'
@@ -179,42 +201,28 @@ jobs:
           NODE_ENV: production
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          CARGO_INCREMENTAL: '0'
-          RUST_BACKTRACE: full
-          CARGO_TERM_COLOR: always
-          RUSTFLAGS: '-C target-feature=+crt-static'
         run: |
-          echo "🪟 Building Windows installer and updater files..."
-          echo "🔍 Debug: Environment check..."
-          echo "Rust version: $(rustc --version)"
-          echo "Cargo version: $(cargo --version)"
-          echo "Node version: $(node --version)"
-          echo "NPM version: $(npm --version)"
+          echo "🪟 Building Windows with basic debugging..."
+          echo "Debug - Environment info:"
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Rust: $(rustc --version)"
+          echo "Cargo: $(cargo --version)"
           echo "Working directory: $(pwd)"
-          echo "Target: x86_64-pc-windows-msvc"
+          echo "Available disk space: $(df -h . | tail -1)"
           
-          # Clear any cached build files to ensure clean build
-          echo "🧹 Cleaning previous build artifacts..."
-          cd src-tauri && cargo clean && cd ..
-          
-          echo "🚀 Starting Tauri build..."
-          set -o pipefail
-          npm run tauri build -- --bundles nsis,updater --verbose 2>&1 | tee build.log || {
-            echo "❌ Tauri build failed, showing detailed logs..."
-            echo "=== LAST 100 LINES OF BUILD LOG ==="
-            tail -100 build.log
-            echo "=== END OF BUILD LOG ==="
-            echo "=== CHECKING FOR CORE FILES ==="
-            find . -name "core*" -o -name "*.dmp" 2>/dev/null || echo "No core dumps found"
-            echo "=== CHECKING TARGET DIRECTORY ==="
-            ls -la src-tauri/target/ 2>/dev/null || echo "No target directory"
+          echo "🔧 Trying minimal Windows build..."
+          if npm run tauri build -- --bundles nsis --verbose 2>&1 | tee windows-build.log; then
+            echo "✅ Windows build successful"
+            echo "🔍 Generated files:"
+            find src-tauri/target -name "*.exe" -o -name "*.json" | head -10
+          else
+            echo "❌ Windows build failed, showing logs:"
+            tail -100 windows-build.log
+            echo "=== Checking for specific error patterns ==="
+            grep -i "error\|failed\|panic" windows-build.log | tail -10 || echo "No obvious errors found"
             exit 1
-          }
-          
-          echo "🔍 Debug: Searching for all generated files..."
-          find src-tauri/target -name "*.exe" -o -name "*.json" -o -name "*.sig" | head -20 || true
-          echo "📁 Bundle directory contents:"
-          find src-tauri/target -type d -name "bundle" -exec ls -la {} \; || true
+          fi
 
       - name: Upload Linux artifacts to release
         if: matrix.target == 'x86_64-unknown-linux-gnu' && startsWith(github.ref, 'refs/tags/')
