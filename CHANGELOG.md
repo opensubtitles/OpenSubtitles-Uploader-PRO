@@ -5,6 +5,13 @@ All notable changes to OpenSubtitles Uploader PRO will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-08-08
+
+### Changed
+- 🚀 RELEASE v1.5.35: Smart Download-Only Auto-Update System
+- 1.5.18
+- 📥 ENHANCE: Smart download-only auto-update system + automated changelog
+
 ## [1.5.35] - 2025-08-08
 
 ### Added
