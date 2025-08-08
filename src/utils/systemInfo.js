@@ -220,6 +220,39 @@ export const formatBytes = (bytes, decimals = 2) => {
 };
 
 /**
+ * Smart format that removes N/A values and adjusts separators
+ */
+export const formatWithoutNA = (...parts) => {
+  // Filter out N/A values and empty strings
+  const filteredParts = parts.filter(part => 
+    part !== null && 
+    part !== undefined && 
+    part !== 'N/A' && 
+    part !== ''
+  );
+  
+  // Join remaining parts with space
+  return filteredParts.join(' ').trim() || 'N/A';
+};
+
+/**
+ * Smart format for system info lines that handles N/A values
+ */
+export const formatSystemInfoLine = (parts, separator = ' | ') => {
+  // Filter out N/A values and empty strings
+  const filteredParts = parts.filter(part => 
+    part !== null && 
+    part !== undefined && 
+    part !== 'N/A' && 
+    part !== '' &&
+    part.trim() !== ''
+  );
+  
+  // Join remaining parts with separator
+  return filteredParts.length > 0 ? filteredParts.join(separator) : 'N/A';
+};
+
+/**
  * Get comprehensive system information
  */
 export const getSystemInfo = async () => {
@@ -274,8 +307,8 @@ export const getSystemInfoFormatted = async () => {
     'App Name': info.app.name,
     'App Version': info.app.version,
     'Environment': info.app.environment,
-    'Browser': `${info.browser.name} ${info.browser.version}`,
-    'Operating System': `${info.os.name} ${info.os.version}`,
+    'Browser': formatWithoutNA(info.browser.name, info.browser.version),
+    'Operating System': formatWithoutNA(info.os.name, info.os.version),
     'Architecture': info.os.architecture,
     'CPU Cores': info.browser.hardwareConcurrency,
     'Screen Resolution': `${info.display.screenWidth}x${info.display.screenHeight}`,

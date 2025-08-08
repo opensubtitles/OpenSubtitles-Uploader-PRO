@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSystemInfo, getSystemInfoFormatted, formatBytes } from '../utils/systemInfo.js';
+import { getSystemInfo, getSystemInfoFormatted, formatBytes, formatWithoutNA, formatSystemInfoLine } from '../utils/systemInfo.js';
 
 /**
  * System Information Display Component
@@ -33,13 +33,72 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
   const copyToClipboard = async () => {
     if (!systemInfo) return;
 
-    const text = Object.entries(formattedInfo)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n');
+    // Build comprehensive system information text
+    const sections = [];
+    
+    // Application Information
+    sections.push('=== APPLICATION ===');
+    sections.push(`Name: ${systemInfo.app.name}`);
+    sections.push(`Version: ${systemInfo.app.version}`);
+    sections.push(`Environment: ${systemInfo.app.environment}`);
+    if (systemInfo.tauri.isTauri && systemInfo.tauri.tauriVersion && systemInfo.tauri.tauriVersion !== 'N/A') {
+      sections.push(`Tauri Version: ${systemInfo.tauri.tauriVersion}`);
+    }
+    
+    // Browser/Runtime Information
+    sections.push('\n=== BROWSER/RUNTIME ===');
+    sections.push(`Browser: ${formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}`);
+    sections.push(`Language: ${systemInfo.browser.language}`);
+    sections.push(`Platform: ${systemInfo.browser.platform}`);
+    sections.push(`Online: ${systemInfo.browser.onLine ? 'Yes' : 'No'}`);
+    
+    // Operating System
+    sections.push('\n=== OPERATING SYSTEM ===');
+    sections.push(`OS: ${formatWithoutNA(systemInfo.os.name, systemInfo.os.version)}`);
+    sections.push(`Architecture: ${systemInfo.os.architecture}`);
+    sections.push(`CPU Cores: ${systemInfo.browser.hardwareConcurrency}`);
+    sections.push(`Timezone: ${systemInfo.timezone}`);
+    
+    // Display Information
+    sections.push('\n=== DISPLAY ===');
+    sections.push(`Screen: ${systemInfo.display.screenWidth}×${systemInfo.display.screenHeight}`);
+    sections.push(`Viewport: ${systemInfo.display.viewportWidth}×${systemInfo.display.viewportHeight}`);
+    sections.push(`Pixel Ratio: ${systemInfo.display.pixelRatio}x`);
+    sections.push(`Color Depth: ${systemInfo.display.colorDepth}-bit`);
+    
+    // Memory Information (if available)
+    if (systemInfo.performance.usedJSHeapSize !== 'N/A') {
+      sections.push('\n=== MEMORY ===');
+      sections.push(`Used: ${formatBytes(systemInfo.performance.usedJSHeapSize)}`);
+      sections.push(`Total: ${formatBytes(systemInfo.performance.totalJSHeapSize)}`);
+      sections.push(`Limit: ${formatBytes(systemInfo.performance.jsHeapSizeLimit)}`);
+    }
+    
+    // Network Information (if available)
+    if (systemInfo.performance.connection !== 'N/A') {
+      sections.push('\n=== CONNECTION ===');
+      sections.push(`Type: ${systemInfo.performance.connection.effectiveType}`);
+      sections.push(`Downlink: ${systemInfo.performance.connection.downlink} Mbps`);
+      sections.push(`RTT: ${systemInfo.performance.connection.rtt}ms`);
+    }
+    
+    // Feature Support
+    sections.push('\n=== FEATURE SUPPORT ===');
+    Object.entries(systemInfo.features).forEach(([feature, supported]) => {
+      const featureName = feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+      sections.push(`${featureName}: ${supported ? '✓ Yes' : '✗ No'}`);
+    });
+    
+    // Generation timestamp
+    sections.push(`\n=== GENERATED ===`);
+    sections.push(`Timestamp: ${new Date(systemInfo.timestamp).toLocaleString()}`);
+    sections.push(`Timezone: ${systemInfo.timezone}`);
+    
+    const text = sections.join('\n');
 
     try {
       await navigator.clipboard.writeText(text);
-      alert('System information copied to clipboard');
+      alert('Complete system information copied to clipboard');
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       // Fallback: create textarea and select
@@ -49,7 +108,7 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      alert('System information copied to clipboard');
+      alert('Complete system information copied to clipboard');
     }
   };
 
@@ -79,10 +138,10 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
             <strong>{systemInfo.app.name}</strong> v{systemInfo.app.version}
           </div>
           <div className="info-line secondary">
-            {systemInfo.os.name} {systemInfo.os.version} ({systemInfo.os.architecture})
-          </div>
-          <div className="info-line secondary">
-            {systemInfo.browser.name} {systemInfo.browser.version} | {systemInfo.app.environment}
+            {formatSystemInfoLine([
+              formatWithoutNA(systemInfo.os.name, systemInfo.os.version, `(${systemInfo.os.architecture})`),
+              systemInfo.app.environment
+            ])}
           </div>
         </div>
         <button 
@@ -147,7 +206,7 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           <h5>Browser/Runtime</h5>
           <div className="info-item">
             <span className="label">Browser:</span>
-            <span className="value">{systemInfo.browser.name} {systemInfo.browser.version}</span>
+            <span className="value">{formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}</span>
           </div>
           <div className="info-item">
             <span className="label">Language:</span>
@@ -168,7 +227,7 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           <h5>Operating System</h5>
           <div className="info-item">
             <span className="label">OS:</span>
-            <span className="value">{systemInfo.os.name} {systemInfo.os.version}</span>
+            <span className="value">{formatWithoutNA(systemInfo.os.name, systemInfo.os.version)}</span>
           </div>
           <div className="info-item">
             <span className="label">Architecture:</span>

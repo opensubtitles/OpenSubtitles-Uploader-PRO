@@ -6,51 +6,58 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
   const [changelog, setChangelog] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastFetched, setLastFetched] = useState(null);
 
-  const fetchChangelog = async () => {
+  const fetchChangelog = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      let changelogUrl;
+      // Always fetch from GitHub to ensure we get the latest content
+      // Add cache-busting timestamp to prevent caching issues
+      const timestamp = new Date().getTime();
+      const changelogUrl = `https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md?t=${timestamp}`;
       
-      // Try to fetch from the same domain first (for web version)
-      if (window.location.protocol === 'https:' || window.location.protocol === 'http:') {
-        changelogUrl = '/CHANGELOG.md';
-      } else {
-        // For Tauri/desktop app, fetch from GitHub
-        changelogUrl = 'https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md';
-      }
+      console.log(`📋 Fetching fresh changelog from: ${changelogUrl}`);
 
-      const response = await fetch(changelogUrl);
+      const response = await fetch(changelogUrl, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        cache: 'no-store' // Prevent browser caching
+      });
       
       if (!response.ok) {
-        // Fallback to GitHub if local fetch fails
-        if (changelogUrl === '/CHANGELOG.md') {
-          const fallbackResponse = await fetch('https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md');
-          if (!fallbackResponse.ok) {
-            throw new Error(`Failed to fetch changelog: ${fallbackResponse.status}`);
-          }
-          const fallbackText = await fallbackResponse.text();
-          setChangelog(fallbackText);
-        } else {
-          throw new Error(`Failed to fetch changelog: ${response.status}`);
-        }
-      } else {
-        const text = await response.text();
-        setChangelog(text);
+        throw new Error(`Failed to fetch changelog: ${response.status} ${response.statusText}`);
       }
+      
+      const text = await response.text();
+      
+      // Verify we got actual content
+      if (!text || text.trim().length === 0) {
+        throw new Error('Received empty changelog content');
+      }
+      
+      console.log(`✅ Changelog fetched successfully (${text.length} characters)`);
+      setChangelog(text);
+      setLastFetched(new Date());
+      
     } catch (err) {
-      console.error('Failed to fetch changelog:', err);
-      setError(err.message);
+      console.error('❌ Failed to fetch changelog:', err);
+      setError(`Unable to load the latest changelog: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isOpen && !changelog) {
-      fetchChangelog();
+    if (isOpen) {
+      // Always fetch fresh changelog when overlay opens
+      // This ensures users see the latest changes
+      fetchChangelog(true);
     }
   }, [isOpen]);
 
@@ -170,19 +177,39 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
               <p className="text-sm" style={{ color: isDark ? '#d1d1d1' : colors.textSecondary }}>
                 Version {APP_VERSION} - What's new and improved
               </p>
+              {lastFetched && (
+                <p className="text-xs" style={{ color: isDark ? '#a3a3a3' : colors.textSecondary }}>
+                  Last updated: {lastFetched.toLocaleString()}
+                </p>
+              )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105"
-            style={{ 
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
-              color: colors.textPrimary,
-              border: `1px solid ${colors.border}`
-            }}
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fetchChangelog(true)}
+              disabled={loading}
+              className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+              title="Refresh changelog"
+            >
+              {loading ? '⏳' : '🔄'}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105"
+              style={{ 
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Content */}

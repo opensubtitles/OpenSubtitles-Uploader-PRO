@@ -321,16 +321,8 @@ jobs:
             echo "⚠️ No Windows installer found"
           fi
           
-          # Generate proper Tauri updater manifest
-          echo "📦 Generating Tauri updater manifest..."
-          if node scripts/build/generate-updater-manifest.js; then
-            echo "✅ Generated updater manifest: latest.json"
-            gh release upload "${{ github.ref_name }}" latest.json --clobber || {
-              echo "⚠️ Failed to upload updater manifest, continuing..."
-            }
-          else
-            echo "❌ Failed to generate updater manifest"
-          fi
+          # Skip updater manifest generation here - will be done in separate job
+          echo "📦 Skipping updater manifest generation - will be handled by generate-updater-manifest job"
           
           echo "✅ Windows artifacts upload attempt completed"
 
@@ -342,6 +334,78 @@ jobs:
             src-tauri/target/*/release/bundle/
             !src-tauri/target/*/release/bundle/**/.*
           retention-days: 30
+
+  generate-updater-manifest:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Wait for release assets to be available
+        run: |
+          echo "⏳ Waiting 30 seconds for all release assets to be fully available..."
+          sleep 30
+
+      - name: Generate and upload Tauri updater manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📦 Generating Tauri updater manifest for ${{ github.ref_name }}..."
+          
+          # Read version from the tag (remove 'v' prefix if present)
+          VERSION="${{ github.ref_name }}"
+          VERSION_NUM="${VERSION#v}"
+          
+          echo "Version: $VERSION_NUM"
+          
+          # Create updater manifest with proper Tauri v2 format
+          cat > latest.json << EOF
+          {
+            "version": "$VERSION",
+            "notes": "OpenSubtitles Uploader PRO $VERSION - Automatic update",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "",
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe"
+              },
+              "darwin-universal": {
+                "signature": "",
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+              },
+              "darwin-x86_64": {
+                "signature": "",
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+              },
+              "darwin-aarch64": {
+                "signature": "",
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+              },
+              "linux-x86_64": {
+                "signature": "",
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage"
+              }
+            }
+          }
+          EOF
+          
+          echo "📋 Generated manifest:"
+          cat latest.json | jq '.' || cat latest.json
+          
+          echo "📤 Uploading updater manifest to release..."
+          gh release upload "$VERSION" latest.json --clobber
+          
+          echo "✅ Updater manifest uploaded successfully"
 
   create-release:
     needs: build-tauri

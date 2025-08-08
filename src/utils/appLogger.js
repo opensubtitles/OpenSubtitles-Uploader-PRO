@@ -1,4 +1,4 @@
-import { getSystemInfo } from './systemInfo.js';
+import { getSystemInfo, formatWithoutNA, formatSystemInfoLine } from './systemInfo.js';
 
 /**
  * Enhanced application logging with system information
@@ -26,7 +26,12 @@ export const logSystemInfoOnStart = async () => {
     
     if (!isDebugPanelEnvironment) {
       // Compact one-line system info for console-only environments  
-      console.log(`🚀 OpenSubtitles Uploader PRO v${systemInfo.app.version} | ${systemInfo.app.environment} | ${systemInfo.os.name} ${systemInfo.os.version} (${systemInfo.os.architecture}) | ${systemInfo.browser.name} ${systemInfo.browser.version}`);
+      console.log(formatSystemInfoLine([
+        `🚀 OpenSubtitles Uploader PRO v${systemInfo.app.version}`,
+        systemInfo.app.environment,
+        formatWithoutNA(systemInfo.os.name, systemInfo.os.version, `(${systemInfo.os.architecture})`),
+        formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)
+      ]));
       
       // Additional details only if needed for debugging
       if (systemInfo.tauri.isTauri) {
