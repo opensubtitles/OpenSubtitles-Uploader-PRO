@@ -1,0 +1,285 @@
+/* System Information Component Styles */
+
+.system-info {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.9em;
+  line-height: 1.4;
+  color: #333;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.system-info.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.loading-spinner {
+  color: #666;
+  font-style: italic;
+}
+
+.system-info.error {
+  background: #fee;
+  border-color: #fcc;
+  color: #c33;
+}
+
+.error-message {
+  text-align: center;
+  font-style: italic;
+}
+
+/* Compact View */
+.system-info.compact {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.compact-info {
+  margin-bottom: 12px;
+}
+
+.info-line {
+  margin: 4px 0;
+}
+
+.info-line.secondary {
+  color: #666;
+  font-size: 0.85em;
+}
+
+.expand-button, .collapse-button, .copy-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: background-color 0.2s;
+}
+
+.expand-button:hover, .collapse-button:hover, .copy-button:hover {
+  background: #0056b3;
+}
+
+.collapse-button {
+  background: #6c757d;
+  margin-left: 8px;
+}
+
+.collapse-button:hover {
+  background: #545b62;
+}
+
+/* Expanded View */
+.system-info.expanded {
+  max-width: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.header h4 {
+  margin: 0;
+  color: #495057;
+  font-size: 1.1em;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.info-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.info-section h5 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 4px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 0;
+  padding: 2px 0;
+}
+
+.info-item .label {
+  font-weight: 500;
+  color: #666;
+  min-width: 0;
+  flex: 1;
+}
+
+.info-item .value {
+  font-weight: 400;
+  color: #333;
+  text-align: right;
+  word-break: break-word;
+  margin-left: 8px;
+}
+
+/* Features Section */
+.features-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.features-section h5 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 4px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.feature {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+
+.feature.supported {
+  background: #e8f5e8;
+  color: #2d5a2d;
+}
+
+.feature.not-supported {
+  background: #f8e8e8;
+  color: #5a2d2d;
+}
+
+.feature-name {
+  text-transform: capitalize;
+}
+
+.feature-status {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+/* Timestamp */
+.timestamp {
+  text-align: center;
+  color: #6c757d;
+  border-top: 1px solid #e9ecef;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .system-info {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-color: #4a5568;
+  }
+
+  .info-section, .features-section {
+    background: #1a202c;
+    border-color: #4a5568;
+  }
+
+  .info-section h5, .features-section h5 {
+    color: #cbd5e0;
+    border-color: #4a5568;
+  }
+
+  .info-item .label {
+    color: #a0aec0;
+  }
+
+  .info-item .value {
+    color: #e2e8f0;
+  }
+
+  .feature.supported {
+    background: #2d4a2d;
+    color: #c6f6c6;
+  }
+
+  .feature.not-supported {
+    background: #4a2d2d;
+    color: #f6c6c6;
+  }
+
+  .timestamp {
+    color: #a0aec0;
+    border-color: #4a5568;
+  }
+
+  .header h4 {
+    color: #cbd5e0;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header-actions {
+    justify-content: center;
+  }
+}

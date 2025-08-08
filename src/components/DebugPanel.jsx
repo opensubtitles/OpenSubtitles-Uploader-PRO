@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CacheService } from '../services/cache.js';
 import authService from '../services/authService.js';
+import SystemInfo from './SystemInfo.jsx';
+import '../styles/SystemInfo.css';
 
 export const DebugPanel = ({ 
   debugMode, 
@@ -286,6 +288,11 @@ export const DebugPanel = ({
               </span>
             )}
           </div>
+        </div>
+        
+        {/* System Information */}
+        <div className="mt-4">
+          <SystemInfo compact={true} />
         </div>
       </div>
     </details>

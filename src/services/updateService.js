@@ -1,4 +1,5 @@
 import { APP_VERSION } from '../utils/constants.js';
+import { logUpdaterDiagnostics } from '../utils/appLogger.js';
 
 // Import Tauri APIs directly - they'll be available when bundled in production
 let tauriUpdater = null;
@@ -207,6 +208,9 @@ export class UpdateService {
 
     try {
       console.log('🔄 Checking for updates via Tauri updater...');
+      
+      // Log updater diagnostics for troubleshooting
+      await logUpdaterDiagnostics('Pre-Update Check');
       
       // Ensure Tauri APIs are loaded before proceeding
       if (!tauriUpdater) {
