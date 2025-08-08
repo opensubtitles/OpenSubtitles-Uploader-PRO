@@ -11,30 +11,42 @@ const UpdateNotification = () => {
     isStandalone,
     updateAvailable,
     updateInfo,
-    isInstalling,
-    installUpdate,
-    restartApp,
+    isDownloading,
+    downloadedFilePath,
+    downloadedFilename,
+    downloadUpdate,
+    openDownloadedFile,
     error
   } = useAppUpdate();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [showConfirmDownload, setShowConfirmDownload] = useState(false);
 
   // Don't show if no update available or dismissed
   if (!updateAvailable || isDismissed) {
     return null;
   }
 
-  const handleInstallUpdate = async () => {
-    const result = await installUpdate();
+  const handleDownloadUpdate = async () => {
+    const result = await downloadUpdate();
     if (result.success) {
-      // Show restart option after successful install
-      setIsExpanded(true);
+      console.log('✅ Update downloaded:', result.filePath);
     }
   };
 
-  const handleRestartApp = async () => {
-    await restartApp();
+  const handleOpenDownloadedFile = async () => {
+    if (downloadedFilePath) {
+      const result = await openDownloadedFile(downloadedFilePath);
+      if (result.success) {
+        console.log('✅ File opened successfully');
+      }
+    }
+  };
+
+  const handleConfirmDownload = () => {
+    setShowConfirmDownload(false);
+    handleDownloadUpdate();
   };
 
   const handleDismiss = () => {
@@ -94,55 +106,113 @@ const UpdateNotification = () => {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {isStandalone ? (
-            // Standalone app - show install/restart buttons
-            !isInstalling ? (
-              <>
-                <button
-                  onClick={handleInstallUpdate}
-                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                    isDark
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  Install Update
-                </button>
-                
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                    isDark
-                      ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                  }`}
-                >
-                  {isExpanded ? 'Less Info' : 'More Info'}
-                </button>
-              </>
+            // Standalone app - show download and open buttons
+            !isDownloading ? (
+              downloadedFilePath ? (
+                // File has been downloaded - show open file button
+                <>
+                  <div className={`text-xs px-3 py-1 rounded font-medium ${
+                    isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'
+                  }`}>
+                    ✅ Downloaded: {downloadedFilename}
+                  </div>
+                  
+                  <button
+                    onClick={handleOpenDownloadedFile}
+                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                      isDark
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    📂 Open File
+                  </button>
+                  
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                      isDark
+                        ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                    }`}
+                  >
+                    {isExpanded ? 'Less Info' : 'More Info'}
+                  </button>
+                </>
+              ) : (
+                // No file downloaded yet - show download button
+                <>
+                  {showConfirmDownload ? (
+                    // Confirmation dialog
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className={`text-xs ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                        Download update to your Downloads folder?
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleConfirmDownload}
+                          className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                            isDark
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          Yes, Download
+                        </button>
+                        <button
+                          onClick={() => setShowConfirmDownload(false)}
+                          className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                            isDark
+                              ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                          }`}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Normal buttons
+                    <>
+                      <button
+                        onClick={() => setShowConfirmDownload(true)}
+                        className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                          isDark
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        📥 Download Update
+                      </button>
+                      
+                      <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                          isDark
+                            ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                        }`}
+                      >
+                        {isExpanded ? 'Less Info' : 'More Info'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )
             ) : (
+              // Downloading in progress
               <>
                 <div className="flex items-center text-xs">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Installing update...
+                  Downloading update...
                 </div>
-                
-                <button
-                  onClick={handleRestartApp}
-                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                    isDark
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
-                >
-                  Restart App
-                </button>
               </>
             )
           ) : (
-            // Web/browser app - show download links
+            // Web/browser app - show download links (unchanged)
             <>
               {updateInfo?.releaseUrl && (
                 <a

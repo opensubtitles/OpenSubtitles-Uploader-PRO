@@ -3,6 +3,8 @@ import { APP_VERSION } from '../utils/constants.js';
 // Import Tauri APIs directly - they'll be available when bundled in production
 let tauriUpdater = null;
 let tauriProcess = null;
+let tauriShell = null;
+let tauriPath = null;
 
 const loadTauriAPIs = async () => {
   // Only load Tauri APIs in actual Tauri environment
@@ -14,6 +16,8 @@ const loadTauriAPIs = async () => {
       // Import the actual Tauri updater APIs
       const { checkUpdate, installUpdate, onUpdaterEvent } = await import('@tauri-apps/plugin-updater');
       const { relaunch } = await import('@tauri-apps/plugin-process');
+      const { open } = await import('@tauri-apps/plugin-shell');
+      const { downloadDir } = await import('@tauri-apps/api/path');
       
       tauriUpdater = { 
         checkUpdate, 
@@ -22,6 +26,12 @@ const loadTauriAPIs = async () => {
       };
       tauriProcess = { 
         relaunch 
+      };
+      tauriShell = { 
+        open 
+      };
+      tauriPath = { 
+        downloadDir 
       };
       
       console.log('✅ Tauri updater APIs loaded successfully');
@@ -35,6 +45,12 @@ const loadTauriAPIs = async () => {
       };
       tauriProcess = { 
         relaunch: () => Promise.resolve() 
+      };
+      tauriShell = { 
+        open: () => Promise.resolve() 
+      };
+      tauriPath = { 
+        downloadDir: () => Promise.resolve('/tmp') 
       };
       console.log('⚠️ Using fallback dummy updater APIs');
     }
@@ -368,10 +384,10 @@ export class UpdateService {
   }
 
   /**
-   * Install available update
-   * @returns {Promise<Object>} Install result
+   * Download update to Downloads folder
+   * @returns {Promise<Object>} Download result
    */
-  async installUpdate() {
+  async downloadUpdate() {
     if (!this.isStandalone) {
       return {
         success: false,
@@ -379,42 +395,91 @@ export class UpdateService {
       };
     }
 
-    if (this.isInstalling) {
+    const cache = UpdateService.updateCache;
+    if (!cache.updateAvailable || !cache.updateInfo) {
       return {
         success: false,
-        error: 'Update installation already in progress'
+        error: 'No update available'
       };
     }
 
     try {
-      this.isInstalling = true;
-      console.log('📦 Installing update...');
+      console.log('📦 Downloading update...');
 
       this.notifyListeners({
-        type: 'update_install_start'
+        type: 'update_download_start'
       });
 
-      if (!tauriUpdater) {
-        throw new Error('Tauri updater not available');
+      if (!tauriUpdater || !tauriPath) {
+        throw new Error('Tauri APIs not available');
       }
       
-      await tauriUpdater.installUpdate();
+      // Get the update manifest and download the appropriate file
+      const updateInfo = await tauriUpdater.checkUpdate();
+      if (!updateInfo.shouldUpdate) {
+        throw new Error('No update available');
+      }
+
+      // Get Downloads directory
+      const downloadsPath = await tauriPath.downloadDir();
       
-      console.log('✅ Update installed successfully');
+      // Get the appropriate asset for current platform
+      const manifest = updateInfo.manifest;
+      let downloadUrl = null;
+      let filename = null;
+
+      // Determine platform-specific download URL from manifest
+      if (manifest.platforms) {
+        const platform = this.getCurrentPlatform();
+        const platformData = manifest.platforms[platform];
+        if (platformData) {
+          downloadUrl = platformData.url;
+          filename = platformData.url.split('/').pop();
+        }
+      }
+
+      if (!downloadUrl) {
+        throw new Error('No download URL found for current platform');
+      }
+
+      // Download the file
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      
+      // Use Tauri's fs plugin to write file
+      const { writeFile, BaseDirectory } = await import('@tauri-apps/api/fs');
+      const filePath = `${filename}`;
+      
+      await writeFile(filePath, new Uint8Array(arrayBuffer), { 
+        dir: BaseDirectory.Download 
+      });
+      
+      const fullPath = `${downloadsPath}/${filename}`;
+      
+      console.log('✅ Update downloaded successfully to:', fullPath);
       
       this.notifyListeners({
-        type: 'update_install_complete'
+        type: 'update_download_complete',
+        filePath: fullPath,
+        filename: filename
       });
 
       return {
         success: true,
-        message: 'Update installed successfully'
+        message: 'Update downloaded successfully',
+        filePath: fullPath,
+        filename: filename
       };
     } catch (error) {
-      console.error('❌ Update installation failed:', error);
+      console.error('❌ Update download failed:', error);
       
       this.notifyListeners({
-        type: 'update_install_error',
+        type: 'update_download_error',
         error: error.message
       });
 
@@ -422,9 +487,72 @@ export class UpdateService {
         success: false,
         error: error.message
       };
-    } finally {
-      this.isInstalling = false;
     }
+  }
+
+  /**
+   * Get current platform identifier
+   * @returns {string} Platform identifier
+   */
+  getCurrentPlatform() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('mac') || userAgent.includes('darwin')) {
+      return 'darwin';
+    } else if (userAgent.includes('windows') || userAgent.includes('win')) {
+      return 'windows';
+    } else if (userAgent.includes('linux')) {
+      return 'linux';
+    }
+    
+    return 'unknown';
+  }
+
+  /**
+   * Open downloaded file
+   * @param {string} filePath - Path to the file to open
+   * @returns {Promise<Object>} Open result
+   */
+  async openDownloadedFile(filePath) {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    try {
+      console.log('📂 Opening downloaded file:', filePath);
+
+      if (!tauriShell) {
+        throw new Error('Tauri shell not available');
+      }
+      
+      await tauriShell.open(filePath);
+      
+      console.log('✅ File opened successfully');
+      
+      return {
+        success: true,
+        message: 'File opened successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to open file:', error);
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Install available update (deprecated - now just downloads)
+   * @returns {Promise<Object>} Install result
+   */
+  async installUpdate() {
+    console.log('⚠️ installUpdate is deprecated, use downloadUpdate instead');
+    return await this.downloadUpdate();
   }
 
   /**

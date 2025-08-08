@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function getCommitsSinceLastTag() {
   try {
@@ -32,14 +36,17 @@ function getCommitsSinceLastTag() {
 function categorizeCommit(message) {
   const msg = message.toLowerCase();
   
-  if (msg.includes('fix') || msg.includes('bug') || msg.includes('patch')) {
-    return 'Fixed';
-  } else if (msg.includes('feat') || msg.includes('add') || msg.includes('new')) {
-    return 'Added';
-  } else if (msg.includes('break') || msg.includes('remove') || msg.includes('deprecat')) {
-    return 'Changed';
-  } else if (msg.includes('security')) {
+  // More comprehensive categorization based on conventional commits and emojis
+  if (msg.includes('🔒') || msg.includes('🛡️') || msg.includes('security') || msg.includes('vulnerabil')) {
     return 'Security';
+  } else if (msg.includes('🐛') || msg.includes('🔧') || msg.includes('fix') || msg.includes('bug') || msg.includes('patch') || msg.includes('repair')) {
+    return 'Fixed';
+  } else if (msg.includes('✨') || msg.includes('🎉') || msg.includes('📦') || msg.includes('feat') || msg.includes('add') || msg.includes('new') || msg.includes('implement') || msg.includes('create')) {
+    return 'Added';
+  } else if (msg.includes('💥') || msg.includes('⚠️') || msg.includes('break') || msg.includes('remove') || msg.includes('deprecat') || msg.includes('change') || msg.includes('update') || msg.includes('improve') || msg.includes('enhance') || msg.includes('refactor')) {
+    return 'Changed';
+  } else if (msg.includes('🗑️') || msg.includes('remove') || msg.includes('delete')) {
+    return 'Removed';
   } else {
     return 'Changed';
   }
@@ -47,14 +54,28 @@ function categorizeCommit(message) {
 
 function formatCommitForChangelog(commit) {
   const [hash, ...messageParts] = commit.split(' ');
-  const message = messageParts.join(' ');
+  let message = messageParts.join(' ');
   
-  // Skip version bump commits
-  if (message.toLowerCase().includes('bump version') || message.toLowerCase().includes('version to')) {
+  // Skip version bump commits and merge commits
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('bump version') || 
+      lowerMessage.includes('version to') || 
+      lowerMessage.includes('merge branch') ||
+      lowerMessage.includes('merge pull request') ||
+      lowerMessage.includes('auto-update changelog')) {
     return null;
   }
   
-  return `- ${message.charAt(0).toUpperCase() + message.slice(1)}`;
+  // Clean up common prefixes and emojis for better readability
+  message = message.replace(/^(feat|fix|docs|style|refactor|test|chore|build|ci|perf)(\(.+\))?:\s*/i, '');
+  
+  // Ensure first letter is capitalized
+  message = message.charAt(0).toUpperCase() + message.slice(1);
+  
+  // Remove trailing period if present
+  message = message.replace(/\.$/, '');
+  
+  return `- ${message}`;
 }
 
 function generateChangelogSection(version, commits) {
@@ -63,7 +84,8 @@ function generateChangelogSection(version, commits) {
     'Added': [],
     'Changed': [],
     'Fixed': [],
-    'Security': []
+    'Security': [],
+    'Removed': []
   };
   
   commits.forEach(commit => {
@@ -110,16 +132,41 @@ function updateChangelog() {
   let existingChangelog = '';
   if (fs.existsSync(changelogPath)) {
     existingChangelog = fs.readFileSync(changelogPath, 'utf8');
+  } else {
+    // Create basic changelog structure if file doesn't exist
+    existingChangelog = `# Changelog
+
+All notable changes to OpenSubtitles Uploader PRO will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+*This changelog is automatically updated from git commits. For more details on any release, see the [GitHub releases page](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases).*`;
   }
   
   // Find where to insert the new section
   const lines = existingChangelog.split('\n');
-  const insertIndex = lines.findIndex(line => line.startsWith('## [')) || 
-                     lines.findIndex(line => line.includes('---')) || 
-                     lines.length;
+  let insertIndex = lines.findIndex(line => line.startsWith('## ['));
+  
+  // If no existing version sections found, insert before the footer
+  if (insertIndex === -1) {
+    insertIndex = lines.findIndex(line => line.includes('---'));
+    if (insertIndex === -1) {
+      insertIndex = lines.length;
+    }
+  }
+  
+  // Check if this version already exists
+  const versionExists = lines.some(line => line.includes(`## [${currentVersion}]`));
+  if (versionExists) {
+    console.log(`Version ${currentVersion} already exists in changelog, skipping update`);
+    return;
+  }
   
   // Insert new section
-  lines.splice(insertIndex, 0, newSection);
+  lines.splice(insertIndex, 0, newSection.trimEnd(), '');
   
   // Write updated changelog
   fs.writeFileSync(changelogPath, lines.join('\n'));
@@ -128,8 +175,9 @@ function updateChangelog() {
   console.log(`Added ${commits.length} commits to changelog`);
 }
 
-if (require.main === module) {
+// Check if this is the main module (ES module equivalent)
+if (import.meta.url === `file://${process.argv[1]}`) {
   updateChangelog();
 }
 
-module.exports = { updateChangelog };
+export { updateChangelog };

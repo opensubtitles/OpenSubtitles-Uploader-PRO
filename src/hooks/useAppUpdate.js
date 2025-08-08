@@ -11,6 +11,9 @@ export const useAppUpdate = () => {
     updateInfo: null,
     isChecking: false,
     isInstalling: false,
+    isDownloading: false,
+    downloadedFilePath: null,
+    downloadedFilename: null,
     error: null,
     lastChecked: null,
     autoCheckEnabled: false,
@@ -56,10 +59,36 @@ export const useAppUpdate = () => {
           }));
           break;
 
+        case 'update_download_start':
+          setUpdateState(prev => ({
+            ...prev,
+            isDownloading: true,
+            error: null
+          }));
+          break;
+
+        case 'update_download_complete':
+          setUpdateState(prev => ({
+            ...prev,
+            isDownloading: false,
+            downloadedFilePath: event.filePath,
+            downloadedFilename: event.filename,
+            error: null
+          }));
+          break;
+
+        case 'update_download_error':
+          setUpdateState(prev => ({
+            ...prev,
+            isDownloading: false,
+            error: event.error
+          }));
+          break;
+
         case 'update_install_start':
           setUpdateState(prev => ({
             ...prev,
-            isInstalling: true,
+            isDownloading: true,
             error: null
           }));
           break;
@@ -67,7 +96,7 @@ export const useAppUpdate = () => {
         case 'update_install_complete':
           setUpdateState(prev => ({
             ...prev,
-            isInstalling: false,
+            isDownloading: false,
             error: null
           }));
           break;
@@ -75,7 +104,7 @@ export const useAppUpdate = () => {
         case 'update_install_error':
           setUpdateState(prev => ({
             ...prev,
-            isInstalling: false,
+            isDownloading: false,
             error: event.error
           }));
           break;
@@ -125,15 +154,30 @@ export const useAppUpdate = () => {
     }
   }, []);
 
-  // Install update
-  const installUpdate = useCallback(async () => {
+  // Download update
+  const downloadUpdate = useCallback(async () => {
     if (!updateState.isStandalone) {
       return { success: false, error: 'Not running as standalone app' };
     }
 
-    const result = await updateService.installUpdate();
+    const result = await updateService.downloadUpdate();
     return result;
   }, [updateState.isStandalone]);
+
+  // Open downloaded file
+  const openDownloadedFile = useCallback(async (filePath) => {
+    if (!updateState.isStandalone) {
+      return { success: false, error: 'Not running as standalone app' };
+    }
+
+    const result = await updateService.openDownloadedFile(filePath);
+    return result;
+  }, [updateState.isStandalone]);
+
+  // Install update (deprecated - now downloads)
+  const installUpdate = useCallback(async () => {
+    return await downloadUpdate();
+  }, [downloadUpdate]);
 
   // Restart application
   const restartApp = useCallback(async () => {
@@ -189,7 +233,9 @@ export const useAppUpdate = () => {
     
     // Actions
     checkForUpdates,
-    installUpdate,
+    downloadUpdate,
+    openDownloadedFile,
+    installUpdate, // deprecated, now just calls downloadUpdate
     restartApp,
     startAutoUpdates,
     stopAutoUpdates,
