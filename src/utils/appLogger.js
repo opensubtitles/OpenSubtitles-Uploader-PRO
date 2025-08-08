@@ -8,6 +8,7 @@ let hasLoggedSystemInfo = false;
 
 /**
  * Log comprehensive system information on app start
+ * Only logs to console if debug panel is not available (web-only usage)
  */
 export const logSystemInfoOnStart = async () => {
   if (hasLoggedSystemInfo) return;
@@ -16,41 +17,22 @@ export const logSystemInfoOnStart = async () => {
   try {
     const systemInfo = await getSystemInfo();
     
-    console.group('📱 OpenSubtitles Uploader PRO - System Information');
-    console.log('🎯 App Version:', systemInfo.app.version);
-    console.log('🌍 Environment:', systemInfo.app.environment);
-    console.log('💻 OS:', `${systemInfo.os.name} ${systemInfo.os.version} (${systemInfo.os.architecture})`);
-    console.log('🔧 Browser/Runtime:', `${systemInfo.browser.name} ${systemInfo.browser.version}`);
-    console.log('🖥️ Screen:', `${systemInfo.display.screenWidth}×${systemInfo.display.screenHeight} (${systemInfo.display.pixelRatio}x)`);
-    console.log('🧠 CPU Cores:', systemInfo.browser.hardwareConcurrency);
+    // Only log system info to console in non-debug environments
+    // In debug mode, it's shown in the debug panel to avoid duplication
+    const isDebugPanelEnvironment = typeof document !== 'undefined' && 
+                                   (window.location.hostname === 'localhost' || 
+                                    window.location.hostname.includes('127.0.0.1') ||
+                                    window.location.protocol.startsWith('tauri'));
     
-    if (systemInfo.performance.usedJSHeapSize !== 'N/A') {
-      const usedMB = Math.round(systemInfo.performance.usedJSHeapSize / 1024 / 1024);
-      const totalMB = Math.round(systemInfo.performance.totalJSHeapSize / 1024 / 1024);
-      console.log('🐏 Memory:', `${usedMB} MB / ${totalMB} MB`);
+    if (!isDebugPanelEnvironment) {
+      // Compact one-line system info for console-only environments  
+      console.log(`🚀 OpenSubtitles Uploader PRO v${systemInfo.app.version} | ${systemInfo.app.environment} | ${systemInfo.os.name} ${systemInfo.os.version} (${systemInfo.os.architecture}) | ${systemInfo.browser.name} ${systemInfo.browser.version}`);
+      
+      // Additional details only if needed for debugging
+      if (systemInfo.tauri.isTauri) {
+        console.log('🦀 Tauri App:', systemInfo.tauri.tauriVersion || 'Unknown version');
+      }
     }
-    
-    if (systemInfo.tauri.isTauri) {
-      console.log('🦀 Tauri Version:', systemInfo.tauri.tauriVersion || 'Unknown');
-      console.log('🔗 Protocol:', systemInfo.tauri.protocol);
-    }
-    
-    console.log('🌐 Language:', systemInfo.browser.language);
-    console.log('🕐 Timezone:', systemInfo.timezone);
-    console.log('📡 Online:', systemInfo.browser.onLine ? 'Yes' : 'No');
-    
-    // Feature support summary
-    const supportedFeatures = Object.entries(systemInfo.features)
-      .filter(([, supported]) => supported)
-      .map(([feature]) => feature);
-    
-    console.log('✅ Features:', supportedFeatures.join(', '));
-    
-    console.log('⏰ Boot Time:', new Date(systemInfo.timestamp).toLocaleString());
-    console.groupEnd();
-    
-    // Log raw system info object for debugging
-    console.log('🔍 Full System Info (for debugging):', systemInfo);
     
   } catch (error) {
     console.error('❌ Failed to log system information:', error);
@@ -75,7 +57,6 @@ export const logWithContext = (level, message, data = null) => {
  * Log app initialization
  */
 export const logAppInit = async () => {
-  console.log('🚀 OpenSubtitles Uploader PRO - Starting up...');
   await logSystemInfoOnStart();
 };
 

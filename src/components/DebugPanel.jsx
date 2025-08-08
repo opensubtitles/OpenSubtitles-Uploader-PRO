@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CacheService } from '../services/cache.js';
 import authService from '../services/authService.js';
 import SystemInfo from './SystemInfo.jsx';
+import { getSystemInfo } from '../utils/systemInfo.js';
 import '../styles/SystemInfo.css';
 
 export const DebugPanel = ({ 
@@ -23,16 +24,25 @@ export const DebugPanel = ({
   const [cacheInfo, setCacheInfo] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [systemInfo, setSystemInfo] = useState(null);
 
   // Update cache info and session info when debug panel opens or cache is cleared
   useEffect(() => {
-    const updateInfo = () => {
+    const updateInfo = async () => {
       setCacheInfo(CacheService.getCacheSize());
       setSessionInfo({
         hasSessionId: !!authService.getToken(),
         sessionId: authService.getToken() ? `${authService.getToken().substring(0, 8)}...` : null,
         isValid: authService.isLoggedIn()
       });
+      
+      // Load system information
+      try {
+        const sysInfo = await getSystemInfo();
+        setSystemInfo(sysInfo);
+      } catch (error) {
+        console.error('Failed to load system info for debug panel:', error);
+      }
     };
     
     updateInfo();
@@ -191,6 +201,13 @@ export const DebugPanel = ({
               }
             </div>
           </div>
+          
+          {/* System Information - Always Visible as regular debug message */}
+          {systemInfo && (
+            <div className="text-xs" style={{color: themeColors.textSecondary}}>
+              {new Date().toLocaleTimeString()}: 🚀 {systemInfo.app.name} v{systemInfo.app.version} | {systemInfo.app.environment} | {systemInfo.os.name} {systemInfo.os.version} ({systemInfo.os.architecture}) | {systemInfo.browser.name} {systemInfo.browser.version}
+            </div>
+          )}
           
           {/* Debug data display - hidden from user */}
           {/* 

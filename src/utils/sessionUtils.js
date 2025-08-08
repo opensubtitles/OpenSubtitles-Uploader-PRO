@@ -134,8 +134,7 @@ export const detectSession = () => {
     return result;
   }
 
-  // No session found
-  console.log('🔍 No session detected from any source');
+  // No session found - normal for first-time users
   return result;
 };
 
@@ -182,15 +181,10 @@ export const isValidSessionFormat = (sessionId) => {
 export const logSessionDetection = (context = 'Unknown') => {
   const info = getSessionDebugInfo();
   
-  console.group(`🔍 Session Detection - ${context}`);
-  console.log('🎯 Selected Session:', {
-    id: info.sessionId ? `${info.sessionId.substring(0, 10)}...` : 'none',
-    source: info.source
-  });
-  console.log('🔍 All Sources Checked:', info.debug);
-  console.log('🍪 All Cookies:', info.allCookies);
-  console.log('💾 localStorage:', info.localStorage);
-  console.groupEnd();
+  // Only log session detection if a session was found
+  if (info.sessionId && info.sessionId !== 'none') {
+    console.log(`🔍 Session detected from ${info.source}: ${info.sessionId.substring(0, 10)}...`);
+  }
   
   return info;
 };

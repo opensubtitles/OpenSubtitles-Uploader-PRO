@@ -11,17 +11,11 @@ export class SessionManager {
    * Then redirect to clean URL without session ID
    */
   static initializeSession() {
-    console.log('🔐 SessionManager: Initializing session...');
-    console.log(`🔐 SessionManager: Current URL: ${window.location.href}`);
-    console.log(`🔐 SessionManager: URL search params: ${window.location.search}`);
-    
     const urlParams = new URLSearchParams(window.location.search);
     const sidParam = urlParams.get('sid');
     
-    console.log(`🔐 SessionManager: SID parameter found: ${!!sidParam}`);
     if (sidParam) {
       console.log(`🔐 SessionManager: ✅ Capturing session ID from URL: ${sidParam.substring(0, 8)}...`);
-      console.log(`🔐 SessionManager: SID length: ${sidParam.length} chars`);
       
       // Store the session ID securely
       this.storeSessionId(sidParam);
@@ -37,13 +31,10 @@ export class SessionManager {
       
       return sidParam;
     } else {
-      console.log('🔐 SessionManager: No SID parameter in URL');
-      console.log('🔐 SessionManager: Checking existing stored session...');
+      // Silently check for existing session
       const existing = this.getStoredSessionId();
       if (existing) {
-        console.log(`🔐 SessionManager: Found existing stored session: ${existing.substring(0, 8)}...`);
-      } else {
-        console.log('🔐 SessionManager: No existing stored session');
+        console.log(`🔐 SessionManager: ✅ Using existing stored session: ${existing.substring(0, 8)}...`);
       }
     }
     
@@ -76,10 +67,7 @@ export class SessionManager {
    */
   static getStoredSessionId() {
     try {
-      console.log(`🔐 SessionManager: Retrieving stored session ID from key: ${SESSION_STORAGE_KEY}`);
       const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
-      console.log(`🔐 SessionManager: Retrieved session ID: ${sessionId ? sessionId.substring(0, 8) + '...' : 'null'}`);
-      console.log(`🔐 SessionManager: Session ID length: ${sessionId ? sessionId.length : 0} chars`);
       return sessionId || null;
     } catch (error) {
       console.error('🔐 SessionManager: ❌ Failed to retrieve session ID:', error);

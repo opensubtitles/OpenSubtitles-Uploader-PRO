@@ -182,7 +182,7 @@ export const getTauriInfo = async () => {
  * Get memory and performance information
  */
 export const getPerformanceInfo = () => {
-  const memory = (performance as any).memory || {};
+  const memory = performance.memory || {};
   
   return {
     // Memory information (Chrome/Edge only)
