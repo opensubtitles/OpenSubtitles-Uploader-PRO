@@ -77,7 +77,10 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          key: ${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          key: v1-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            v1-${{ matrix.target }}-
+            v1-
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
@@ -248,13 +251,34 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           CARGO_INCREMENTAL: '0'
-          RUST_BACKTRACE: '1'
+          RUST_BACKTRACE: full
+          CARGO_TERM_COLOR: always
+          RUSTFLAGS: '-C target-feature=+crt-static'
         run: |
           echo "🪟 Building Windows installer and updater files..."
+          echo "🔍 Debug: Environment check..."
+          echo "Rust version: $(rustc --version)"
+          echo "Cargo version: $(cargo --version)"
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Working directory: $(pwd)"
+          echo "Target: x86_64-pc-windows-msvc"
+          
+          # Clear any cached build files to ensure clean build
+          echo "🧹 Cleaning previous build artifacts..."
+          cd src-tauri && cargo clean && cd ..
+          
+          echo "🚀 Starting Tauri build..."
           set -o pipefail
-          npm run tauri build -- --bundles nsis,updater 2>&1 | tee build.log || {
-            echo "❌ Tauri build failed, checking logs..."
-            tail -50 build.log
+          npm run tauri build -- --bundles nsis,updater --verbose 2>&1 | tee build.log || {
+            echo "❌ Tauri build failed, showing detailed logs..."
+            echo "=== LAST 100 LINES OF BUILD LOG ==="
+            tail -100 build.log
+            echo "=== END OF BUILD LOG ==="
+            echo "=== CHECKING FOR CORE FILES ==="
+            find . -name "core*" -o -name "*.dmp" 2>/dev/null || echo "No core dumps found"
+            echo "=== CHECKING TARGET DIRECTORY ==="
+            ls -la src-tauri/target/ 2>/dev/null || echo "No target directory"
             exit 1
           }
           
