@@ -387,7 +387,49 @@ jobs:
             echo "⚠️ Falling back to DMG URL: $MACOS_URL"
           fi
           
-          # Create updater manifest with proper Tauri v2 format
+          # Install minisign for signature generation
+          echo "🔐 Installing minisign for signature generation..."
+          curl -L https://github.com/jedisct1/minisign/releases/download/0.11/minisign-0.11-linux.tar.gz | tar -xz
+          chmod +x minisign-linux/x86_64/minisign
+          export PATH="$PWD/minisign-linux/x86_64:$PATH"
+          
+          # Create private key file from secret
+          echo "${{ secrets.TAURI_PRIVATE_KEY }}" > private.key
+          
+          # Generate signatures for all platform files
+          echo "🔐 Generating signatures for release assets..."
+          
+          # Download assets and generate signatures
+          WINDOWS_SIG=""
+          MACOS_SIG=""
+          LINUX_SIG=""
+          
+          # Generate signature for Windows executable
+          if curl -sL "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe" -o windows.exe; then
+            WINDOWS_SIG=$(minisign -S -s private.key -m windows.exe -x windows.exe.minisig && cat windows.exe.minisig | tail -n 1)
+            echo "✅ Generated Windows signature"
+            rm windows.exe windows.exe.minisig
+          fi
+          
+          # Generate signature for macOS file
+          MACOS_FILENAME=$(basename "$MACOS_URL")
+          if curl -sL "$MACOS_URL" -o "$MACOS_FILENAME"; then
+            MACOS_SIG=$(minisign -S -s private.key -m "$MACOS_FILENAME" -x "$MACOS_FILENAME.minisig" && cat "$MACOS_FILENAME.minisig" | tail -n 1)
+            echo "✅ Generated macOS signature"
+            rm "$MACOS_FILENAME" "$MACOS_FILENAME.minisig"
+          fi
+          
+          # Generate signature for Linux AppImage
+          if curl -sL "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage" -o linux.AppImage; then
+            LINUX_SIG=$(minisign -S -s private.key -m linux.AppImage -x linux.AppImage.minisig && cat linux.AppImage.minisig | tail -n 1)
+            echo "✅ Generated Linux signature"
+            rm linux.AppImage linux.AppImage.minisig
+          fi
+          
+          # Clean up private key
+          rm private.key
+
+          # Create updater manifest with proper Tauri v2 format and real signatures
           cat > latest.json << EOF
           {
             "version": "$VERSION",
@@ -395,23 +437,23 @@ jobs:
             "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platforms": {
               "windows-x86_64": {
-                "signature": "",
+                "signature": "$WINDOWS_SIG",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe"
               },
               "darwin-universal": {
-                "signature": "",
+                "signature": "$MACOS_SIG",
                 "url": "$MACOS_URL"
               },
               "darwin-x86_64": {
-                "signature": "",
+                "signature": "$MACOS_SIG",
                 "url": "$MACOS_URL"
               },
               "darwin-aarch64": {
-                "signature": "",
+                "signature": "$MACOS_SIG",
                 "url": "$MACOS_URL"
               },
               "linux-x86_64": {
-                "signature": "",
+                "signature": "$LINUX_SIG",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage"
               }
             }
