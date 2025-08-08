@@ -205,7 +205,51 @@ export const DebugPanel = ({
           {/* System Information - Always Visible as regular debug message */}
           {systemInfo && (
             <div className="text-xs" style={{color: themeColors.textSecondary}}>
-              {new Date().toLocaleTimeString()}: 🚀 {systemInfo.app.name} v{systemInfo.app.version} | {systemInfo.app.environment} | {systemInfo.os.name} {systemInfo.os.version} ({systemInfo.os.architecture}) | {systemInfo.browser.name} {systemInfo.browser.version}
+              {(() => {
+                const formatSystemInfo = () => {
+                  const parts = [];
+                  
+                  // App name and version
+                  parts.push(`🚀 ${systemInfo.app.name} v${systemInfo.app.version}`);
+                  
+                  // Environment
+                  if (systemInfo.app.environment && systemInfo.app.environment !== 'N/A') {
+                    parts.push(systemInfo.app.environment);
+                  }
+                  
+                  // OS info
+                  const osInfo = [];
+                  if (systemInfo.os.name && systemInfo.os.name !== 'N/A') {
+                    osInfo.push(systemInfo.os.name);
+                  }
+                  if (systemInfo.os.version && systemInfo.os.version !== 'N/A') {
+                    osInfo.push(systemInfo.os.version);
+                  }
+                  if (osInfo.length > 0) {
+                    let osString = osInfo.join(' ');
+                    if (systemInfo.os.architecture && systemInfo.os.architecture !== 'N/A') {
+                      osString += ` (${systemInfo.os.architecture})`;
+                    }
+                    parts.push(osString);
+                  }
+                  
+                  // Browser info
+                  const browserInfo = [];
+                  if (systemInfo.browser.name && systemInfo.browser.name !== 'N/A') {
+                    browserInfo.push(systemInfo.browser.name);
+                  }
+                  if (systemInfo.browser.version && systemInfo.browser.version !== 'N/A') {
+                    browserInfo.push(systemInfo.browser.version);
+                  }
+                  if (browserInfo.length > 0) {
+                    parts.push(browserInfo.join(' '));
+                  }
+                  
+                  return parts.join(' | ');
+                };
+                
+                return `${new Date().toLocaleTimeString()}: ${formatSystemInfo()}`;
+              })()}
             </div>
           )}
           

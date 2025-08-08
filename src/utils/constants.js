@@ -1,5 +1,5 @@
 // Application version - updated manually to match package.json
-export const APP_VERSION = '1.5.36';
+export const APP_VERSION = '1.5.37';
 
 // API Configuration - embedded keys take priority over environment variables
 // Global __EMBEDDED_OPENSUBTITLES_API_KEY__ is defined by Vite at build time
