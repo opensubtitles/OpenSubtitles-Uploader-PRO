@@ -29,22 +29,22 @@ jobs:
             arch: 'x64'
             os: 'linux'
           
-          # macOS Universal Binary (Intel + Apple Silicon)
-          - platform: 'macos-latest'
+          # macOS Universal Binary (Intel + Apple Silicon) - using 14 for compatibility
+          - platform: 'macos-14'
             args: ''
             target: 'universal-apple-darwin'
             arch: 'universal'
             os: 'macos'
           
-          # Windows Intel/AMD builds
-          - platform: 'windows-latest'
+          # Windows Intel/AMD builds - using explicit version for stability
+          - platform: 'windows-2022'
             args: ''
             target: 'x86_64-pc-windows-msvc'
             arch: 'x64'
             os: 'windows'
 
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 60  # Prevent hanging for 24+ hours
+    timeout-minutes: 45  # Reduced timeout to prevent resource exhaustion
     
     steps:
       - name: Checkout repository
@@ -87,6 +87,27 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Verify Tauri CLI and basic setup
+        shell: bash
+        run: |
+          echo "🔍 Verifying Tauri CLI installation..."
+          npm run tauri --version || echo "Tauri CLI not accessible via npm"
+          npx tauri --version || echo "Tauri CLI not accessible via npx"
+          
+          echo "📦 Checking package.json scripts:"
+          grep -A5 -B5 "tauri" package.json || echo "No tauri scripts found"
+          
+          echo "🔧 Checking Tauri config:"
+          if [ -f "src-tauri/tauri.conf.json" ]; then
+            echo "✅ Tauri config exists"
+            head -10 src-tauri/tauri.conf.json
+          else
+            echo "❌ Tauri config missing"
+          fi
+          
+          echo "📁 Project structure:"
+          ls -la src-tauri/ || echo "src-tauri directory missing"
 
       - name: Build the app (Universal Binary)
         if: matrix.target == 'universal-apple-darwin'
