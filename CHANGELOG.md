@@ -5,6 +5,55 @@ All notable changes to OpenSubtitles Uploader PRO will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.35] - 2025-08-08
+
+### Added
+- Add v1.5.9 entries to CHANGELOG.md
+- Add in-app changelog viewer with markdown rendering
+- Remove CC from Hearing Impaired detection and add PSDH support
+- Add comprehensive release process documentation to CLAUDE.md
+- Add OpenSubtitles.com to acknowledgments
+- Add MKV extraction progress indicators and WASM initialization v1.5.3
+
+### Changed
+- 1.5.18
+- 📥 ENHANCE: Smart download-only auto-update system + automated changelog
+- Test release v1.5.16 - Auto-updater verification
+- Re-enable Tauri auto-updater with proper code signing
+- Disable Tauri auto-updater until code signing is available
+- Optimize release builds: Remove RPM, DEB, and MSI formats
+- Improve dark mode text contrast in changelog overlay
+- Enhance version management documentation in CLAUDE.md
+- Update CHANGELOG.md with complete project history
+- Remove Web Application from Downloads section in README
+- Improve README formatting for supported file formats section
+- Suppress Vite externalization warning for archive-wasm module dependency
+- Organize project structure and clean up root directory
+- Restructure README with user-focused content first
+- Streamline release assets to essential formats only
+- Update README with version-agnostic download links and universal macOS build
+
+### Fixed
+- Version bump to v1.5.17 for Windows build fix test
+- Fix Windows build: Force bash shell for artifact upload
+- Fix app icon visibility in dark mode
+- Fix macOS DMG dark mode appearance
+- Fix AdBlock test page state management and add uploader link
+- Fix closure issue in test completion check
+- Fix test completion detection for accurate recommendations
+- Fix initial page load timing issue for test recommendations
+- Fix incorrect 'No Internet Connection' recommendation when tests pass
+- Fix CORS error in network connectivity test
+- Fix 'Changelog' header text color for dark mode readability
+- Fix changelog overlay dark mode styling
+- Fix APP_VERSION in constants.js to match package.json (1.5.9)
+- Fix IMDb ID search to handle short numeric IDs with zero padding
+- Fix deploy.sh to work when run from any directory
+- Fix false positive Hearing Impaired detection for NonHI patterns
+- Update Tauri configuration for v1.5.4 and fix bundle targets format
+- Ensure consistent Hearing Impaired behavior between paired and orphaned subtitles v1.5.4
+- Fix releases link to point to latest release
+
 ## [1.5.17] - 2025-08-08
 
 ### Added
