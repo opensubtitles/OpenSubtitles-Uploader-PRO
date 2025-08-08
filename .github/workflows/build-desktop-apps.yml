@@ -381,15 +381,15 @@ jobs:
               },
               "darwin-universal": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
               },
               "darwin-x86_64": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
               },
               "darwin-aarch64": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
               },
               "linux-x86_64": {
                 "signature": "",
@@ -468,7 +468,7 @@ jobs:
             - `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer
             
             **macOS:**
-            - `OpenSubtitles Uploader PRO_x.x.x_universal.dmg` - Universal (Intel & Apple Silicon)
+            - `OpenSubtitles Uploader PRO_macos.tar.gz` - Universal (Intel & Apple Silicon)
             
             **Linux:**
             - `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
@@ -476,7 +476,7 @@ jobs:
             ### Installation Instructions:
             
             **Windows:** Download and run the `.exe` setup file
-            **macOS:** Download the `.dmg` file and drag the app to Applications
+            **macOS:** Download the `.tar.gz` file, extract it, and run the app
             **Linux:** Download the `.AppImage`, make it executable (`chmod +x *.AppImage`), then run
             
             ### Features:
