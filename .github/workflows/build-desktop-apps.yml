@@ -206,7 +206,7 @@ jobs:
           echo "Available disk space: $(df -h . | tail -1)"
           
           echo "🔧 Trying minimal Linux build..."
-          if npm run tauri build -- --bundles appimage --verbose 2>&1 | tee linux-build.log; then
+          if npm run tauri build -- --bundles appimage,deb --verbose 2>&1 | tee linux-build.log; then
             echo "✅ Linux build successful"
             echo "🔍 Generated files:"
             find src-tauri/target -name "*.AppImage" -o -name "*.deb" | head -10
@@ -264,14 +264,26 @@ jobs:
           APPIMAGE_FILE=$(find src-tauri -name "*.AppImage" | head -1)
           DEB_FILE=$(find src-tauri -name "*.deb" | head -1)
           
+          # Upload AppImage if found
           if [ -n "$APPIMAGE_FILE" ] && [ -f "$APPIMAGE_FILE" ]; then
             echo "✅ Found AppImage: $APPIMAGE_FILE"
             gh release upload "${{ github.ref_name }}" "$APPIMAGE_FILE" --clobber
-          elif [ -n "$DEB_FILE" ] && [ -f "$DEB_FILE" ]; then
+          else
+            echo "⚠️ No AppImage found"
+          fi
+          
+          # Upload DEB if found
+          if [ -n "$DEB_FILE" ] && [ -f "$DEB_FILE" ]; then
             echo "✅ Found DEB: $DEB_FILE"  
             gh release upload "${{ github.ref_name }}" "$DEB_FILE" --clobber
           else
-            echo "⚠️ No Linux packages found - continuing without upload"
+            echo "⚠️ No DEB file found"
+          fi
+          
+          # Check if we got at least one package
+          if [ -z "$APPIMAGE_FILE" ] && [ -z "$DEB_FILE" ]; then
+            echo "❌ No Linux packages found - this should not happen"
+            exit 1
           fi
 
       - name: Upload Windows artifacts to release
