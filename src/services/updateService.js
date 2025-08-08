@@ -31,26 +31,41 @@ const loadTauriAPIs = async () => {
       try {
         console.log('🔄 Tauri environment detected - loading updater APIs...');
         
-        // Try to load Tauri APIs with more robust error handling
-        const { checkUpdate, installUpdate, onUpdaterEvent } = await import('@tauri-apps/plugin-updater');
-        const { relaunch } = await import('@tauri-apps/plugin-process');
+        // Try to load Tauri APIs with correct v2 API structure
+        const updaterModule = await import('@tauri-apps/plugin-updater');
+        const processModule = await import('@tauri-apps/plugin-process');
         
-        // Verify the APIs are actually functions
-        if (typeof checkUpdate === 'function' && typeof installUpdate === 'function') {
+        console.log('🔧 Raw updater module:', Object.keys(updaterModule));
+        console.log('🔧 Raw process module:', Object.keys(processModule));
+        
+        // For Tauri v2, use the correct API structure
+        const { check, Update } = updaterModule;
+        const { relaunch } = processModule;
+        
+        // Verify the APIs are available
+        if (typeof check === 'function' && Update) {
           tauriUpdater = { 
-            checkUpdate, 
-            installUpdate, 
-            onUpdaterEvent: typeof onUpdaterEvent === 'function' ? onUpdaterEvent : () => {}
+            check, // This is the correct method name in v2
+            Update, // Class for update operations
+            install: async () => {
+              // Use Update class to install
+              const updateInfo = await check();
+              if (updateInfo && updateInfo.available) {
+                await updateInfo.downloadAndInstall();
+              }
+              return updateInfo;
+            }
           };
           tauriProcess = { 
             relaunch: typeof relaunch === 'function' ? relaunch : () => Promise.resolve()
           };
           
-          console.log('✅ Tauri updater APIs loaded and validated successfully');
+          console.log('✅ Tauri v2 updater APIs loaded successfully');
           console.log('🔧 Available updater methods:', Object.keys(tauriUpdater));
           console.log('🔧 Available process methods:', Object.keys(tauriProcess));
         } else {
-          throw new Error('Invalid API functions - checkUpdate or installUpdate not available');
+          console.log('❌ Available methods in updater module:', Object.keys(updaterModule));
+          throw new Error('Invalid API functions - check method or Update class not available');
         }
       } catch (error) {
         console.error('❌ Failed to load Tauri updater APIs:', {
@@ -241,30 +256,31 @@ export class UpdateService {
         throw new Error('Tauri updater not available - APIs not loaded after retry');
       }
 
-      if (!tauriUpdater.checkUpdate) {
-        throw new Error('Tauri checkUpdate method not available - got: ' + typeof tauriUpdater.checkUpdate);
+      if (!tauriUpdater.check) {
+        throw new Error('Tauri check method not available - got: ' + typeof tauriUpdater.check);
       }
 
-      console.log('🔄 Calling tauriUpdater.checkUpdate()...');
-      const updateInfo = await tauriUpdater.checkUpdate();
+      console.log('🔄 Calling tauriUpdater.check()...');
+      const updateInfo = await tauriUpdater.check();
       console.log('✅ Raw Tauri update response:', JSON.stringify(updateInfo, null, 2));
 
-      const hasUpdate = updateInfo.shouldUpdate || false;
+      // Tauri v2 API structure - updateInfo is null if no update available
+      const hasUpdate = updateInfo !== null && updateInfo !== undefined;
 
       console.log('🔄 Tauri update check result:', { 
         hasUpdate, 
         currentVersion: APP_VERSION, 
-        manifest: updateInfo.manifest,
+        updateInfo: updateInfo,
         fullResponse: updateInfo
       });
 
       const result = {
         shouldUpdate: hasUpdate,
         currentVersion: APP_VERSION,
-        latestVersion: updateInfo.manifest?.version || 'unknown',
-        releaseNotes: updateInfo.manifest?.body || 'No release notes available',
-        publishedAt: updateInfo.manifest?.date || null,
-        manifest: updateInfo.manifest
+        latestVersion: hasUpdate ? updateInfo.version : APP_VERSION,
+        releaseNotes: hasUpdate ? (updateInfo.body || 'No release notes available') : 'No update available',
+        publishedAt: hasUpdate ? updateInfo.date : null,
+        updateData: updateInfo
       };
 
       // Update cache
@@ -493,7 +509,7 @@ export class UpdateService {
         throw new Error('Tauri updater not available');
       }
       
-      await tauriUpdater.installUpdate();
+      await tauriUpdater.install();
       
       console.log('✅ Update installed successfully');
       

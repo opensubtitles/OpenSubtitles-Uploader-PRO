@@ -13,33 +13,33 @@ export const getBrowserInfo = () => {
   const platform = navigator.platform || '';
   
   // Detect browser
-  let browserName = 'Unknown';
-  let browserVersion = 'Unknown';
+  let browserName = 'N/A';
+  let browserVersion = 'N/A';
   
   if (ua.includes('Chrome') && !ua.includes('Edg') && !ua.includes('OPR')) {
     browserName = 'Chrome';
     const match = ua.match(/Chrome\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   } else if (ua.includes('Firefox')) {
     browserName = 'Firefox';
     const match = ua.match(/Firefox\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
     browserName = 'Safari';
     const match = ua.match(/Version\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   } else if (ua.includes('Edg')) {
     browserName = 'Edge';
     const match = ua.match(/Edg\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   } else if (ua.includes('OPR')) {
     browserName = 'Opera';
     const match = ua.match(/OPR\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   } else if (ua.includes('Tauri')) {
     browserName = 'Tauri (WebView)';
     const match = ua.match(/Tauri\/(\d+\.\d+)/);
-    browserVersion = match ? match[1] : 'Unknown';
+    browserVersion = match ? match[1] : 'N/A';
   }
   
   return {
@@ -52,7 +52,7 @@ export const getBrowserInfo = () => {
     languages: navigator.languages || [navigator.language],
     cookieEnabled: navigator.cookieEnabled,
     onLine: navigator.onLine,
-    hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown'
+    hardwareConcurrency: navigator.hardwareConcurrency || 'N/A'
   };
 };
 
@@ -63,9 +63,9 @@ export const getOSInfo = () => {
   const ua = navigator.userAgent;
   const platform = navigator.platform;
   
-  let osName = 'Unknown';
-  let osVersion = 'Unknown';
-  let architecture = 'Unknown';
+  let osName = 'N/A';
+  let osVersion = 'N/A';
+  let architecture = 'N/A';
   
   // Detect OS
   if (ua.includes('Windows')) {
@@ -90,7 +90,7 @@ export const getOSInfo = () => {
     } else if (platform.includes('arm') || ua.includes('arm64')) {
       architecture = 'Apple Silicon (ARM64)';
     } else {
-      architecture = platform || 'Unknown';
+      architecture = platform || 'N/A';
     }
   } else if (ua.includes('Linux')) {
     osName = 'Linux';
@@ -127,7 +127,7 @@ export const getDisplayInfo = () => {
     pixelRatio: window.devicePixelRatio || 1,
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
-    orientation: screen.orientation ? screen.orientation.type : 'Unknown'
+    orientation: screen.orientation ? screen.orientation.type : 'N/A'
   };
 };
 
