@@ -131,7 +131,7 @@ jobs:
           echo "Available disk space: $(df -h . | tail -1)"
           
           echo "🔧 Trying basic macOS build..."
-          if npm run tauri build -- --bundles dmg --verbose 2>&1 | tee macos-build.log; then
+          if npm run tauri build -- --bundles dmg --target universal-apple-darwin --verbose 2>&1 | tee macos-build.log; then
             echo "✅ macOS build successful"
             echo "🔍 Generated files:"
             find src-tauri/target -name "*.dmg" -o -name "*.app" | head -10
