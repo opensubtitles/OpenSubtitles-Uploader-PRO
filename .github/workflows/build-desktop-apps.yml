@@ -321,17 +321,15 @@ jobs:
             echo "⚠️ No Windows installer found"
           fi
           
-          # Find updater JSON - be more flexible
-          UPDATER_JSON=$(find src-tauri -name "*.json" | grep -E "(bundle|update)" | head -1)
-          
-          if [ -n "$UPDATER_JSON" ] && [ -f "$UPDATER_JSON" ]; then
-            echo "✅ Found updater JSON: $UPDATER_JSON"
-            cp "$UPDATER_JSON" latest.json
+          # Generate proper Tauri updater manifest
+          echo "📦 Generating Tauri updater manifest..."
+          if node scripts/build/generate-updater-manifest.js; then
+            echo "✅ Generated updater manifest: latest.json"
             gh release upload "${{ github.ref_name }}" latest.json --clobber || {
-              echo "⚠️ Failed to upload updater JSON, continuing..."
+              echo "⚠️ Failed to upload updater manifest, continuing..."
             }
           else
-            echo "⚠️ No updater JSON found"
+            echo "❌ Failed to generate updater manifest"
           fi
           
           echo "✅ Windows artifacts upload attempt completed"

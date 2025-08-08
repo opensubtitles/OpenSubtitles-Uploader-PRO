@@ -6,44 +6,72 @@ let tauriProcess = null;
 
 const loadTauriAPIs = async () => {
   // Only load Tauri APIs in actual Tauri environment
-  if (typeof window !== 'undefined' && window.__TAURI__ && !tauriUpdater) {
-    try {
-      console.log('🔄 Tauri APIs available - window.__TAURI__ detected!');
-      console.log('✅ Tauri environment confirmed');
-      
-      // Import the actual Tauri updater APIs
-      const { checkUpdate, installUpdate, onUpdaterEvent } = await import('@tauri-apps/plugin-updater');
-      const { relaunch } = await import('@tauri-apps/plugin-process');
-      
-      tauriUpdater = { 
-        checkUpdate, 
-        installUpdate, 
-        onUpdaterEvent
-      };
-      tauriProcess = { 
-        relaunch 
-      };
-      
-      console.log('✅ Tauri updater APIs loaded successfully');
-    } catch (error) {
-      console.error('❌ Failed to load Tauri updater APIs:', error);
-      // Fallback to dummy objects if import fails
-      tauriUpdater = { 
-        checkUpdate: () => Promise.resolve({ shouldUpdate: false }), 
-        installUpdate: () => Promise.resolve(), 
-        onUpdaterEvent: () => {}
-      };
-      tauriProcess = { 
-        relaunch: () => Promise.resolve() 
-      };
-      console.log('⚠️ Using fallback dummy updater APIs');
-    }
-  } else {
-    console.log('🔍 Tauri API loading conditions:', {
+  if (typeof window !== 'undefined' && !tauriUpdater) {
+    // Enhanced detection for Tauri v2 environment
+    const isTauriEnv = window.__TAURI__ || 
+                      window.location.protocol === 'tauri:' || 
+                      window.location.origin.startsWith('tauri://') ||
+                      navigator.userAgent.includes('Tauri');
+    
+    console.log('🔍 Enhanced Tauri detection:', {
       hasWindow: typeof window !== 'undefined',
-      hasTauri: !!window.__TAURI__,
-      alreadyLoaded: !!tauriUpdater
+      hasTauriGlobal: !!window.__TAURI__,
+      isTauriProtocol: window.location.protocol === 'tauri:',
+      isTauriOrigin: window.location.origin.startsWith('tauri://'),
+      hasTauriUserAgent: navigator.userAgent.includes('Tauri'),
+      isTauriEnv,
+      alreadyLoaded: !!tauriUpdater,
+      protocol: window.location.protocol,
+      origin: window.location.origin,
+      userAgent: navigator.userAgent.substring(0, 100) + '...'
     });
+
+    if (isTauriEnv) {
+      try {
+        console.log('🔄 Tauri environment detected - loading updater APIs...');
+        
+        // Try to load Tauri APIs with more robust error handling
+        const { checkUpdate, installUpdate, onUpdaterEvent } = await import('@tauri-apps/plugin-updater');
+        const { relaunch } = await import('@tauri-apps/plugin-process');
+        
+        // Verify the APIs are actually functions
+        if (typeof checkUpdate === 'function' && typeof installUpdate === 'function') {
+          tauriUpdater = { 
+            checkUpdate, 
+            installUpdate, 
+            onUpdaterEvent: typeof onUpdaterEvent === 'function' ? onUpdaterEvent : () => {}
+          };
+          tauriProcess = { 
+            relaunch: typeof relaunch === 'function' ? relaunch : () => Promise.resolve()
+          };
+          
+          console.log('✅ Tauri updater APIs loaded and validated successfully');
+          console.log('🔧 Available updater methods:', Object.keys(tauriUpdater));
+          console.log('🔧 Available process methods:', Object.keys(tauriProcess));
+        } else {
+          throw new Error('Invalid API functions - checkUpdate or installUpdate not available');
+        }
+      } catch (error) {
+        console.error('❌ Failed to load Tauri updater APIs:', {
+          error: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        // Don't create fallback APIs - let the detection fail properly
+        tauriUpdater = null;
+        tauriProcess = null;
+        console.log('⚠️ Tauri updater APIs failed to load - will use fallback methods');
+      }
+    } else {
+      console.log('🌐 Not in Tauri environment - updater will use GitHub API fallback');
+      // Don't create APIs in non-Tauri environment
+      tauriUpdater = null;
+      tauriProcess = null;
+    }
+  } else if (tauriUpdater) {
+    console.log('✅ Tauri APIs already loaded');
+  } else {
+    console.log('⚠️ Window not available - cannot load Tauri APIs');
   }
 };
 
@@ -112,24 +140,31 @@ export class UpdateService {
    * Detect if running as standalone Tauri app
    */
   detectStandaloneMode() {
-    // In Tauri v2, detection might be different
+    // Enhanced detection for Tauri v2
     const hasTauriProtocol = window.location.protocol === 'tauri:';
     const hasTauriOrigin = window.location.origin.startsWith('tauri://');
     const hasTauriInUserAgent = navigator.userAgent.includes('Tauri');
     const hasTauriGlobal = window.__TAURI__ !== undefined;
     
-    // Use protocol/origin as primary detection for Tauri v2
-    const isStandalone = hasTauriProtocol || hasTauriOrigin;
+    // Check for file:// protocol which might be used in development
+    const isFileProtocol = window.location.protocol === 'file:';
     
-    console.log('🔍 Standalone detection (v2):', {
+    // Use multiple detection methods for better reliability
+    const isStandalone = hasTauriProtocol || hasTauriOrigin || 
+                        (hasTauriGlobal && (hasTauriInUserAgent || isFileProtocol));
+    
+    console.log('🔍 Enhanced standalone detection:', {
       isStandalone,
       hasTauriProtocol,
       hasTauriOrigin,
       hasTauriInUserAgent,
       hasTauriGlobal,
+      isFileProtocol,
       protocol: window.location.protocol,
       origin: window.location.origin,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent.substring(0, 150) + '...',
+      hostname: window.location.hostname,
+      href: window.location.href.substring(0, 100) + '...'
     });
     
     return isStandalone;
@@ -179,18 +214,31 @@ export class UpdateService {
         await loadTauriAPIs();
       }
       
-      console.log('🔍 Debug - Tauri updater state:', {
+      // Enhanced debugging
+      console.log('🔍 Comprehensive Tauri state debug:', {
         tauriUpdaterAvailable: !!tauriUpdater,
         updaterMethods: tauriUpdater ? Object.keys(tauriUpdater) : 'N/A',
-        currentVersion: APP_VERSION
+        checkUpdateType: tauriUpdater?.checkUpdate ? typeof tauriUpdater.checkUpdate : 'N/A',
+        currentVersion: APP_VERSION,
+        windowTauri: !!window.__TAURI__,
+        windowTauriKeys: window.__TAURI__ ? Object.keys(window.__TAURI__) : 'N/A'
       });
       
+      // Try to diagnose import issues
       if (!tauriUpdater) {
-        throw new Error('Tauri updater not available - APIs not loaded');
+        console.log('🔧 Attempting to diagnose Tauri import issues...');
+        try {
+          const testImport = await import('@tauri-apps/plugin-updater');
+          console.log('✅ Plugin-updater import successful:', Object.keys(testImport));
+        } catch (importError) {
+          console.error('❌ Plugin-updater import failed:', importError);
+        }
+        
+        throw new Error('Tauri updater not available - APIs not loaded after retry');
       }
 
       if (!tauriUpdater.checkUpdate) {
-        throw new Error('Tauri checkUpdate method not available');
+        throw new Error('Tauri checkUpdate method not available - got: ' + typeof tauriUpdater.checkUpdate);
       }
 
       console.log('🔄 Calling tauriUpdater.checkUpdate()...');
