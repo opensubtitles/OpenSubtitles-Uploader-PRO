@@ -14,7 +14,9 @@ export const useAppUpdate = () => {
     error: null,
     lastChecked: null,
     autoCheckEnabled: false,
-    currentVersion: null
+    currentVersion: null,
+    downloadedFile: null,
+    downloadedFileName: null
   });
 
   // Initialize state from update service
@@ -57,6 +59,7 @@ export const useAppUpdate = () => {
           break;
 
         case 'update_install_start':
+        case 'update_download_start':
           setUpdateState(prev => ({
             ...prev,
             isInstalling: true,
@@ -65,14 +68,18 @@ export const useAppUpdate = () => {
           break;
 
         case 'update_install_complete':
+        case 'update_download_complete':
           setUpdateState(prev => ({
             ...prev,
             isInstalling: false,
-            error: null
+            error: null,
+            downloadedFile: event.filePath,
+            downloadedFileName: event.fileName
           }));
           break;
 
         case 'update_install_error':
+        case 'update_download_error':
           setUpdateState(prev => ({
             ...prev,
             isInstalling: false,
@@ -125,13 +132,43 @@ export const useAppUpdate = () => {
     }
   }, []);
 
-  // Install update
+  // Download update (replaces install for safety)
+  const downloadUpdate = useCallback(async () => {
+    if (!updateState.isStandalone) {
+      return { success: false, error: 'Not running as standalone app' };
+    }
+
+    const result = await updateService.downloadUpdate();
+    return result;
+  }, [updateState.isStandalone]);
+
+  // Install update (now downloads only for safety)
   const installUpdate = useCallback(async () => {
     if (!updateState.isStandalone) {
       return { success: false, error: 'Not running as standalone app' };
     }
 
     const result = await updateService.installUpdate();
+    return result;
+  }, [updateState.isStandalone]);
+
+  // Open Downloads folder
+  const openDownloadsFolder = useCallback(async () => {
+    if (!updateState.isStandalone) {
+      return { success: false, error: 'Not running as standalone app' };
+    }
+
+    const result = await updateService.openDownloadsFolder();
+    return result;
+  }, [updateState.isStandalone]);
+
+  // Run installer
+  const runInstaller = useCallback(async (filePath) => {
+    if (!updateState.isStandalone) {
+      return { success: false, error: 'Not running as standalone app' };
+    }
+
+    const result = await updateService.runInstaller(filePath);
     return result;
   }, [updateState.isStandalone]);
 
@@ -189,7 +226,10 @@ export const useAppUpdate = () => {
     
     // Actions
     checkForUpdates,
+    downloadUpdate,
     installUpdate,
+    openDownloadsFolder,
+    runInstaller,
     restartApp,
     startAutoUpdates,
     stopAutoUpdates,

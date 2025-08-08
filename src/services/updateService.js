@@ -479,10 +479,10 @@ export class UpdateService {
   }
 
   /**
-   * Install available update
-   * @returns {Promise<Object>} Install result
+   * Download update to Downloads folder instead of installing
+   * @returns {Promise<Object>} Download result
    */
-  async installUpdate() {
+  async downloadUpdate() {
     if (!this.isStandalone) {
       return {
         success: false,
@@ -493,39 +493,96 @@ export class UpdateService {
     if (this.isInstalling) {
       return {
         success: false,
-        error: 'Update installation already in progress'
+        error: 'Update download already in progress'
       };
     }
 
     try {
       this.isInstalling = true;
-      console.log('📦 Installing update...');
+      console.log('📦 Downloading update to Downloads folder...');
 
       this.notifyListeners({
-        type: 'update_install_start'
+        type: 'update_download_start'
       });
 
-      if (!tauriUpdater) {
-        throw new Error('Tauri updater not available');
+      // Get update info from cache
+      const cache = UpdateService.updateCache;
+      if (!cache.updateAvailable || !cache.updateInfo) {
+        throw new Error('No update available to download');
       }
+
+      // Import Tauri download and path APIs
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { downloadDir } = await import('@tauri-apps/api/path');
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+
+      // Determine platform and get download URL
+      const platform = navigator.platform.toLowerCase();
+      let downloadUrl = '';
+      let fileName = '';
+
+      if (cache.updateInfo.updateData && cache.updateInfo.updateData.rawJson) {
+        const platforms = cache.updateInfo.updateData.rawJson.platforms;
+        
+        if (platform.includes('win')) {
+          downloadUrl = platforms['windows-x86_64']?.url;
+          fileName = `OpenSubtitles.Uploader.PRO_${cache.updateInfo.latestVersion}_x64-setup.exe`;
+        } else if (platform.includes('mac')) {
+          downloadUrl = platforms['darwin-universal']?.url;
+          fileName = `OpenSubtitles.Uploader.PRO_${cache.updateInfo.latestVersion}_universal.dmg`;
+        } else if (platform.includes('linux')) {
+          downloadUrl = platforms['linux-x86_64']?.url;
+          fileName = `OpenSubtitles.Uploader.PRO_${cache.updateInfo.latestVersion}_amd64.AppImage`;
+        }
+      }
+
+      if (!downloadUrl) {
+        throw new Error('Could not determine download URL for current platform');
+      }
+
+      console.log('🔗 Download URL:', downloadUrl);
+      console.log('📁 Target filename:', fileName);
+
+      // Get Downloads directory
+      const downloadsPath = await downloadDir();
+      const filePath = `${downloadsPath}/${fileName}`;
+
+      console.log('💾 Downloading to:', filePath);
+
+      // Download the file
+      const response = await tauriFetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Get file content as array buffer
+      const fileData = await response.arrayBuffer();
       
-      await tauriUpdater.install();
-      
-      console.log('✅ Update installed successfully');
+      // Save to Downloads folder
+      await save({
+        defaultPath: filePath,
+        contents: new Uint8Array(fileData)
+      });
+
+      console.log('✅ Update downloaded successfully to:', filePath);
       
       this.notifyListeners({
-        type: 'update_install_complete'
+        type: 'update_download_complete',
+        filePath,
+        fileName
       });
 
       return {
         success: true,
-        message: 'Update installed successfully'
+        message: 'Update downloaded to Downloads folder',
+        filePath,
+        fileName
       };
     } catch (error) {
-      console.error('❌ Update installation failed:', error);
+      console.error('❌ Update download failed:', error);
       
       this.notifyListeners({
-        type: 'update_install_error',
+        type: 'update_download_error',
         error: error.message
       });
 
@@ -535,6 +592,110 @@ export class UpdateService {
       };
     } finally {
       this.isInstalling = false;
+    }
+  }
+
+  /**
+   * Install available update (kept for backward compatibility but now downloads only)
+   * @returns {Promise<Object>} Install result
+   */
+  async installUpdate() {
+    // Redirect to download method for safer approach
+    return await this.downloadUpdate();
+  }
+
+  /**
+   * Open Downloads folder to show downloaded update
+   * @returns {Promise<Object>} Result
+   */
+  async openDownloadsFolder() {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    try {
+      console.log('📁 Opening Downloads folder...');
+      
+      // Import shell API to open folder
+      const { open } = await import('@tauri-apps/plugin-shell');
+      const { downloadDir } = await import('@tauri-apps/api/path');
+      
+      const downloadsPath = await downloadDir();
+      await open(downloadsPath);
+      
+      console.log('✅ Downloads folder opened');
+      
+      return {
+        success: true,
+        message: 'Downloads folder opened'
+      };
+    } catch (error) {
+      console.error('❌ Failed to open Downloads folder:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Run the downloaded installer
+   * @param {string} filePath - Path to the downloaded installer
+   * @returns {Promise<Object>} Result
+   */
+  async runInstaller(filePath) {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    if (!filePath) {
+      return {
+        success: false,
+        error: 'No installer file path provided'
+      };
+    }
+
+    try {
+      console.log('🚀 Running installer:', filePath);
+      
+      // Import shell API to execute file
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      
+      // Determine how to run based on platform
+      const platform = navigator.platform.toLowerCase();
+      
+      if (platform.includes('win')) {
+        // Windows - run the .exe installer
+        await Command.create('explorer', [filePath]).execute();
+      } else if (platform.includes('mac')) {
+        // macOS - open the .dmg file
+        await Command.create('open', [filePath]).execute();
+      } else if (platform.includes('linux')) {
+        // Linux - make executable and run AppImage
+        await Command.create('chmod', ['+x', filePath]).execute();
+        await Command.create(filePath).execute();
+      } else {
+        throw new Error('Unsupported platform for installer execution');
+      }
+      
+      console.log('✅ Installer launched');
+      
+      return {
+        success: true,
+        message: 'Installer launched successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to run installer:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
