@@ -1,6 +1,6 @@
 {
   "name": "opensubtitles-uploader-pro",
-  "version": "1.5.28",
+  "version": "1.5.29",
   "description": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
   "keywords": [
     "opensubtitles",
@@ -33,9 +33,9 @@
     "update-version": "node scripts/build/update-version.js",
     "update-readme-version": "node -e \"const fs=require('fs');const pkg=require('./package.json');let readme=fs.readFileSync('README.md','utf8');readme=readme.replace(/version-[0-9.]+/g,'version-'+pkg.version).replace(/Version [0-9.]+/g,'Version '+pkg.version);fs.writeFileSync('README.md',readme);\"",
     "prepublishOnly": "npm run build",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri": "npx tauri",
+    "tauri:dev": "npx tauri dev",
+    "tauri:build": "npx tauri build"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

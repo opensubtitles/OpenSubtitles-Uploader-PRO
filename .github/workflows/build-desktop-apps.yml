@@ -92,22 +92,26 @@ jobs:
         shell: bash
         run: |
           echo "🔍 Verifying Tauri CLI installation..."
-          npm run tauri --version || echo "Tauri CLI not accessible via npm"
-          npx tauri --version || echo "Tauri CLI not accessible via npx"
+          npx tauri --version || echo "❌ Tauri CLI not accessible via npx"
           
           echo "📦 Checking package.json scripts:"
-          grep -A5 -B5 "tauri" package.json || echo "No tauri scripts found"
+          grep -A3 "tauri" package.json || echo "No tauri scripts found"
           
           echo "🔧 Checking Tauri config:"
           if [ -f "src-tauri/tauri.conf.json" ]; then
             echo "✅ Tauri config exists"
-            head -10 src-tauri/tauri.conf.json
+            head -5 src-tauri/tauri.conf.json
           else
             echo "❌ Tauri config missing"
+            exit 1
           fi
           
           echo "📁 Project structure:"
           ls -la src-tauri/ || echo "src-tauri directory missing"
+          
+          echo "🦀 Rust toolchain info:"
+          rustc --version
+          cargo --version
 
       - name: Build the app (Universal Binary)
         if: matrix.target == 'universal-apple-darwin'
