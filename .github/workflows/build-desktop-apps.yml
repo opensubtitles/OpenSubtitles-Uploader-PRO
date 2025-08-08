@@ -376,23 +376,18 @@ jobs:
             "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platforms": {
               "windows-x86_64": {
-                "signature": "",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe"
               },
               "darwin-universal": {
-                "signature": "",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
               },
               "darwin-x86_64": {
-                "signature": "",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
               },
               "darwin-aarch64": {
-                "signature": "",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
               },
               "linux-x86_64": {
-                "signature": "",
                 "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage"
               }
             }
