@@ -2459,7 +2459,7 @@ dependencies = [
 
 [[package]]
 name = "opensubtitles-uploader-pro"
-version = "1.2.0"
+version = "1.5.34"
 dependencies = [
  "serde",
  "serde_json",
