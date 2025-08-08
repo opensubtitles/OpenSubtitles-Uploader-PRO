@@ -77,10 +77,8 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          key: v1-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            v1-${{ matrix.target }}-
-            v1-
+          shared-key: v2-${{ matrix.target }}
+          cache-all-crates: true
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
