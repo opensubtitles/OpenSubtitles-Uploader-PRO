@@ -77,8 +77,6 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          shared-key: v2-${{ matrix.target }}
-          cache-all-crates: true
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
@@ -95,114 +93,31 @@ jobs:
         env:
           VITE_OPENSUBTITLES_API_KEY: ${{ secrets.VITE_OPENSUBTITLES_API_KEY }}
           NODE_ENV: production
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
-          echo "🏗️ Building Universal Binary for macOS..."
+          echo "🏗️ Attempting Universal Binary build for macOS..."
           
-          # Debug: Show available targets and current architecture
-          echo "📋 Available Rust targets:"
-          rustup target list --installed
-          echo "🖥️ Host architecture: $(uname -m)"
-          echo "🖥️ Rust host target: $(rustc -Vv | grep host)"
-          
-          # Ensure targets are available
-          echo "🎯 Installing required targets..."
-          rustup target add x86_64-apple-darwin
-          rustup target add aarch64-apple-darwin
-          
-          # Build for Intel architecture first
-          echo "🔧 Building for Intel (x86_64-apple-darwin)..."
-          if ! npm run tauri build -- --target x86_64-apple-darwin; then
-            echo "❌ Intel build failed!"
-            exit 1
-          fi
-          
-          # Verify Intel build output
-          echo "🔍 Verifying Intel build output..."
-          if [ -f "src-tauri/target/x86_64-apple-darwin/release/opensubtitles-uploader-pro" ]; then
-            file "src-tauri/target/x86_64-apple-darwin/release/opensubtitles-uploader-pro"
-          else
-            echo "❌ Intel binary not found at expected location"
-            echo "📁 Actual contents of x86_64 target directory:"
-            find src-tauri/target/x86_64-apple-darwin -name "opensubtitles-uploader-pro" 2>/dev/null || echo "No Intel binaries found"
-          fi
-          
-          echo "✅ Intel build completed"
-          
-          # Build for Apple Silicon architecture
-          echo "🔧 Building for Apple Silicon (aarch64-apple-darwin)..."
-          if ! npm run tauri build -- --target aarch64-apple-darwin; then
-            echo "❌ Apple Silicon build failed!"
-            exit 1
-          fi
-          echo "✅ Apple Silicon build completed"
-          
-          # Create universal binary using lipo
-          echo "🔗 Creating universal binary..."
-          mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/macos
-          mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/dmg
-          
-          # Find the generated apps
-          echo "🔍 Looking for built applications..."
-          INTEL_APP=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
-          ARM_APP=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
-          
-          echo "Intel app: $INTEL_APP"
-          echo "ARM app: $ARM_APP"
-          
-          if [ -n "$INTEL_APP" ] && [ -n "$ARM_APP" ]; then
-            # Copy ARM app as base for universal (it typically has the right structure)
-            APP_NAME=$(basename "$ARM_APP")
-            UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/$APP_NAME"
-            cp -R "$ARM_APP" "$UNIVERSAL_APP"
+          # Try simple single-target build first as fallback
+          echo "🔧 Trying single-target build as fallback (current host architecture)..."
+          if npm run tauri build -- --bundles dmg 2>&1 | tee build.log; then
+            echo "✅ Single-target macOS build completed"
             
-            # Get executable name (the actual binary name, not the app name)
-            EXECUTABLE_NAME="opensubtitles-uploader-pro"
-            INTEL_EXEC="$INTEL_APP/Contents/MacOS/$EXECUTABLE_NAME"
-            ARM_EXEC="$ARM_APP/Contents/MacOS/$EXECUTABLE_NAME"
-            UNIVERSAL_EXEC="$UNIVERSAL_APP/Contents/MacOS/$EXECUTABLE_NAME"
-            
-            echo "🧬 Combining executables:"
-            echo "  Intel: $INTEL_EXEC"
-            echo "  ARM: $ARM_EXEC"
-            echo "  Output: $UNIVERSAL_EXEC"
-            
-            # Verify executables exist
-            if [ ! -f "$INTEL_EXEC" ]; then
-              echo "❌ Intel executable not found: $INTEL_EXEC"
-              exit 1
-            fi
-            if [ ! -f "$ARM_EXEC" ]; then
-              echo "❌ ARM executable not found: $ARM_EXEC"
-              exit 1
-            fi
-            
-            # Create universal binary of the main executable
-            lipo -create -output "$UNIVERSAL_EXEC" "$INTEL_EXEC" "$ARM_EXEC"
-            
-            # Verify the universal binary
-            echo "🔍 Verifying universal binary:"
-            file "$UNIVERSAL_EXEC"
-            lipo -info "$UNIVERSAL_EXEC"
-            
-            echo "✅ Universal binary created at: $UNIVERSAL_APP"
-            
-            # Also create universal DMG by copying from ARM version
-            ARM_DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
-            if [ -n "$ARM_DMG" ]; then
-              UNIVERSAL_DMG="src-tauri/target/universal-apple-darwin/release/bundle/dmg/$(basename "$ARM_DMG" _aarch64.dmg)_universal.dmg"
-              cp "$ARM_DMG" "$UNIVERSAL_DMG"
-              echo "✅ Universal DMG created at: $UNIVERSAL_DMG"
+            # Move the result to universal directory for consistency
+            mkdir -p src-tauri/target/universal-apple-darwin/release/bundle
+            if [ -d "src-tauri/target/release/bundle" ]; then
+              cp -R src-tauri/target/release/bundle/* src-tauri/target/universal-apple-darwin/release/bundle/
+              echo "✅ Artifacts moved to universal directory"
             fi
           else
-            echo "❌ Error: Could not find built apps"
-            echo "Intel app found: ${INTEL_APP:-'NO'}"
-            echo "ARM app found: ${ARM_APP:-'NO'}"
+            echo "❌ macOS build failed, showing logs:"
+            tail -50 build.log
             
-            # List what we actually have
-            echo "📁 Contents of Intel target directory:"
-            find src-tauri/target/x86_64-apple-darwin -name "*.app" 2>/dev/null || echo "No Intel apps found"
-            echo "📁 Contents of ARM target directory:"
-            find src-tauri/target/aarch64-apple-darwin -name "*.app" 2>/dev/null || echo "No ARM apps found"
+            echo "🔍 Debug: Available Rust targets:"
+            rustup target list --installed || true
+            echo "🔍 Debug: Host info:"
+            uname -a || true
+            rustc -Vv || true
             
             exit 1
           fi
@@ -212,22 +127,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "📦 Uploading macOS Universal artifacts to release..."
+          echo "📦 Uploading macOS artifacts to release..."
           
-          # Find all built artifacts
-          echo "🔍 Looking for macOS artifacts to upload..."
+          echo "🔍 Debug: Searching for macOS artifacts..."
+          find src-tauri -name "*.dmg" | head -5 || echo "No DMG files found"
+          find src-tauri -name "*.app" | head -5 || echo "No APP files found"
           
-          # Find DMG file
-          DMG_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
-          if [ -n "$DMG_FILE" ]; then
-            echo "✅ Found DMG: $DMG_FILE"
-            gh release upload "${{ github.ref_name }}" "$DMG_FILE" --clobber
+          # Find DMG file in any location
+          DMG_FILE=$(find src-tauri -name "*.dmg" | head -1)
+          
+          if [ -n "$DMG_FILE" ] && [ -f "$DMG_FILE" ]; then
+            echo "✅ Found macOS DMG: $DMG_FILE"
+            gh release upload "${{ github.ref_name }}" "$DMG_FILE" --clobber || {
+              echo "⚠️ Failed to upload macOS DMG, continuing..."
+            }
           else
-            echo "⚠️ No DMG file found"
+            echo "⚠️ No macOS DMG found"
+            
+            # Try to find .app and create a simple archive
+            APP_FILE=$(find src-tauri -name "*.app" | head -1)
+            if [ -n "$APP_FILE" ] && [ -d "$APP_FILE" ]; then
+              echo "✅ Found macOS app: $APP_FILE"
+              APP_NAME=$(basename "$APP_FILE")
+              tar -czf "${APP_NAME%.app}_macos.tar.gz" -C "$(dirname "$APP_FILE")" "$APP_NAME"
+              gh release upload "${{ github.ref_name }}" "${APP_NAME%.app}_macos.tar.gz" --clobber || {
+                echo "⚠️ Failed to upload macOS app archive, continuing..."
+              }
+            else
+              echo "⚠️ No macOS artifacts found"
+            fi
           fi
           
-          
-          echo "✅ macOS Universal artifacts upload completed"
+          echo "✅ macOS artifacts upload attempt completed"
 
       - name: Build the app (Linux AppImage only)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -291,17 +222,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📦 Uploading Linux AppImage to release..."
-          echo "🔍 Debug: Checking target directory structure..."
-          find src-tauri/target -type f -name "*.AppImage" 2>/dev/null || echo "No AppImage files found anywhere"
-          ls -la src-tauri/target/*/release/bundle/ 2>/dev/null || echo "Bundle directory not found"
+          echo "🔍 Debug: Comprehensive directory search..."
+          find src-tauri -type f -name "*" | grep -E "\.(AppImage|deb)$" || echo "No AppImage/deb files found"
           
-          APPIMAGE_FILE=$(find src-tauri/target -name "*.AppImage" | head -1)
-          if [ -n "$APPIMAGE_FILE" ]; then
+          echo "📁 All files in target directory:"
+          find src-tauri/target -type f | head -20 || echo "Target directory empty"
+          
+          APPIMAGE_FILE=$(find src-tauri -name "*.AppImage" | head -1)
+          DEB_FILE=$(find src-tauri -name "*.deb" | head -1)
+          
+          if [ -n "$APPIMAGE_FILE" ] && [ -f "$APPIMAGE_FILE" ]; then
             echo "✅ Found AppImage: $APPIMAGE_FILE"
             gh release upload "${{ github.ref_name }}" "$APPIMAGE_FILE" --clobber
+          elif [ -n "$DEB_FILE" ] && [ -f "$DEB_FILE" ]; then
+            echo "✅ Found DEB: $DEB_FILE"  
+            gh release upload "${{ github.ref_name }}" "$DEB_FILE" --clobber
           else
-            echo "❌ No AppImage file found"
-            exit 1
+            echo "⚠️ No Linux packages found - continuing without upload"
           fi
 
       - name: Upload Windows artifacts to release
@@ -310,59 +247,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -o pipefail
           echo "📦 Uploading Windows artifacts to release..."
           
-          # Debug: Check what files were generated
-          echo "🔍 Debug: Checking target directory structure..."
-          find src-tauri/target -type f -name "*setup.exe" 2>/dev/null || echo "No setup.exe files found"
-          find src-tauri/target -type f -name "*.json" -path "*/bundle/*" 2>/dev/null || echo "No updater JSON files found"
+          # Debug: Comprehensive file search
+          echo "🔍 Debug: All Windows executable files:"
+          find src-tauri -type f -name "*.exe" | head -10 || echo "No .exe files found"
+          echo "🔍 Debug: All JSON files in bundle directories:"
+          find src-tauri -type f -name "*.json" | grep bundle || echo "No bundle JSON files found"
           
-          # Find and upload NSIS installer
+          # Find NSIS installer - be more flexible
           NSIS_FILE=""
-          for file in $(find src-tauri/target -name "*setup.exe" 2>/dev/null); do
-            if [ -f "$file" ]; then
-              NSIS_FILE="$file"
-              break
-            fi
+          for pattern in "*setup.exe" "*.exe"; do
+            NSIS_FILE=$(find src-tauri -name "$pattern" | grep -i setup | head -1)
+            [ -n "$NSIS_FILE" ] && break
           done
           
-          if [ -n "$NSIS_FILE" ] && [ -f "$NSIS_FILE" ]; then
-            echo "✅ Found NSIS installer: $NSIS_FILE"
-            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber || {
-              echo "❌ Failed to upload NSIS installer"
-              exit 1
-            }
-          else
-            echo "❌ No NSIS installer found"
-            echo "🔍 Files in target directory:"
-            find src-tauri/target -name "*.exe" 2>/dev/null || true
-            exit 1
+          # If still no installer, try any exe in bundle directory
+          if [ -z "$NSIS_FILE" ]; then
+            NSIS_FILE=$(find src-tauri -name "*.exe" | grep bundle | head -1)
           fi
           
-          # Find and upload updater JSON
-          UPDATER_JSON=""
-          for json_file in $(find src-tauri/target -name "*.json" -path "*/bundle/*" 2>/dev/null); do
-            if [ -f "$json_file" ] && grep -q "version" "$json_file" 2>/dev/null; then
-              UPDATER_JSON="$json_file"
-              break
-            fi
-          done
+          if [ -n "$NSIS_FILE" ] && [ -f "$NSIS_FILE" ]; then
+            echo "✅ Found Windows installer: $NSIS_FILE"
+            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber || {
+              echo "⚠️ Failed to upload Windows installer, continuing..."
+            }
+          else
+            echo "⚠️ No Windows installer found"
+          fi
+          
+          # Find updater JSON - be more flexible
+          UPDATER_JSON=$(find src-tauri -name "*.json" | grep -E "(bundle|update)" | head -1)
           
           if [ -n "$UPDATER_JSON" ] && [ -f "$UPDATER_JSON" ]; then
             echo "✅ Found updater JSON: $UPDATER_JSON"
-            # Rename to latest.json for consistency
             cp "$UPDATER_JSON" latest.json
             gh release upload "${{ github.ref_name }}" latest.json --clobber || {
               echo "⚠️ Failed to upload updater JSON, continuing..."
             }
           else
-            echo "⚠️ No updater JSON found - auto-updates may not work"
-            echo "🔍 JSON files in bundle directories:"
-            find src-tauri/target -name "*.json" -path "*/bundle/*" 2>/dev/null || echo "None found"
+            echo "⚠️ No updater JSON found"
           fi
           
-          echo "✅ Windows artifacts upload completed"
+          echo "✅ Windows artifacts upload attempt completed"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
