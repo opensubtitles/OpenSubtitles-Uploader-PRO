@@ -368,6 +368,25 @@ jobs:
           
           echo "Version: $VERSION_NUM"
           
+          # Check which macOS file format was actually uploaded
+          echo "🔍 Checking available release assets for macOS file format..."
+          ASSETS=$(gh release view "$VERSION" --json assets --jq '.assets[].name')
+          echo "Available assets:"
+          echo "$ASSETS"
+          
+          # Determine macOS file URL based on what actually exists
+          if echo "$ASSETS" | grep -q "universal\.dmg"; then
+            MACOS_URL="https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+            echo "✅ Found DMG file, using: $MACOS_URL"
+          elif echo "$ASSETS" | grep -q "_macos\.tar\.gz"; then
+            MACOS_URL="https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
+            echo "✅ Found tar.gz file, using: $MACOS_URL"
+          else
+            echo "❌ No macOS file found (neither .dmg nor .tar.gz)"
+            MACOS_URL="https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_universal.dmg"
+            echo "⚠️ Falling back to DMG URL: $MACOS_URL"
+          fi
+          
           # Create updater manifest with proper Tauri v2 format
           cat > latest.json << EOF
           {
@@ -381,15 +400,15 @@ jobs:
               },
               "darwin-universal": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
+                "url": "$MACOS_URL"
               },
               "darwin-x86_64": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
+                "url": "$MACOS_URL"
               },
               "darwin-aarch64": {
                 "signature": "",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_macos.tar.gz"
+                "url": "$MACOS_URL"
               },
               "linux-x86_64": {
                 "signature": "",
