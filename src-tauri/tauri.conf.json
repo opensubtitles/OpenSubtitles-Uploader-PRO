@@ -40,10 +40,7 @@
             "dialog:default",
             "http:default",
             "updater:default",
-            "core:path:default",
-            "core:path:allow-download-dir",
-            "fs:allow-read-dir",
-            "fs:allow-write-file"
+            "core:path:default"
           ]
         }
       ]
