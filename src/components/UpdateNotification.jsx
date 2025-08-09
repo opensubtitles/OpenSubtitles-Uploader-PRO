@@ -21,7 +21,6 @@ const UpdateNotification = () => {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
 
   // Don't show if no update available or dismissed
   if (!updateAvailable || isDismissed) {
@@ -29,7 +28,6 @@ const UpdateNotification = () => {
   }
 
   const handleDownloadUpdate = async () => {
-    setShowDownloadConfirm(false);
     const result = await downloadUpdate();
     if (result.success) {
       setIsExpanded(true);
@@ -40,14 +38,6 @@ const UpdateNotification = () => {
     if (downloadedFilePath) {
       await openDownloadedFile(downloadedFilePath);
     }
-  };
-
-  const handleConfirmDownload = () => {
-    setShowDownloadConfirm(true);
-  };
-
-  const handleCancelDownload = () => {
-    setShowDownloadConfirm(false);
   };
 
   const handleDismiss = () => {
@@ -109,10 +99,10 @@ const UpdateNotification = () => {
           {isStandalone ? (
             // Standalone app - show download workflow
             <>
-              {!showDownloadConfirm && !isDownloading && !downloadedFilePath && (
+              {!isDownloading && !downloadedFilePath && (
                 <>
                   <button
-                    onClick={handleConfirmDownload}
+                    onClick={handleDownloadUpdate}
                     className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
                       isDark
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -131,35 +121,6 @@ const UpdateNotification = () => {
                     }`}
                   >
                     {isExpanded ? 'Less Info' : 'More Info'}
-                  </button>
-                </>
-              )}
-              
-              {showDownloadConfirm && !isDownloading && (
-                <>
-                  <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-blue-700'} mb-2 w-full`}>
-                    Download update to Downloads folder?
-                  </div>
-                  <button
-                    onClick={handleDownloadUpdate}
-                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                      isDark
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                  >
-                    Yes, Download
-                  </button>
-                  
-                  <button
-                    onClick={handleCancelDownload}
-                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                      isDark
-                        ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                    }`}
-                  >
-                    Cancel
                   </button>
                 </>
               )}
