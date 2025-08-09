@@ -4,6 +4,9 @@ import { logUpdaterDiagnostics } from '../utils/appLogger.js';
 // Import Tauri APIs directly - they'll be available when bundled in production
 let tauriUpdater = null;
 let tauriProcess = null;
+let tauriShell = null;
+let tauriPath = null;
+let tauriFs = null;
 
 const loadTauriAPIs = async () => {
   // Only load Tauri APIs in actual Tauri environment
@@ -34,13 +37,22 @@ const loadTauriAPIs = async () => {
         // Try to load Tauri APIs with correct v2 API structure
         const updaterModule = await import('@tauri-apps/plugin-updater');
         const processModule = await import('@tauri-apps/plugin-process');
+        const shellModule = await import('@tauri-apps/plugin-shell');
+        const pathModule = await import('@tauri-apps/api/path');
+        const fsModule = await import('@tauri-apps/plugin-fs');
         
         console.log('🔧 Raw updater module:', Object.keys(updaterModule));
         console.log('🔧 Raw process module:', Object.keys(processModule));
+        console.log('🔧 Raw shell module:', Object.keys(shellModule));
+        console.log('🔧 Raw path module:', Object.keys(pathModule));
+        console.log('🔧 Raw fs module:', Object.keys(fsModule));
         
         // For Tauri v2, use the correct API structure
         const { check, Update } = updaterModule;
         const { relaunch } = processModule;
+        const { open } = shellModule;
+        const { downloadDir } = pathModule;
+        const { writeFile } = fsModule;
         
         // Verify the APIs are available
         if (typeof check === 'function' && Update) {
@@ -58,6 +70,15 @@ const loadTauriAPIs = async () => {
           };
           tauriProcess = { 
             relaunch: typeof relaunch === 'function' ? relaunch : () => Promise.resolve()
+          };
+          tauriShell = {
+            open: typeof open === 'function' ? open : () => Promise.resolve()
+          };
+          tauriPath = {
+            downloadDir: typeof downloadDir === 'function' ? downloadDir : () => Promise.resolve('/tmp')
+          };
+          tauriFs = {
+            writeFile: typeof writeFile === 'function' ? writeFile : () => Promise.resolve()
           };
           
           console.log('✅ Tauri v2 updater APIs loaded successfully');
@@ -479,10 +500,10 @@ export class UpdateService {
   }
 
   /**
-   * Install available update
-   * @returns {Promise<Object>} Install result
+   * Download update to Downloads folder
+   * @returns {Promise<Object>} Download result
    */
-  async installUpdate() {
+  async downloadUpdate() {
     if (!this.isStandalone) {
       return {
         success: false,
@@ -490,42 +511,107 @@ export class UpdateService {
       };
     }
 
+    const cache = UpdateService.updateCache;
+    if (!cache.updateAvailable || !cache.updateInfo) {
+      return {
+        success: false,
+        error: 'No update available'
+      };
+    }
+
     if (this.isInstalling) {
       return {
         success: false,
-        error: 'Update installation already in progress'
+        error: 'Download already in progress'
       };
     }
 
     try {
       this.isInstalling = true;
-      console.log('📦 Installing update...');
+      console.log('📦 Downloading update to Downloads folder...');
 
       this.notifyListeners({
-        type: 'update_install_start'
+        type: 'update_download_start'
       });
 
-      if (!tauriUpdater) {
-        throw new Error('Tauri updater not available');
+      if (!tauriUpdater || !tauriPath || !tauriShell || !tauriFs) {
+        throw new Error('Tauri APIs not available');
       }
+
+      // Get the update info
+      const updateInfo = await tauriUpdater.check();
+      if (!updateInfo) {
+        throw new Error('No update available to download');
+      }
+
+      // Get Downloads directory
+      const downloadsPath = await tauriPath.downloadDir();
+      console.log('📁 Downloads directory:', downloadsPath);
+
+      // Determine platform and get appropriate download URL
+      const platform = this.getCurrentPlatform();
+      const updateData = cache.updateInfo.updateData;
       
-      await tauriUpdater.install();
+      let downloadUrl = '';
+      let fileName = '';
       
-      console.log('✅ Update installed successfully');
+      if (updateData && updateData.platforms) {
+        const platformKey = this.getPlatformKey(platform);
+        const platformData = updateData.platforms[platformKey];
+        
+        if (platformData && platformData.url) {
+          downloadUrl = platformData.url;
+          fileName = this.getFileNameFromUrl(downloadUrl, platform);
+        }
+      }
+
+      if (!downloadUrl) {
+        // Fallback to constructing URL from version info
+        const version = cache.updateInfo.latestVersion;
+        downloadUrl = this.constructDownloadUrl(version, platform);
+        fileName = this.getDefaultFileName(version, platform);
+      }
+
+      console.log('🔗 Download URL:', downloadUrl);
+      console.log('📄 File name:', fileName);
+
+      // Download the file
+      console.log('⬇️ Starting download...');
+      const response = await fetch(downloadUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Write file to Downloads folder
+      const filePath = `${downloadsPath}/${fileName}`;
+      await tauriFs.writeFile({
+        path: filePath,
+        contents: uint8Array
+      });
+
+      console.log('✅ Update downloaded successfully to:', filePath);
       
       this.notifyListeners({
-        type: 'update_install_complete'
+        type: 'update_download_complete',
+        filePath: filePath,
+        fileName: fileName
       });
 
       return {
         success: true,
-        message: 'Update installed successfully'
+        message: 'Update downloaded successfully',
+        filePath: filePath,
+        fileName: fileName
       };
     } catch (error) {
-      console.error('❌ Update installation failed:', error);
+      console.error('❌ Update download failed:', error);
       
       this.notifyListeners({
-        type: 'update_install_error',
+        type: 'update_download_error',
         error: error.message
       });
 
@@ -536,6 +622,143 @@ export class UpdateService {
     } finally {
       this.isInstalling = false;
     }
+  }
+
+  /**
+   * Get current platform identifier
+   * @returns {string} Platform identifier
+   */
+  getCurrentPlatform() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('mac') || userAgent.includes('darwin')) {
+      return 'macos';
+    } else if (userAgent.includes('windows') || userAgent.includes('win')) {
+      return 'windows';
+    } else if (userAgent.includes('linux')) {
+      return 'linux';
+    }
+    
+    return 'unknown';
+  }
+
+  /**
+   * Get platform key for Tauri updater manifest
+   * @param {string} platform - Platform identifier
+   * @returns {string} Platform key
+   */
+  getPlatformKey(platform) {
+    switch (platform) {
+      case 'windows':
+        return 'windows-x86_64';
+      case 'macos':
+        return 'darwin-universal';
+      case 'linux':
+        return 'linux-x86_64';
+      default:
+        return 'unknown';
+    }
+  }
+
+  /**
+   * Extract filename from download URL
+   * @param {string} url - Download URL
+   * @param {string} platform - Platform identifier
+   * @returns {string} File name
+   */
+  getFileNameFromUrl(url, platform) {
+    try {
+      const urlParts = url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      if (fileName && fileName.length > 0) {
+        return fileName;
+      }
+    } catch (error) {
+      console.warn('Could not extract filename from URL:', error);
+    }
+    
+    // Fallback to default naming
+    return this.getDefaultFileName('latest', platform);
+  }
+
+  /**
+   * Get default filename for platform
+   * @param {string} version - Version string
+   * @param {string} platform - Platform identifier
+   * @returns {string} Default file name
+   */
+  getDefaultFileName(version, platform) {
+    const cleanVersion = version.replace(/^v/, '');
+    
+    switch (platform) {
+      case 'windows':
+        return `OpenSubtitles.Uploader.PRO_${cleanVersion}_x64-setup.exe`;
+      case 'macos':
+        return `OpenSubtitles.Uploader.PRO_${cleanVersion}_universal.dmg`;
+      case 'linux':
+        return `opensubtitles-uploader-pro_${cleanVersion}_amd64.AppImage`;
+      default:
+        return `opensubtitles-uploader-pro-${cleanVersion}.bin`;
+    }
+  }
+
+  /**
+   * Construct download URL for version and platform
+   * @param {string} version - Version string
+   * @param {string} platform - Platform identifier
+   * @returns {string} Download URL
+   */
+  constructDownloadUrl(version, platform) {
+    const fileName = this.getDefaultFileName(version, platform);
+    const versionTag = version.startsWith('v') ? version : `v${version}`;
+    return `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/${versionTag}/${fileName}`;
+  }
+
+  /**
+   * Open downloaded file or reveal in file explorer
+   * @param {string} filePath - Path to the downloaded file
+   * @returns {Promise<Object>} Open result
+   */
+  async openDownloadedFile(filePath) {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    try {
+      console.log('📂 Opening downloaded file:', filePath);
+
+      if (!tauriShell) {
+        throw new Error('Tauri shell not available');
+      }
+      
+      await tauriShell.open(filePath);
+      
+      console.log('✅ File opened successfully');
+      
+      return {
+        success: true,
+        message: 'File opened successfully'
+      };
+    } catch (error) {
+      console.error('❌ Failed to open file:', error);
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Install available update (deprecated - now downloads instead)
+   * @returns {Promise<Object>} Install result
+   */
+  async installUpdate() {
+    console.log('⚠️ installUpdate is deprecated, using downloadUpdate instead');
+    return await this.downloadUpdate();
   }
 
   /**
