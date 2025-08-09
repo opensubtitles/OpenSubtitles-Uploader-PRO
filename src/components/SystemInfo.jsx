@@ -82,6 +82,24 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
       sections.push(`RTT: ${systemInfo.performance.connection.rtt}ms`);
     }
     
+    // Libraries Information
+    if (systemInfo.libraries && Object.keys(systemInfo.libraries).length > 0) {
+      sections.push('\n=== LIBRARIES ===');
+      Object.entries(systemInfo.libraries).forEach(([lib, version]) => {
+        const libName = lib.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+        sections.push(`${libName}: ${version}`);
+      });
+    }
+    
+    // Security Information
+    if (systemInfo.security) {
+      sections.push('\n=== SECURITY ===');
+      Object.entries(systemInfo.security).forEach(([feature, enabled]) => {
+        const featureName = feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+        sections.push(`${featureName}: ${enabled ? '✓ Yes' : '✗ No'}`);
+      });
+    }
+    
     // Feature Support
     sections.push('\n=== FEATURE SUPPORT ===');
     Object.entries(systemInfo.features).forEach(([feature, supported]) => {
@@ -299,6 +317,34 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
               <span className="label">RTT:</span>
               <span className="value">{systemInfo.performance.connection.rtt}ms</span>
             </div>
+          </div>
+        )}
+
+        {/* Libraries Information */}
+        {systemInfo.libraries && Object.keys(systemInfo.libraries).length > 0 && (
+          <div className="info-section">
+            <h5>Libraries</h5>
+            {Object.entries(systemInfo.libraries).map(([lib, version]) => (
+              <div key={lib} className="info-item">
+                <span className="label">{lib.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase())}:</span>
+                <span className="value">{version}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Security Information */}
+        {systemInfo.security && (
+          <div className="info-section">
+            <h5>Security</h5>
+            {Object.entries(systemInfo.security).map(([feature, enabled]) => (
+              <div key={feature} className="info-item">
+                <span className="label">{feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase())}:</span>
+                <span className={`value ${enabled ? 'supported' : 'not-supported'}`}>
+                  {enabled ? '✓ Yes' : '✗ No'}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

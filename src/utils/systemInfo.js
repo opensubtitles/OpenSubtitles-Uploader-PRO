@@ -253,6 +253,78 @@ export const formatSystemInfoLine = (parts, separator = ' | ') => {
 };
 
 /**
+ * Get library and dependency information
+ */
+export const getLibraryInfo = () => {
+  const libraries = {};
+  
+  // Check for React version
+  if (typeof React !== 'undefined' && React.version) {
+    libraries.react = React.version;
+  } else if (window.React?.version) {
+    libraries.react = window.React.version;
+  } else {
+    libraries.react = 'N/A';
+  }
+  
+  // Check for common build tools and frameworks
+  if (typeof __VITE__ !== 'undefined') {
+    libraries.vite = 'Available';
+  }
+  
+  // Check for WebAssembly modules
+  if (typeof WebAssembly === 'object') {
+    libraries.webAssembly = 'Supported';
+  }
+  
+  // Check for FFmpeg
+  if (window.FFmpeg) {
+    libraries.ffmpeg = 'Loaded';
+  }
+  
+  // Check for GuessIt
+  if (window.guessit || window.GuessIt) {
+    libraries.guessit = 'Loaded';
+  }
+  
+  return libraries;
+};
+
+/**
+ * Get security and capability information
+ */
+export const getSecurityInfo = () => {
+  const security = {};
+  
+  // Check HTTPS
+  security.https = window.location.protocol === 'https:';
+  
+  // Check secure context
+  security.secureContext = window.isSecureContext || false;
+  
+  // Check for CSP (Content Security Policy)
+  try {
+    security.contentSecurityPolicy = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+  } catch (e) {
+    security.contentSecurityPolicy = false;
+  }
+  
+  // Check for SameSite cookie support
+  security.sameSiteCookies = 'cookieStore' in window || document.cookie !== undefined;
+  
+  // Check permissions API
+  security.permissionsAPI = 'permissions' in navigator;
+  
+  // Check clipboard API
+  security.clipboardAPI = 'clipboard' in navigator;
+  
+  // Check for File System Access API
+  security.fileSystemAccess = 'showOpenFilePicker' in window;
+  
+  return security;
+};
+
+/**
  * Get comprehensive system information
  */
 export const getSystemInfo = async () => {
@@ -261,6 +333,8 @@ export const getSystemInfo = async () => {
   const display = getDisplayInfo();
   const tauri = await getTauriInfo();
   const performance = getPerformanceInfo();
+  const libraries = getLibraryInfo();
+  const security = getSecurityInfo();
   
   return {
     // App information
@@ -277,6 +351,8 @@ export const getSystemInfo = async () => {
     display,
     tauri,
     performance,
+    libraries,
+    security,
     
     // Timestamp
     timestamp: new Date().toISOString(),
