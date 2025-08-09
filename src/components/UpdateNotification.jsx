@@ -57,14 +57,14 @@ const UpdateNotification = () => {
   return (
     <div className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg border ${
       isDark 
-        ? 'bg-blue-900/95 border-blue-700 text-white' 
+        ? 'bg-gray-900/95 border-gray-700 text-white shadow-xl' 
         : 'bg-blue-50 border-blue-200 text-blue-900'
     }`}>
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
               </svg>
             </div>
@@ -72,11 +72,11 @@ const UpdateNotification = () => {
               <h3 className={`text-sm font-medium ${isDark ? 'text-white' : 'text-blue-900'}`}>
                 Update Available
               </h3>
-              <div className={`mt-1 text-sm ${isDark ? 'text-blue-200' : 'text-blue-700'}`}>
+              <div className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-blue-700'}`}>
                 <p>Version {updateInfo?.latestVersion} is available</p>
                 <p className="text-xs mt-1">You're currently using v{updateInfo?.currentVersion}</p>
                 {isExpanded && updateInfo?.releaseNotes && (
-                  <div className="mt-2 p-2 rounded bg-black bg-opacity-20">
+                  <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
                     <p className="text-xs font-medium mb-1">Release Notes:</p>
                     <p className="text-xs whitespace-pre-wrap">{updateInfo.releaseNotes}</p>
                   </div>
@@ -84,7 +84,7 @@ const UpdateNotification = () => {
               </div>
               
               {error && (
-                <div className={`mt-2 text-xs ${isDark ? 'text-red-300' : 'text-red-600'}`}>
+                <div className={`mt-2 text-xs ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                   Error: {error}
                 </div>
               )}
@@ -95,7 +95,7 @@ const UpdateNotification = () => {
             onClick={handleDismiss}
             className={`ml-4 inline-flex text-sm ${
               isDark 
-                ? 'text-blue-300 hover:text-blue-100' 
+                ? 'text-gray-400 hover:text-gray-200' 
                 : 'text-blue-500 hover:text-blue-700'
             }`}
           >
@@ -137,7 +137,7 @@ const UpdateNotification = () => {
               
               {showDownloadConfirm && !isDownloading && (
                 <>
-                  <div className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-700'} mb-2 w-full`}>
+                  <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-blue-700'} mb-2 w-full`}>
                     Download update to Downloads folder?
                   </div>
                   <button
@@ -178,7 +178,7 @@ const UpdateNotification = () => {
               
               {downloadedFilePath && downloadedFileName && (
                 <>
-                  <div className={`text-xs ${isDark ? 'text-green-300' : 'text-green-700'} mb-2 w-full`}>
+                  <div className={`text-xs ${isDark ? 'text-green-400' : 'text-green-700'} mb-2 w-full`}>
                     ✅ Downloaded: {downloadedFileName}
                   </div>
                   <button

@@ -1,27 +1,27 @@
 {
-  "version": "v1.5.43",
-  "notes": "OpenSubtitles Uploader PRO v1.5.43 - Final Auto-Update Fix with Signature Fields",
-  "pub_date": "2025-08-08T21:04:24Z",
+  "version": "v1.6.1",
+  "notes": "OpenSubtitles Uploader PRO v1.6.1 - Automatic update",
+  "pub_date": "2025-08-09T01:24:02Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.43/OpenSubtitles.Uploader.PRO_1.5.43_x64-setup.exe"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.1/OpenSubtitles.Uploader.PRO_1.6.1_x64-setup.exe"
     },
     "darwin-universal": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.43/OpenSubtitles.Uploader.PRO_1.5.43_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.1/OpenSubtitles.Uploader.PRO_1.6.1_universal.dmg"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.43/OpenSubtitles.Uploader.PRO_1.5.43_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.1/OpenSubtitles.Uploader.PRO_1.6.1_universal.dmg"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.43/OpenSubtitles.Uploader.PRO_1.5.43_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.1/OpenSubtitles.Uploader.PRO_1.6.1_universal.dmg"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.43/OpenSubtitles.Uploader.PRO_1.5.43_amd64.AppImage"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.1/OpenSubtitles.Uploader.PRO_1.6.1_amd64.AppImage"
     }
   }
 }
