@@ -59,4 +59,17 @@ tauriConfig.version = currentVersion;
 fs.writeFileSync(tauriConfigPath, JSON.stringify(tauriConfig, null, 2));
 console.log(`✅ Updated src-tauri/tauri.conf.json to v${currentVersion}`);
 
+// Update Cargo.toml
+const cargoTomlPath = path.join(__dirname, '../../src-tauri/Cargo.toml');
+let cargoContent = fs.readFileSync(cargoTomlPath, 'utf8');
+
+// Replace the version line in the [package] section
+cargoContent = cargoContent.replace(
+  /version = "[0-9.]+"/,
+  `version = "${currentVersion}"`
+);
+
+fs.writeFileSync(cargoTomlPath, cargoContent);
+console.log(`✅ Updated src-tauri/Cargo.toml to v${currentVersion}`);
+
 console.log(`🎉 Version update complete! All references now point to v${currentVersion}`);
