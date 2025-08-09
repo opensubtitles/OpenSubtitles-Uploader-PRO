@@ -5,6 +5,34 @@ All notable changes to OpenSubtitles Uploader PRO will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2025-08-09
+
+### Fixed
+- Correct Tauri ACL permission name
+
+## [1.6.4] - 2025-08-09
+
+### Changed
+- Remove redundant download confirmation step
+
+## [1.6.3] - 2025-08-09
+
+### Fixed
+- Add path permissions for download functionality
+
+## [1.6.2] - 2025-08-09
+
+### Added
+- Libraries and Security sections to SystemInfo
+
+### Changed
+- Enhanced dark mode styling and version bump
+
+## [1.6.1] - 2025-08-09
+
+### Added
+- Smart download-only auto-update system
+
 ## [1.5.9] - 2025-08-07
 
 ### Added

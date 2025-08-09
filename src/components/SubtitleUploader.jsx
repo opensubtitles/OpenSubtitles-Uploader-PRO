@@ -1920,12 +1920,14 @@ function SubtitleUploaderInner() {
                     OpenSubtitles Uploader <span style={styles.link}>PRO</span>
                   </h1>
                   <span 
-                    className="px-2 py-1 text-xs font-semibold rounded-full"
+                    className="px-2 py-1 text-xs font-semibold rounded-full cursor-pointer hover:opacity-80 transition-opacity"
                     style={{
                       backgroundColor: colors.success + '20',
                       color: colors.success,
                       border: `1px solid ${colors.success}40`
                     }}
+                    onClick={() => setShowChangelogOverlay(true)}
+                    title="Click to view changelog"
                   >
                     v{APP_VERSION}
                   </span>
@@ -2371,16 +2373,6 @@ function SubtitleUploaderInner() {
              style={{borderTopColor: colors.border, color: colors.textSecondary}}>
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setShowChangelogOverlay(true)}
-                className="hover:underline transition-all flex items-center gap-1"
-                style={styles.link}
-                {...createHoverHandlers(colors, styles.link, styles.linkHover)}
-              >
-                <span>📋</span>
-                Changelog v{APP_VERSION}
-              </button>
-              <span className="text-xs opacity-60">•</span>
               <a 
                 href="/#/adblock"
                 className="hover:underline transition-all flex items-center gap-1"

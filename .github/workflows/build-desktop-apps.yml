@@ -452,7 +452,7 @@ jobs:
           
       - name: Generate changelog
         run: |
-          node scripts/generate-changelog.js
+          node scripts/generate-changelog.cjs
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add CHANGELOG.md

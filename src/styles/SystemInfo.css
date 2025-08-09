@@ -224,6 +224,17 @@
     border-color: #4a5568;
   }
 
+  /* Fix compact view dark mode */
+  .system-info.compact {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .info-line.secondary {
+    color: #a0aec0;
+  }
+
   .info-section, .features-section {
     background: #1a202c;
     border-color: #4a5568;
