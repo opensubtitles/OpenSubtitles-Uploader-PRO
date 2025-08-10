@@ -180,6 +180,27 @@ export const HelpOverlay = ({ isOpen, onClose, colors, isDark }) => {
                     <div style={{ color: colors.textSecondary }}>Click to browse and select files as an alternative to drag & drop</div>
                   </div>
                 </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-base">🎞️</span>
+                  <div>
+                    <div className="font-semibold" style={{ color: colors.text }}>MKV Subtitle Extraction</div>
+                    <div style={{ color: colors.textSecondary }}>Automatically extracts embedded subtitles from MKV files using FFmpeg</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-base">📋</span>
+                  <div>
+                    <div className="font-semibold" style={{ color: colors.text }}>Embedded Changelog</div>
+                    <div style={{ color: colors.textSecondary }}>Click version number to view embedded changelog (no internet required)</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-base">🔄</span>
+                  <div>
+                    <div className="font-semibold" style={{ color: colors.text }}>Desktop Auto-Updater</div>
+                    <div style={{ color: colors.textSecondary }}>Automatic update detection with progress bars and reveal in file manager</div>
+                  </div>
+                </div>
               </div>
             </section>
 

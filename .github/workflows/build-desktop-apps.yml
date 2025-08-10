@@ -156,6 +156,33 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure release exists
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Checking if release ${{ github.ref_name }} exists..."
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            echo "✅ Release ${{ github.ref_name }} already exists"
+          else
+            echo "📦 Creating release ${{ github.ref_name }}..."
+            gh release create "${{ github.ref_name }}" \
+              --title "${{ github.ref_name }} - Build ${{ github.run_number }}" \
+              --notes "Automated release created by GitHub Actions build.
+
+**Build Information:**
+- Build Number: ${{ github.run_number }}
+- Commit: ${{ github.sha }}
+- Triggered by: ${{ github.event_name }}
+
+Assets will be uploaded as builds complete on each platform.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+            echo "✅ Release ${{ github.ref_name }} created successfully"
+          fi
+
       - name: Upload macOS Universal artifacts to release
         if: matrix.target == 'universal-apple-darwin' && startsWith(github.ref, 'refs/tags/')
         env:

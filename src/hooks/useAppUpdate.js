@@ -95,8 +95,10 @@ export const useAppUpdate = () => {
             downloadStatus: 'finished',
             downloadedFilePath: event.filePath,
             downloadedFileName: event.fileName,
+            downloadedFileSize: event.fileSize || 0,
             showPath: event.showPath || false,
             canReveal: event.canReveal || false,
+            warning: event.warning || null,
             error: null
           }));
           break;

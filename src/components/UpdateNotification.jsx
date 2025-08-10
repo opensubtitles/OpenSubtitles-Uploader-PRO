@@ -18,8 +18,10 @@ const UpdateNotification = () => {
     downloadStatus,
     downloadedFilePath,
     downloadedFileName,
+    downloadedFileSize,
     showPath,
     canReveal,
+    warning,
     downloadUpdate,
     openDownloadedFile,
     revealDownloadedFile,
@@ -183,15 +185,30 @@ const UpdateNotification = () => {
               {downloadedFilePath && downloadedFileName && (
                 <>
                   <div className="w-full mb-3">
-                    <div className={`text-xs ${isDark ? 'text-green-400' : 'text-green-700'} mb-2 flex items-center`}>
+                    <div className={`text-xs ${warning ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : (isDark ? 'text-green-400' : 'text-green-700')} mb-2 flex items-center`}>
                       <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {warning ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        )}
                       </svg>
-                      Update downloaded successfully!
+                      {warning ? 'Update downloaded with validation warning' : 'Update downloaded successfully!'}
                     </div>
+                    
+                    {warning && (
+                      <div className={`text-xs ${isDark ? 'text-yellow-300' : 'text-yellow-700'} mb-2 p-2 rounded ${isDark ? 'bg-yellow-900/20' : 'bg-yellow-100'} border-l-2 ${isDark ? 'border-yellow-500' : 'border-yellow-400'}`}>
+                        ⚠️ {warning}
+                      </div>
+                    )}
                     
                     <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
                       <div className="font-medium">{downloadedFileName}</div>
+                      {downloadedFileSize > 0 && (
+                        <div className="mt-1">
+                          <span className="font-medium">Size:</span> {formatFileSize(downloadedFileSize)}
+                        </div>
+                      )}
                       {showPath && (
                         <div className="mt-1">
                           <span className="font-medium">Location:</span> {downloadedFilePath}

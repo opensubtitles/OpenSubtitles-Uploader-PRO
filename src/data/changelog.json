@@ -1,8 +1,43 @@
 {
-  "generated_at": "2025-08-10T01:52:10.808Z",
+  "generated_at": "2025-08-10T11:20:53.519Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.6.11",
+      "name": "v1.6.11 - Embedded Changelog System",
+      "published_at": "2025-08-10T02:01:28Z",
+      "body": "# 🚀 Version 1.6.11 - Embedded Changelog System\n\n## ✨ New Features\n- **Embedded Changelog System**: No more network failures when viewing changelog\n- **Offline Changelog**: Complete changelog data embedded with application\n- **Automatic Generation**: Changelog generated from GitHub releases during build\n- **Enhanced Dark Mode**: Fixed visibility issues in dark theme\n\n## 🔧 Technical Improvements  \n- **GitHub Actions Integration**: Automatic changelog generation in build pipeline\n- **Build-Time Embedding**: Changelog JSON generated and bundled with app\n- **Removed Network Dependencies**: No more GitHub API fetching for changelog\n- **Performance Enhancement**: Instant changelog loading without network requests\n\n## 🎨 UI/UX Enhancements\n- **Fixed Dark Mode Styling**: Better contrast for close button and GitHub links\n- **Removed Reload Button**: Simplified changelog interface  \n- **Improved Button Visibility**: Enhanced styling for dark theme users\n- **Consistent Experience**: Same changelog across web and desktop versions\n\n## 📦 Build System\n- **Pre-build Changelog Generation**: Automatic generation before each build\n- **Cross-Platform Compatibility**: Works on all platforms without network access\n- **Cache Management**: Smart generation with timestamps for freshness\n- **Release Asset Details**: Download links and file sizes included\n\nThis release solves the changelog loading issues reported on macOS by embedding the changelog data directly in the application, eliminating network dependencies and providing instant, reliable access to release information.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.6.11",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.11/latest.json",
+          "size": 1169
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.11_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.11/OpenSubtitles.Uploader.PRO_1.6.11_amd64.AppImage",
+          "size": 91780288
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.11_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.11/OpenSubtitles.Uploader.PRO_1.6.11_amd64.deb",
+          "size": 7300266
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.11_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.11/OpenSubtitles.Uploader.PRO_1.6.11_universal.dmg",
+          "size": 13932068
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.11_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.11/OpenSubtitles.Uploader.PRO_1.6.11_x64-setup.exe",
+          "size": 4656299
+        }
+      ]
+    },
     {
       "version": "v1.6.10",
       "name": "v1.6.10 - Maintenance Release",
@@ -412,41 +447,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.5.46_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.46/OpenSubtitles.Uploader.PRO_1.5.46_x64-setup.exe",
           "size": 4644824
-        }
-      ]
-    },
-    {
-      "version": "v1.5.45",
-      "name": "🚀 OpenSubtitles Uploader PRO v1.5.45 - Complete Auto-Update System",
-      "published_at": "2025-08-08T22:05:38Z",
-      "body": "🚀 **OpenSubtitles Uploader PRO v1.5.45 - Complete Auto-Update System**\n\nThis release completes the auto-update system with all issues resolved\\!\n\n## ✅ Auto-Update System Complete\n- **✅ JSON parsing fixed** - Resolved \"error decoding response body\" with clean manifest format\n- **✅ Cross-platform compatibility** - All platforms (Windows, macOS, Linux) working correctly\n- **✅ Dynamic file detection** - Smart detection of .dmg vs .tar.gz for macOS builds\n- **✅ Empty signature fields** - Prevents \"missing field signature\" errors\n- **✅ HTTPS-only security** - Signature validation properly disabled for secure updates\n\n## 🎯 System Enhancements  \n- **📊 Clean system information display** - Fixed \"N/A N/A\" formatting with smart value filtering\n- **📋 Cache-busting changelog** - Fresh changelog content with timestamps and manual refresh\n- **🔄 Robust manifest generation** - Adaptive to different build environments and file formats\n\n## 🛠️ Technical Details\n- Tauri v2.6.0 with updater plugin v2.9.0\n- GitHub Actions automated build with smart asset detection\n- Cross-platform compatibility with proper file format handling\n- Empty signature fields for HTTPS-only security model\n\nThe auto-update system is now production-ready and fully functional\\! 🎉\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.5.45",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.45/latest.json",
-          "size": 1169
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.5.45_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.45/OpenSubtitles.Uploader.PRO_1.5.45_amd64.AppImage",
-          "size": 91768000
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.5.45_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.45/OpenSubtitles.Uploader.PRO_1.5.45_amd64.deb",
-          "size": 7285756
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.5.45_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.45/OpenSubtitles.Uploader.PRO_1.5.45_universal.dmg",
-          "size": 13906818
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.5.45_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.5.45/OpenSubtitles.Uploader.PRO_1.5.45_x64-setup.exe",
-          "size": 4645725
         }
       ]
     }

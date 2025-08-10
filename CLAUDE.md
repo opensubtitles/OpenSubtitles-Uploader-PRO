@@ -6,9 +6,11 @@
 
 - **ALWAYS** use GitHub Actions for building
 - **NEVER** build locally unless specifically requested
-- Use `gh workflow run release.yml` to trigger GitHub builds
+- Use `gh workflow run "Build Desktop Apps" --field create_release=true` to trigger GitHub builds
 - GitHub builds create releases for all platforms (Windows, macOS, Linux)
 - Only build locally when explicitly asked: "build locally"
+
+**FIXED**: The workflow now automatically creates releases if they don't exist, preventing "release not found" upload errors.
 
 ### Commands for releases:
 ```bash
