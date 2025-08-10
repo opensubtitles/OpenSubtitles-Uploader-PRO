@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
+use std::env;
 
 fn main() {
     tauri::Builder::default()
@@ -18,13 +19,23 @@ fn main() {
                 window.open_devtools();
             }
             
-            // Setup Tauri environment indicators
+            // Check for command line arguments
+            let args: Vec<String> = env::args().collect();
+            let test_upgrade = args.iter().any(|arg| arg == "--test-upgrade" || arg == "--force-update");
+            
+            // Setup Tauri environment indicators and test mode
             let window = app.get_webview_window("main").unwrap();
-            let _ = window.eval(r#"
+            let setup_script = format!(r#"
                 console.log('🔧 Tauri v2 setup complete');
                 console.log('🔧 Drag and drop should be enabled');
                 console.log('🔧 Protocol:', window.location.protocol);
-            "#);
+                console.log('🔧 Test upgrade mode:', {});
+                
+                // Set global test upgrade flag
+                window.__TEST_UPGRADE_MODE__ = {};
+            "#, test_upgrade, test_upgrade);
+            
+            let _ = window.eval(&setup_script);
             
             Ok(())
         })

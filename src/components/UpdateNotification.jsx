@@ -88,6 +88,9 @@ const UpdateNotification = () => {
               <div className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-blue-700'}`}>
                 <p>Version {updateInfo?.latestVersion} is available</p>
                 <p className="text-xs mt-1">You're currently using v{updateInfo?.currentVersion}</p>
+                {typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ && (
+                  <p className="text-xs mt-1 font-semibold text-yellow-500">🧪 TEST MODE - Update forced for testing</p>
+                )}
                 {isExpanded && updateInfo?.releaseNotes && (
                   <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
                     <p className="text-xs font-medium mb-1">Release Notes:</p>

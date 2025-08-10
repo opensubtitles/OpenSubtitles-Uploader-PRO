@@ -139,7 +139,19 @@ export class UpdateService {
     this.listeners = [];
     this.autoCheckInterval = null;
     this.isInstalling = false;
+    this.isTestUpgradeMode = this.detectTestUpgradeMode();
     this.init();
+  }
+
+  /**
+   * Detect if app was launched with --test-upgrade flag
+   */
+  detectTestUpgradeMode() {
+    try {
+      return typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ === true;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**
@@ -163,7 +175,15 @@ export class UpdateService {
   }
 
   async init() {
-    console.log('🔧 UpdateService init:', { isStandalone: this.isStandalone });
+    console.log('🔧 UpdateService init:', { 
+      isStandalone: this.isStandalone,
+      testUpgradeMode: this.isTestUpgradeMode 
+    });
+    
+    if (this.isTestUpgradeMode) {
+      console.log('🧪 TEST UPGRADE MODE ACTIVE - Updates will be forced even for same version');
+    }
+    
     if (this.isStandalone) {
       await loadTauriAPIs();
       this.setupUpdaterListeners();
@@ -416,7 +436,8 @@ export class UpdateService {
       const latestVersion = release.tag_name;
       const currentVersion = `v${APP_VERSION}`;
 
-      const hasUpdate = this.compareVersions(latestVersion, currentVersion) > 0;
+      // In test upgrade mode, always show update available (even for same version)
+      const hasUpdate = this.isTestUpgradeMode || this.compareVersions(latestVersion, currentVersion) > 0;
 
       const updateInfo = {
         shouldUpdate: hasUpdate,
@@ -433,7 +454,13 @@ export class UpdateService {
         }))
       };
 
-      console.log('🔄 Update check result:', { hasUpdate, currentVersion, latestVersion });
+      console.log('🔄 Update check result:', { 
+        hasUpdate, 
+        currentVersion, 
+        latestVersion, 
+        testMode: this.isTestUpgradeMode,
+        forceUpdate: this.isTestUpgradeMode ? '✅ FORCED BY TEST MODE' : '❌' 
+      });
 
       // Update cache
       cache.lastChecked = now;
