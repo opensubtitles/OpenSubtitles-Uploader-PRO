@@ -70,3 +70,21 @@ npm run tauri:build
 - Enables testing of entire download → install flow
 - Tests signature validation fallback UI
 - Verifies 20% milestone progress logging
+
+### Debug Mode Command Line Logging
+
+In debug builds, all command line parameters are logged to:
+1. **Terminal/Console**: Rust println! statements show all arguments
+2. **Browser DevTools**: JavaScript console.log shows all arguments
+3. **Debug Helper**: Call `getDebugInfo()` in browser console for full launch details
+
+**Debug console output example:**
+```
+🔧 DEBUG: Application launched with 2 arguments:
+🔧 DEBUG: arg[0] = './app'
+🔧 DEBUG: arg[1] = '--test-upgrade'
+🔧 Command line arguments (2):
+🔧   [0]: "./app"
+🔧   [1]: "--test-upgrade"
+🔧 Debug helper available: Call getDebugInfo() for launch details
+```

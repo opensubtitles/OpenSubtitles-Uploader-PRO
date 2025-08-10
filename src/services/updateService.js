@@ -148,8 +148,20 @@ export class UpdateService {
    */
   detectTestUpgradeMode() {
     try {
-      return typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ === true;
+      const isTestMode = typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ === true;
+      
+      // Debug logging for command line arguments
+      if (typeof window !== 'undefined' && window.__COMMAND_LINE_ARGS__) {
+        console.log('🔧 DEBUG: Command line arguments available:', {
+          args: window.__COMMAND_LINE_ARGS__,
+          count: window.__LAUNCH_ARGUMENTS_COUNT__,
+          testMode: isTestMode
+        });
+      }
+      
+      return isTestMode;
     } catch (error) {
+      console.warn('🔧 DEBUG: Error detecting test upgrade mode:', error);
       return false;
     }
   }
