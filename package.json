@@ -1,6 +1,6 @@
 {
   "name": "opensubtitles-uploader-pro",
-  "version": "1.6.10",
+  "version": "1.6.11",
   "description": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
   "keywords": [
     "opensubtitles",
@@ -27,9 +27,10 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run generate-changelog && vite build",
     "preview": "vite preview",
     "test": "node --test tests/**/*.test.js",
+    "generate-changelog": "node scripts/generate-changelog.js",
     "update-version": "node scripts/build/update-version.js",
     "update-readme-version": "node -e \"const fs=require('fs');const pkg=require('./package.json');let readme=fs.readFileSync('README.md','utf8');readme=readme.replace(/version-[0-9.]+/g,'version-'+pkg.version).replace(/Version [0-9.]+/g,'Version '+pkg.version);fs.writeFileSync('README.md',readme);\"",
     "prepublishOnly": "npm run build",

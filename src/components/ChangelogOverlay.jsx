@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { APP_VERSION } from '../utils/constants.js';
+// Import embedded changelog
+import embeddedChangelog from '../data/changelog.json';
 
 const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
   const [changelog, setChangelog] = useState('');
@@ -21,100 +23,68 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
     };
   };
 
-  const fetchChangelog = async (forceRefresh = false) => {
+  const generateChangelogMarkdown = () => {
+    console.log('📋 Using embedded changelog data');
+    
+    // Generate markdown from embedded JSON data
+    let markdownContent = '# Changelog\n\n';
+    markdownContent += '*This changelog is embedded with the application and shows the latest releases.*\n\n';
+    markdownContent += `*Generated at: ${new Date(embeddedChangelog.generated_at).toLocaleString()}*\n\n`;
+    
+    embeddedChangelog.releases.forEach(release => {
+      const versionName = release.name ? release.name.replace(release.version + ' - ', '') : '';
+      markdownContent += `## ${release.version}${versionName ? ' - ' + versionName : ''}\n\n`;
+      markdownContent += `*Released: ${new Date(release.published_at).toLocaleDateString()}*\n\n`;
+      
+      if (release.prerelease) {
+        markdownContent += '**🚧 Pre-release**\n\n';
+      }
+      
+      if (release.body && release.body.trim()) {
+        markdownContent += release.body + '\n\n';
+      }
+      
+      if (release.assets && release.assets.length > 0) {
+        markdownContent += '**Downloads:**\n';
+        release.assets.forEach(asset => {
+          const sizeKB = Math.round(asset.size / 1024);
+          markdownContent += `- [${asset.name}](${asset.download_url}) (${sizeKB} KB)\n`;
+        });
+        markdownContent += '\n';
+      }
+      
+      markdownContent += '---\n\n';
+    });
+    
+    return markdownContent;
+  };
+
+  const loadEmbeddedChangelog = () => {
     setLoading(true);
     setError(null);
-
-    const env = detectEnvironment();
     
     try {
-      let changelogContent = '';
-      
-      if (env.isTauri) {
-        // In Tauri app - can fetch directly from GitHub
-        const timestamp = new Date().getTime();
-        const changelogUrl = `https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md?t=${timestamp}`;
-        
-        console.log(`📋 Fetching changelog from GitHub (Tauri): ${changelogUrl}`);
-
-        const response = await fetch(changelogUrl, {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-          cache: 'no-store'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch changelog: ${response.status} ${response.statusText}`);
-        }
-        
-        changelogContent = await response.text();
-        
-      } else {
-        // In web browser - use GitHub API to avoid CORS issues
-        console.log('📋 Fetching changelog via GitHub API (Web)');
-        
-        const apiUrl = 'https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/contents/CHANGELOG.md';
-        
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'OpenSubtitles-Uploader-PRO'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        // GitHub API returns base64 encoded content
-        if (data.content && data.encoding === 'base64') {
-          changelogContent = atob(data.content);
-        } else {
-          throw new Error('Invalid content format from GitHub API');
-        }
-      }
-      
-      // Verify we got actual content
-      if (!changelogContent || changelogContent.trim().length === 0) {
-        throw new Error('Received empty changelog content');
-      }
-      
-      console.log(`✅ Changelog fetched successfully (${changelogContent.length} characters)`);
+      const changelogContent = generateChangelogMarkdown();
       setChangelog(changelogContent);
-      setLastFetched(new Date());
-      
+      setLastFetched(new Date(embeddedChangelog.generated_at));
+      console.log(`✅ Embedded changelog loaded with ${embeddedChangelog.total_releases} releases`);
     } catch (err) {
-      console.error('❌ Failed to fetch changelog:', err);
+      console.error('❌ Failed to load embedded changelog:', err);
       
-      // Provide fallback with basic changelog if available
+      // Provide fallback
       const fallbackChangelog = `# Changelog
 
 ## Version ${APP_VERSION}
 
-Unable to fetch the latest changelog from GitHub.
-
-**Possible reasons:**
-- Network connectivity issues
-- CORS restrictions in web browser
-- GitHub API rate limiting
+The embedded changelog could not be loaded.
 
 **To view the complete changelog:**
-- [View on GitHub](https://github.com/opensubtitles/opensubtitles-uploader-pro/blob/main/CHANGELOG.md)
-
-**Environment:** ${env.isTauri ? 'Desktop App' : 'Web Browser'}
+- [View on GitHub](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)
 
 **Error details:** ${err.message}`;
       
       setChangelog(fallbackChangelog);
-      setError(null); // Don't show error since we have fallback content
-      
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -122,9 +92,8 @@ Unable to fetch the latest changelog from GitHub.
 
   useEffect(() => {
     if (isOpen) {
-      // Always fetch fresh changelog when overlay opens
-      // This ensures users see the latest changes
-      fetchChangelog(true);
+      // Load embedded changelog when overlay opens
+      loadEmbeddedChangelog();
     }
   }, [isOpen]);
 
@@ -253,25 +222,12 @@ Unable to fetch the latest changelog from GitHub.
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => fetchChangelog(true)}
-              disabled={loading}
-              className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ 
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
-                color: colors.textPrimary,
-                border: `1px solid ${colors.border}`
-              }}
-              title="Refresh changelog"
-            >
-              {loading ? '⏳' : '🔄'}
-            </button>
-            <button
               onClick={onClose}
               className="p-2 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105"
               style={{ 
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border,
-                color: colors.textPrimary,
-                border: `1px solid ${colors.border}`
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : colors.border,
+                color: isDark ? '#f5f5f5' : colors.textPrimary,
+                border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.3)' : colors.border}`
               }}
             >
               ✕
@@ -337,7 +293,7 @@ Unable to fetch the latest changelog from GitHub.
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm hover:underline"
-              style={{ color: colors.primary }}
+              style={{ color: isDark ? '#60a5fa' : colors.primary }}
             >
               📦 View releases on GitHub
             </a>
@@ -345,7 +301,7 @@ Unable to fetch the latest changelog from GitHub.
               onClick={onClose}
               className="px-4 py-2 rounded-lg transition-colors hover:opacity-80"
               style={{ 
-                backgroundColor: colors.primary,
+                backgroundColor: isDark ? '#60a5fa' : colors.primary,
                 color: 'white'
               }}
             >

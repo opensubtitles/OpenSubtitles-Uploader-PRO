@@ -88,6 +88,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Generate embedded changelog
+        run: |
+          echo "📝 Generating embedded changelog for build..."
+          node scripts/generate-changelog.js
+          echo "✅ Changelog generated successfully"
+
       - name: Verify Tauri CLI and basic setup
         shell: bash
         run: |
