@@ -12,10 +12,17 @@ const UpdateNotification = () => {
     updateAvailable,
     updateInfo,
     isDownloading,
+    downloadProgress,
+    downloadedBytes,
+    totalBytes,
+    downloadStatus,
     downloadedFilePath,
     downloadedFileName,
+    showPath,
+    canReveal,
     downloadUpdate,
     openDownloadedFile,
+    revealDownloadedFile,
     error
   } = useAppUpdate();
 
@@ -38,6 +45,20 @@ const UpdateNotification = () => {
     if (downloadedFilePath) {
       await openDownloadedFile(downloadedFilePath);
     }
+  };
+
+  const handleRevealFile = async () => {
+    if (downloadedFilePath) {
+      await revealDownloadedFile(downloadedFilePath);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   const handleDismiss = () => {
@@ -127,42 +148,94 @@ const UpdateNotification = () => {
               
               {isDownloading && (
                 <>
-                  <div className="flex items-center text-xs">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Downloading update...
+                  <div className="w-full">
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Downloading update...
+                      </div>
+                      <div className="text-xs">
+                        {downloadProgress > 0 && `${Math.round(downloadProgress)}%`}
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className={`w-full bg-gray-200 rounded-full h-2 ${isDark ? 'bg-gray-700' : ''}`}>
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${Math.min(downloadProgress, 100)}%` }}
+                      ></div>
+                    </div>
+                    
+                    {/* Download Info */}
+                    {totalBytes > 0 && (
+                      <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {formatFileSize(downloadedBytes)} of {formatFileSize(totalBytes)}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
               
               {downloadedFilePath && downloadedFileName && (
                 <>
-                  <div className={`text-xs ${isDark ? 'text-green-400' : 'text-green-700'} mb-2 w-full`}>
-                    ✅ Downloaded: {downloadedFileName}
+                  <div className="w-full mb-3">
+                    <div className={`text-xs ${isDark ? 'text-green-400' : 'text-green-700'} mb-2 flex items-center`}>
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Update downloaded successfully!
+                    </div>
+                    
+                    <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
+                      <div className="font-medium">{downloadedFileName}</div>
+                      {showPath && (
+                        <div className="mt-1">
+                          <span className="font-medium">Location:</span> {downloadedFilePath}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    onClick={handleOpenFile}
-                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                      isDark
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                  >
-                    📂 Open File
-                  </button>
                   
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                      isDark
-                        ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                    }`}
-                  >
-                    {isExpanded ? 'Less Info' : 'More Info'}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handleOpenFile}
+                      className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                        isDark
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      🚀 Install Now
+                    </button>
+                    
+                    {canReveal && (
+                      <button
+                        onClick={handleRevealFile}
+                        className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                          isDark
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        📁 Show in {navigator.platform.includes('Mac') ? 'Finder' : 'Explorer'}
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                        isDark
+                          ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                      }`}
+                    >
+                      {isExpanded ? 'Less Info' : 'More Info'}
+                    </button>
+                  </div>
                 </>
               )}
             </>

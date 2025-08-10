@@ -12,8 +12,14 @@ export const useAppUpdate = () => {
     isChecking: false,
     isInstalling: false,
     isDownloading: false,
+    downloadProgress: 0,
+    downloadedBytes: 0,
+    totalBytes: 0,
+    downloadStatus: 'idle', // 'idle', 'started', 'downloading', 'finished'
     downloadedFilePath: null,
     downloadedFileName: null,
+    showPath: false,
+    canReveal: false,
     error: null,
     lastChecked: null,
     autoCheckEnabled: false,
@@ -63,7 +69,21 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: true,
+            downloadProgress: 0,
+            downloadedBytes: 0,
+            totalBytes: 0,
+            downloadStatus: 'idle',
             error: null
+          }));
+          break;
+
+        case 'update_download_progress':
+          setUpdateState(prev => ({
+            ...prev,
+            downloadProgress: event.progress || 0,
+            downloadedBytes: event.downloaded || 0,
+            totalBytes: event.total || 0,
+            downloadStatus: event.status || 'downloading'
           }));
           break;
 
@@ -71,8 +91,12 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: false,
+            downloadProgress: 100,
+            downloadStatus: 'finished',
             downloadedFilePath: event.filePath,
             downloadedFileName: event.fileName,
+            showPath: event.showPath || false,
+            canReveal: event.canReveal || false,
             error: null
           }));
           break;
@@ -81,6 +105,8 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: false,
+            downloadProgress: 0,
+            downloadStatus: 'idle',
             error: event.error
           }));
           break;
@@ -174,6 +200,16 @@ export const useAppUpdate = () => {
     return result;
   }, [updateState.isStandalone]);
 
+  // Reveal downloaded file in Finder/Explorer
+  const revealDownloadedFile = useCallback(async (filePath) => {
+    if (!updateState.isStandalone) {
+      return { success: false, error: 'Not running as standalone app' };
+    }
+
+    const result = await updateService.revealDownloadedFile(filePath);
+    return result;
+  }, [updateState.isStandalone]);
+
   // Install update (deprecated - now downloads)
   const installUpdate = useCallback(async () => {
     return await downloadUpdate();
@@ -235,6 +271,7 @@ export const useAppUpdate = () => {
     checkForUpdates,
     downloadUpdate,
     openDownloadedFile,
+    revealDownloadedFile,
     installUpdate, // deprecated, now calls downloadUpdate
     restartApp,
     startAutoUpdates,

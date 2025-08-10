@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -41,7 +41,14 @@
             "http:default",
             "updater:default",
             "core:path:default"
-          ]
+          ],
+          "scope": {
+            "fs": {
+              "allow": [
+                "$DOWNLOAD/**"
+              ]
+            }
+          }
         }
       ]
     }
@@ -66,7 +73,7 @@
       "frameworks": [],
       "signingIdentity": "-",
       "dmg": {
-        "background": null,
+        "background": "icons/dmg-background.png",
         "windowSize": {
           "width": 600,
           "height": 400
@@ -87,10 +94,7 @@
       "open": true
     },
     "fs": {
-      "requireLiteralLeadingDot": false,
-      "scope": {
-        "allow": ["$DOWNLOAD/**"]
-      }
+      "requireLiteralLeadingDot": false
     },
     "updater": {
       "active": true,

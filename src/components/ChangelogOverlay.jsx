@@ -8,46 +8,113 @@ const ChangelogOverlay = ({ isOpen, onClose, colors, isDark }) => {
   const [error, setError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
 
+  const detectEnvironment = () => {
+    // Check if running in Tauri (desktop app)
+    const isTauri = window.__TAURI__ || 
+                   window.location.protocol === 'tauri:' || 
+                   window.location.origin.startsWith('tauri://') ||
+                   navigator.userAgent.includes('Tauri');
+    
+    return {
+      isTauri,
+      isWeb: !isTauri
+    };
+  };
+
   const fetchChangelog = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
+    const env = detectEnvironment();
+    
     try {
-      // Always fetch from GitHub to ensure we get the latest content
-      // Add cache-busting timestamp to prevent caching issues
-      const timestamp = new Date().getTime();
-      const changelogUrl = `https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md?t=${timestamp}`;
+      let changelogContent = '';
       
-      console.log(`📋 Fetching fresh changelog from: ${changelogUrl}`);
+      if (env.isTauri) {
+        // In Tauri app - can fetch directly from GitHub
+        const timestamp = new Date().getTime();
+        const changelogUrl = `https://raw.githubusercontent.com/opensubtitles/opensubtitles-uploader-pro/main/CHANGELOG.md?t=${timestamp}`;
+        
+        console.log(`📋 Fetching changelog from GitHub (Tauri): ${changelogUrl}`);
 
-      const response = await fetch(changelogUrl, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        cache: 'no-store' // Prevent browser caching
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch changelog: ${response.status} ${response.statusText}`);
+        const response = await fetch(changelogUrl, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          cache: 'no-store'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch changelog: ${response.status} ${response.statusText}`);
+        }
+        
+        changelogContent = await response.text();
+        
+      } else {
+        // In web browser - use GitHub API to avoid CORS issues
+        console.log('📋 Fetching changelog via GitHub API (Web)');
+        
+        const apiUrl = 'https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/contents/CHANGELOG.md';
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'OpenSubtitles-Uploader-PRO'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // GitHub API returns base64 encoded content
+        if (data.content && data.encoding === 'base64') {
+          changelogContent = atob(data.content);
+        } else {
+          throw new Error('Invalid content format from GitHub API');
+        }
       }
       
-      const text = await response.text();
-      
       // Verify we got actual content
-      if (!text || text.trim().length === 0) {
+      if (!changelogContent || changelogContent.trim().length === 0) {
         throw new Error('Received empty changelog content');
       }
       
-      console.log(`✅ Changelog fetched successfully (${text.length} characters)`);
-      setChangelog(text);
+      console.log(`✅ Changelog fetched successfully (${changelogContent.length} characters)`);
+      setChangelog(changelogContent);
       setLastFetched(new Date());
       
     } catch (err) {
       console.error('❌ Failed to fetch changelog:', err);
-      setError(`Unable to load the latest changelog: ${err.message}`);
+      
+      // Provide fallback with basic changelog if available
+      const fallbackChangelog = `# Changelog
+
+## Version ${APP_VERSION}
+
+Unable to fetch the latest changelog from GitHub.
+
+**Possible reasons:**
+- Network connectivity issues
+- CORS restrictions in web browser
+- GitHub API rate limiting
+
+**To view the complete changelog:**
+- [View on GitHub](https://github.com/opensubtitles/opensubtitles-uploader-pro/blob/main/CHANGELOG.md)
+
+**Environment:** ${env.isTauri ? 'Desktop App' : 'Web Browser'}
+
+**Error details:** ${err.message}`;
+      
+      setChangelog(fallbackChangelog);
+      setError(null); // Don't show error since we have fallback content
+      
     } finally {
       setLoading(false);
     }

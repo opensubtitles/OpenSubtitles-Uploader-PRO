@@ -500,7 +500,7 @@ export class UpdateService {
   }
 
   /**
-   * Download update to Downloads folder
+   * Download and install update with progress tracking
    * @returns {Promise<Object>} Download result
    */
   async downloadUpdate() {
@@ -512,7 +512,7 @@ export class UpdateService {
     }
 
     const cache = UpdateService.updateCache;
-    if (!cache.updateAvailable || !cache.updateInfo) {
+    if (!cache.updateAvailable || !cache.updateInfo || !cache.updateInfo.updateData) {
       return {
         success: false,
         error: 'No update available'
@@ -528,14 +528,14 @@ export class UpdateService {
 
     try {
       this.isInstalling = true;
-      console.log('📦 Downloading update to Downloads folder...');
+      console.log('📦 Starting update download with progress tracking...');
 
       this.notifyListeners({
         type: 'update_download_start'
       });
 
-      if (!tauriUpdater || !tauriPath || !tauriShell || !tauriFs) {
-        throw new Error('Tauri APIs not available');
+      if (!tauriUpdater) {
+        throw new Error('Tauri updater not available');
       }
 
       // Get the update info
@@ -544,68 +544,85 @@ export class UpdateService {
         throw new Error('No update available to download');
       }
 
-      // Get Downloads directory
-      const downloadsPath = await tauriPath.downloadDir();
-      console.log('📁 Downloads directory:', downloadsPath);
+      console.log('🔄 Starting downloadAndInstall with progress tracking...');
 
-      // Determine platform and get appropriate download URL
-      const platform = this.getCurrentPlatform();
-      const updateData = cache.updateInfo.updateData;
-      
-      let downloadUrl = '';
-      let fileName = '';
-      
-      if (updateData && updateData.platforms) {
-        const platformKey = this.getPlatformKey(platform);
-        const platformData = updateData.platforms[platformKey];
-        
-        if (platformData && platformData.url) {
-          downloadUrl = platformData.url;
-          fileName = this.getFileNameFromUrl(downloadUrl, platform);
+      // Use Tauri v2's downloadAndInstall with progress callback
+      let downloadedBytes = 0;
+      let totalBytes = 0;
+      let downloadPath = null;
+
+      const result = await updateInfo.downloadAndInstall((progressEvent) => {
+        console.log('📊 Download progress event:', progressEvent);
+
+        switch (progressEvent.event) {
+          case 'Started':
+            totalBytes = progressEvent.data.contentLength || 0;
+            console.log(`📦 Download started: ${totalBytes} bytes`);
+            
+            this.notifyListeners({
+              type: 'update_download_progress',
+              progress: 0,
+              downloaded: 0,
+              total: totalBytes,
+              status: 'started'
+            });
+            break;
+
+          case 'Progress':
+            downloadedBytes += progressEvent.data.chunkLength || 0;
+            const progressPercent = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0;
+            
+            console.log(`📈 Download progress: ${downloadedBytes}/${totalBytes} (${progressPercent.toFixed(1)}%)`);
+            
+            this.notifyListeners({
+              type: 'update_download_progress',
+              progress: progressPercent,
+              downloaded: downloadedBytes,
+              total: totalBytes,
+              status: 'downloading'
+            });
+            break;
+
+          case 'Finished':
+            console.log('✅ Download completed');
+            
+            this.notifyListeners({
+              type: 'update_download_progress',
+              progress: 100,
+              downloaded: totalBytes,
+              total: totalBytes,
+              status: 'finished'
+            });
+            break;
+
+          default:
+            console.log('📡 Unknown download event:', progressEvent);
+            break;
         }
-      }
-
-      if (!downloadUrl) {
-        // Fallback to constructing URL from version info
-        const version = cache.updateInfo.latestVersion;
-        downloadUrl = this.constructDownloadUrl(version, platform);
-        fileName = this.getDefaultFileName(version, platform);
-      }
-
-      console.log('🔗 Download URL:', downloadUrl);
-      console.log('📄 File name:', fileName);
-
-      // Download the file
-      console.log('⬇️ Starting download...');
-      const response = await fetch(downloadUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Write file to Downloads folder
-      const filePath = `${downloadsPath}/${fileName}`;
-      await tauriFs.writeFile({
-        path: filePath,
-        contents: uint8Array
       });
 
-      console.log('✅ Update downloaded successfully to:', filePath);
+      // For Tauri v2, we can't get the exact download path from downloadAndInstall
+      // But we know the typical locations for each OS
+      const tempPath = this.getUpdateTempPath();
+      
+      console.log('✅ Update downloaded and ready for installation');
+      console.log('📁 Update saved to system temp directory:', tempPath);
       
       this.notifyListeners({
         type: 'update_download_complete',
-        filePath: filePath,
-        fileName: fileName
+        filePath: tempPath,
+        fileName: this.getUpdateFileName(),
+        showPath: true,
+        canReveal: true
       });
 
       return {
         success: true,
-        message: 'Update downloaded successfully',
-        filePath: filePath,
-        fileName: fileName
+        message: 'Update downloaded successfully and ready for installation',
+        filePath: tempPath,
+        fileName: this.getUpdateFileName(),
+        showPath: true,
+        canReveal: true
       };
     } catch (error) {
       console.error('❌ Update download failed:', error);
@@ -622,6 +639,37 @@ export class UpdateService {
     } finally {
       this.isInstalling = false;
     }
+  }
+
+  /**
+   * Get the typical update temp path based on OS
+   * @returns {string} Temp path where updates are usually saved
+   */
+  getUpdateTempPath() {
+    const platform = this.getCurrentPlatform();
+    
+    switch (platform) {
+      case 'windows':
+        return `%LOCALAPPDATA%\\Temp\\<update_file>`;
+      case 'macos':
+        return `/tmp/<update_file>`;
+      case 'linux':
+        return `/tmp/<update_file>`;
+      default:
+        return '<system_temp_directory>';
+    }
+  }
+
+  /**
+   * Get the expected update filename based on OS and current version
+   * @returns {string} Update filename
+   */
+  getUpdateFileName() {
+    const platform = this.getCurrentPlatform();
+    const cache = UpdateService.updateCache;
+    const version = cache.updateInfo?.latestVersion || 'latest';
+    
+    return this.getDefaultFileName(version, platform);
   }
 
   /**
@@ -734,9 +782,19 @@ export class UpdateService {
         throw new Error('Tauri shell not available');
       }
       
-      await tauriShell.open(filePath);
+      // For update temp files, we need to open the temp directory since
+      // the exact file path may not be accessible directly
+      const platform = this.getCurrentPlatform();
+      let pathToOpen = filePath;
       
-      console.log('✅ File opened successfully');
+      if (filePath.includes('<update_file>')) {
+        // Open the temp directory instead
+        pathToOpen = this.getTempDirectory();
+      }
+      
+      await tauriShell.open(pathToOpen);
+      
+      console.log('✅ File/Directory opened successfully');
       
       return {
         success: true,
@@ -749,6 +807,140 @@ export class UpdateService {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  /**
+   * Reveal downloaded file in system file explorer (Finder on macOS, Explorer on Windows, etc.)
+   * @param {string} filePath - Path to the downloaded file
+   * @returns {Promise<Object>} Reveal result
+   */
+  async revealDownloadedFile(filePath) {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    try {
+      console.log('🔍 Revealing downloaded file in file manager:', filePath);
+
+      if (!tauriShell) {
+        throw new Error('Tauri shell not available');
+      }
+
+      const platform = this.getCurrentPlatform();
+      let command = '';
+      let args = [];
+
+      if (filePath.includes('<update_file>')) {
+        // For temp files, open the temp directory
+        const tempDir = this.getTempDirectory();
+        
+        switch (platform) {
+          case 'macos':
+            command = 'open';
+            args = [tempDir];
+            break;
+          case 'windows':
+            command = 'explorer';
+            args = [tempDir];
+            break;
+          case 'linux':
+            command = 'xdg-open';
+            args = [tempDir];
+            break;
+          default:
+            throw new Error('Unsupported platform for reveal functionality');
+        }
+      } else {
+        // For specific files, use platform-specific reveal commands
+        switch (platform) {
+          case 'macos':
+            command = 'open';
+            args = ['-R', filePath]; // -R reveals the file in Finder
+            break;
+          case 'windows':
+            command = 'explorer';
+            args = ['/select,', filePath]; // /select reveals and selects the file
+            break;
+          case 'linux':
+            // Most Linux file managers support --select
+            command = 'nautilus';
+            args = ['--select', filePath];
+            break;
+          default:
+            throw new Error('Unsupported platform for reveal functionality');
+        }
+      }
+
+      // Execute the reveal command
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      const cmd = new Command(command, args);
+      const result = await cmd.execute();
+
+      if (result.code !== 0) {
+        throw new Error(`Reveal command failed: ${result.stderr || 'Unknown error'}`);
+      }
+      
+      console.log('✅ File revealed successfully in file manager');
+      
+      return {
+        success: true,
+        message: 'File revealed in file manager'
+      };
+    } catch (error) {
+      console.error('❌ Failed to reveal file:', error);
+      
+      // Fallback to opening the parent directory
+      try {
+        console.log('🔄 Attempting fallback: opening parent directory...');
+        
+        let parentPath;
+        if (filePath.includes('<update_file>')) {
+          parentPath = this.getTempDirectory();
+        } else {
+          // Extract parent directory from file path
+          parentPath = filePath.substring(0, filePath.lastIndexOf('/')) || 
+                      filePath.substring(0, filePath.lastIndexOf('\\'));
+        }
+        
+        if (parentPath) {
+          await tauriShell.open(parentPath);
+          
+          return {
+            success: true,
+            message: 'Opened parent directory (reveal not supported)'
+          };
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get the system temp directory path based on OS
+   * @returns {string} Temp directory path
+   */
+  getTempDirectory() {
+    const platform = this.getCurrentPlatform();
+    
+    switch (platform) {
+      case 'windows':
+        return '%LOCALAPPDATA%\\Temp';
+      case 'macos':
+        return '/tmp';
+      case 'linux':
+        return '/tmp';
+      default:
+        return '/tmp';
     }
   }
 
