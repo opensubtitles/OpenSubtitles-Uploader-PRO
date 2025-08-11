@@ -1,6 +1,6 @@
 [package]
 name = "opensubtitles-uploader-pro"
-version = "1.6.16"
+version = "1.6.17"
 description = "OpenSubtitles Uploader PRO - Professional subtitle uploader"
 authors = ["OpenSubtitles"]
 license = "MIT"

@@ -1,27 +1,27 @@
 {
-  "version": "v1.6.15",
-  "notes": "OpenSubtitles Uploader PRO v1.6.15 - Automatic update",
-  "pub_date": "2025-08-11T13:04:33Z",
+  "version": "v1.6.16",
+  "notes": "OpenSubtitles Uploader PRO v1.6.16 - Automatic update",
+  "pub_date": "2025-08-11T13:23:40Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.15/OpenSubtitles.Uploader.PRO_1.6.15_x64-setup.exe"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.16/OpenSubtitles.Uploader.PRO_1.6.16_x64-setup.exe"
     },
     "darwin-universal": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.15/OpenSubtitles.Uploader.PRO_1.6.15_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.16/OpenSubtitles.Uploader.PRO_1.6.16_universal.dmg"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.15/OpenSubtitles.Uploader.PRO_1.6.15_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.16/OpenSubtitles.Uploader.PRO_1.6.16_universal.dmg"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.15/OpenSubtitles.Uploader.PRO_1.6.15_universal.dmg"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.16/OpenSubtitles.Uploader.PRO_1.6.16_universal.dmg"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.15/OpenSubtitles.Uploader.PRO_1.6.15_amd64.AppImage"
+      "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.16/OpenSubtitles.Uploader.PRO_1.6.16_amd64.AppImage"
     }
   }
 }

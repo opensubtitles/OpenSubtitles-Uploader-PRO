@@ -935,7 +935,7 @@ Test completed successfully! ✅`;
 
       // Use our custom download approach (same as demo mode) to bypass signature validation
       const fileName = this.getUpdateFileName();
-      const downloadPath = this.getUpdateTempPath();
+      const downloadPath = await this.getActualDownloadPath(fileName);
       
       console.log('📦 Download details:', {
         url: downloadUrl,

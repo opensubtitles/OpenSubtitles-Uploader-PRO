@@ -2480,7 +2480,7 @@ dependencies = [
 
 [[package]]
 name = "opensubtitles-uploader-pro"
-version = "1.6.13"
+version = "1.6.16"
 dependencies = [
  "base64 0.21.7",
  "dirs 5.0.1",
