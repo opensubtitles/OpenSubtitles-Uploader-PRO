@@ -1,11 +1,6 @@
 name: Build Desktop Apps
 
 on:
-  push:
-    tags:
-      - 'v*'
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       create_release:

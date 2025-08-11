@@ -10,15 +10,15 @@
 - GitHub builds create releases for all platforms (Windows, macOS, Linux)
 - Only build locally when explicitly asked: "build locally"
 
-**FIXED**: The workflow now automatically creates releases if they don't exist, preventing "release not found" upload errors.
+**IMPORTANT**: The workflow is now MANUAL-ONLY to prevent duplicate builds. No automatic builds on push/tag.
 
 ### Commands for releases:
 ```bash
 # Trigger GitHub build and release (DEFAULT)
-gh workflow run release.yml
+gh workflow run "Build Desktop Apps" --field create_release=true
 
 # Check workflow status
-gh run list --workflow=release.yml
+gh run list --workflow="Build Desktop Apps"
 
 # Monitor the build
 gh run watch
