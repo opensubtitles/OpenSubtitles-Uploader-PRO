@@ -35,27 +35,45 @@ npm run tauri:build
 
 ## Version Management
 
-**CRITICAL**: ALWAYS use the update-version script for version bumps:
+**CRITICAL**: ALWAYS follow this EXACT sequence for releases to avoid version mismatches:
+
+### ⚠️ MANDATORY Release Sequence:
 
 ```bash
-# Bump version using the script (REQUIRED)
+# 1. FIRST - Bump version using the script (REQUIRED)
 npm run update-version
 
-# Then commit, tag and push
+# 2. SECOND - Commit and tag the version bump
 git add .
 git commit -m "🚀 RELEASE: Version X.X.X - Description"
 git tag vX.X.X
 git push && git push --tags
+
+# 3. THIRD - Trigger builds/release ONLY after version is committed
+gh workflow run build-desktop-apps.yml --field create_release=true
+# OR make local build: npm run tauri:build
+
+# 4. FOURTH - Create/publish GitHub release with proper version
+gh release create vX.X.X --title "vX.X.X - Description" --notes "..."
 ```
 
-**NEVER manually edit version numbers** in package.json, Cargo.toml, or tauri.conf.json - the script handles all files consistently.
+### 🚨 CRITICAL RULES:
 
-After version bumps, always:
-1. Use `npm run update-version` script
-2. Commit changes with descriptive message
-3. Create and push git tag
-4. Trigger GitHub release workflow
-5. Verify release creation
+1. **NEVER build before version bump** - Always `npm run update-version` FIRST
+2. **NEVER manually edit versions** - Script handles package.json, Cargo.toml, tauri.conf.json consistently
+3. **NEVER skip version commit** - Git tag and version files must match exactly
+4. **ALWAYS verify version sync** - Check that build output matches expected version number
+
+### ❌ What NOT to do:
+- Build first, then bump version (causes version mismatches)
+- Manual version editing (causes inconsistencies)
+- Skipping git tag creation (breaks release automation)
+- Using different version numbers in different files
+
+### ✅ Correct sequence prevents issues like:
+- Release v1.6.14 containing v1.6.13 files (version mismatch)
+- Inconsistent version numbers across package.json, Cargo.toml, tauri.conf.json
+- GitHub releases with wrong version tags
 
 ## Testing Commands
 
