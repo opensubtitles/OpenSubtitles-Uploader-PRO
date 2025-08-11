@@ -318,23 +318,42 @@ export class UpdateService {
       console.log('✅ Raw Tauri update response:', JSON.stringify(updateInfo, null, 2));
 
       // Tauri v2 API structure - updateInfo is null if no update available
-      const hasUpdate = updateInfo !== null && updateInfo !== undefined;
+      // In test upgrade mode, always show update available (even if no real update)
+      const hasUpdate = this.isTestUpgradeMode || (updateInfo !== null && updateInfo !== undefined);
 
       console.log('🔄 Tauri update check result:', { 
         hasUpdate, 
         currentVersion: APP_VERSION, 
         updateInfo: updateInfo,
-        fullResponse: updateInfo
+        fullResponse: updateInfo,
+        testMode: this.isTestUpgradeMode,
+        forceUpdate: this.isTestUpgradeMode ? '✅ FORCED BY TEST MODE' : '❌'
       });
 
-      const result = {
-        shouldUpdate: hasUpdate,
-        currentVersion: APP_VERSION,
-        latestVersion: hasUpdate ? updateInfo.version : APP_VERSION,
-        releaseNotes: hasUpdate ? (updateInfo.body || 'No release notes available') : 'No update available',
-        publishedAt: hasUpdate ? updateInfo.date : null,
-        updateData: updateInfo
-      };
+      // Create result object with test mode handling
+      let result;
+      if (this.isTestUpgradeMode && !updateInfo) {
+        // Create fake update info for testing when no real update exists
+        result = {
+          shouldUpdate: true,
+          currentVersion: APP_VERSION,
+          latestVersion: APP_VERSION, // Same version for testing
+          releaseNotes: '🧪 TEST MODE: Simulated update for testing updater functionality',
+          publishedAt: new Date().toISOString(),
+          updateData: null,
+          testMode: true
+        };
+        console.log('🧪 TEST MODE: Creating simulated update info for testing');
+      } else {
+        result = {
+          shouldUpdate: hasUpdate,
+          currentVersion: APP_VERSION,
+          latestVersion: hasUpdate ? updateInfo.version : APP_VERSION,
+          releaseNotes: hasUpdate ? (updateInfo.body || 'No release notes available') : 'No update available',
+          publishedAt: hasUpdate ? updateInfo.date : null,
+          updateData: updateInfo
+        };
+      }
 
       // Update cache
       cache.lastChecked = now;
@@ -539,6 +558,322 @@ export class UpdateService {
   }
 
   /**
+   * Create a test file for download simulation
+   * @returns {Promise<string>} Test file path
+   */
+  async createTestDownloadFile() {
+    try {
+      console.log('🧪 TEST MODE: Setting up test file simulation...');
+      
+      // Since macOS sandbox prevents us from writing files, let's use a directory that exists
+      // and demonstrate the file operations with a realistic path that would work in production
+      
+      // Get the user's actual Downloads directory for the UI display
+      let actualDownloadsPath = '/Users/brano/Downloads';
+      
+      try {
+        // Try to get the real Downloads directory path from Tauri
+        if (!tauriPath) {
+          await loadTauriAPIs();
+        }
+        if (tauriPath && tauriPath.downloadDir) {
+          const downloadsDir = await tauriPath.downloadDir();
+          actualDownloadsPath = downloadsDir;
+          console.log('📁 Using system Downloads directory:', actualDownloadsPath);
+        }
+      } catch (pathError) {
+        console.log('⚠️ Could not get system Downloads path, using default:', pathError);
+      }
+      
+      const testFileName = 'OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+      const testFilePath = `${actualDownloadsPath}/${testFileName}`;
+      
+      console.log('🎯 TEST MODE: File operations will target:', testFilePath);
+      console.log('📋 Note: Buttons will demonstrate opening this location');
+      console.log('💡 In real downloads, files would be created here by the updater');
+      
+      // Try to create a real demonstration file
+      try {
+        console.log('📝 Attempting to create actual demonstration file...');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = await invoke('create_test_file_native', { 
+          filePath: testFilePath, 
+          content: `Test file for OpenSubtitles Uploader PRO updater functionality verification.` 
+        });
+        
+        console.log('✅ Demo file result:', result);
+        
+        // Extract the actual file path from the result message if different
+        const pathMatch = result.match(/Test file created successfully at: (.+)$/);
+        if (pathMatch) {
+          const actualFilePath = pathMatch[1];
+          console.log('📁 REAL DEMO FILE CREATED:', actualFilePath);
+          console.log('🎯 User can now test buttons with actual file at:', actualFilePath);
+          return actualFilePath;
+        }
+      } catch (demoError) {
+        console.log('ℹ️ Could not create demo file, using directory for testing:', demoError);
+      }
+      
+      return testFilePath;
+      
+    } catch (error) {
+      console.error('❌ Failed to create test file via native command:', error);
+      console.log('🔧 Using fallback test file path for UI testing');
+      
+      // Return a realistic fallback path for UI testing
+      const fallbackPath = '/tmp/OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+      
+      // Try to create a simple fallback file using Tauri APIs
+      try {
+        if (!tauriPath || !tauriFs) {
+          console.log('🔧 Loading Tauri APIs for fallback file creation...');
+          await loadTauriAPIs();
+        }
+
+        // Get temp directory and create test file
+        const tempDir = await tauriPath.tempDir();
+        const testFileName = 'OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+        const testFilePath = await tauriPath.join(tempDir, testFileName);
+        
+        const testContent = `🧪 TEST MODE UPDATE FILE (FALLBACK)
+Generated: ${new Date().toISOString()}
+Version: 1.6.11 (Test Mode - Fallback)
+
+This is a fallback test file for updater functionality testing.
+The actual update installer would normally be a .dmg/.exe file.
+
+Test completed successfully! ✅`;
+
+        await tauriFs.writeTextFile(testFilePath, testContent);
+        
+        // Verify file was created
+        const exists = await tauriFs.exists(testFilePath);
+        if (exists) {
+          console.log('✅ Fallback test file created and verified:', testFilePath);
+          return testFilePath;
+        } else {
+          throw new Error('Fallback file was not created successfully');
+        }
+        
+      } catch (fallbackError) {
+        console.log('⚠️ Could not create physical test file, using virtual path:', fallbackError);
+      }
+      
+      return fallbackPath;
+    }
+  }
+
+  /**
+   * Download real DMG file from GitHub for test mode
+   * @returns {Promise<Object>} Real download result  
+   */
+  async simulateTestDownload() {
+    if (this.isInstalling) {
+      return {
+        success: false,
+        error: 'Download already in progress'
+      };
+    }
+
+    try {
+      this.isInstalling = true;
+      console.log('🧪 TEST MODE: Starting REAL download from GitHub...');
+
+      this.notifyListeners({
+        type: 'update_download_start'
+      });
+
+      // Get the latest release info from GitHub
+      console.log('📡 Fetching latest release info from GitHub...');
+      const response = await fetch('https://api.github.com/repos/opensubtitles/opensubtitles-uploader-pro/releases/latest');
+      
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+      
+      const release = await response.json();
+      console.log('📦 Latest release:', release.tag_name);
+      console.log('📦 Available assets:', release.assets.map(a => a.name));
+      
+      // Find the DMG asset for macOS (improved detection)
+      let dmgAsset = release.assets.find(asset => 
+        asset.name.toLowerCase().includes('.dmg') && 
+        (asset.name.toLowerCase().includes('universal') ||
+         asset.name.toLowerCase().includes('macos') ||
+         asset.name.toLowerCase().includes('darwin'))
+      );
+      
+      // Fallback: find any DMG file
+      if (!dmgAsset) {
+        dmgAsset = release.assets.find(asset => asset.name.toLowerCase().includes('.dmg'));
+      }
+      
+      // Final fallback: use largest asset (likely to be the main installer)
+      if (!dmgAsset) {
+        console.log('⚠️ No DMG found in latest release, using largest asset');
+        dmgAsset = release.assets.reduce((largest, current) => 
+          current.size > largest.size ? current : largest,
+          release.assets[0] || null
+        );
+        
+        if (!dmgAsset) {
+          throw new Error('No assets found in the latest release');
+        }
+        console.log('📦 Using largest asset:', dmgAsset.name);
+      }
+      
+      const downloadUrl = dmgAsset.browser_download_url;
+      const fileName = dmgAsset.name;
+      const expectedSize = dmgAsset.size;
+      
+      console.log('📥 Downloading REAL file:', fileName);
+      console.log('🔗 URL:', downloadUrl);
+      console.log('📊 Expected size:', this.formatFileSize(expectedSize));
+      
+      // Get download destination
+      const downloadPath = await this.getActualDownloadPath(fileName);
+      console.log('📁 Download destination:', downloadPath);
+      
+      // Use native HTTP client as primary method (proven to work in sandboxed environment)  
+      console.log('🔧 Starting native HTTP client download...');
+      
+      // Set up progress tracking for native download
+      let downloadedBytes = 0;
+      let totalBytes = expectedSize || 0;
+      
+      // Listen for native progress events
+      const { listen } = await import('@tauri-apps/api/event');
+      let lastLoggedMilestone = -1;
+      const unlisten = await listen('download-progress', (event) => {
+        const { downloaded, total, percentage } = event.payload;
+        downloadedBytes = downloaded;
+        totalBytes = total || totalBytes;
+        
+        // Only log at 20% milestones to avoid flooding JavaScript console
+        const currentMilestone = Math.floor(percentage / 20);
+        if (currentMilestone > lastLoggedMilestone && currentMilestone <= 5) {
+          console.log(`📈 Native download progress: ${downloaded}/${totalBytes} (${percentage.toFixed(1)}%)`);
+          lastLoggedMilestone = currentMilestone;
+        }
+        
+        this.notifyListeners({
+          type: 'update_download_progress',
+          downloaded: downloaded,
+          total: totalBytes,
+          progress: percentage, // Hook expects 'progress' not 'percentage'
+          percentage: percentage // Keep both for compatibility
+        });
+      });
+      
+      try {
+        // Use native Rust HTTP client (this was working reliably)
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = await invoke('download_file_native', {
+          url: downloadUrl,
+          filePath: downloadPath,
+          fileName: fileName
+        });
+        
+        // Clean up event listener
+        unlisten();
+        
+        console.log('✅ Download completed via native HTTP client:', result);
+        
+        // Extract actual path from result
+        const pathMatch = result.match(/Downloaded successfully to: (.+)$/);
+        const actualPath = pathMatch ? pathMatch[1] : downloadPath;
+        
+        this.notifyListeners({
+          type: 'update_download_complete',
+          filePath: actualPath,
+          fileName: fileName,
+          fileSize: expectedSize,
+          showPath: true,
+          canReveal: true,
+          warning: '🧪 TEST MODE: Real DMG file downloaded via native HTTP client!',
+          canInstall: fileName.toLowerCase().includes('.dmg')
+        });
+
+        return {
+          success: true,
+          message: `Real ${fileName.toLowerCase().includes('.dmg') ? 'DMG' : 'file'} download completed successfully`,
+          filePath: actualPath,
+          fileName: fileName,
+          testMode: true,
+          canInstall: fileName.toLowerCase().includes('.dmg')
+        };
+      } catch (error) {
+        // Clean up event listener on error
+        unlisten();
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('❌ Real download failed:', error);
+      
+      this.notifyListeners({
+        type: 'update_download_error',
+        error: error.message
+      });
+
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      this.isInstalling = false;
+    }
+  }
+
+  /**
+   * Get the actual download path for test files
+   */
+  async getActualDownloadPath(fileName) {
+    // Use native command to get writable directory (optimized to check Documents first)
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke('get_writable_download_path', { fileName: fileName });
+      console.log('📁 Got writable download path from native command:', result);
+      return result;
+    } catch (nativeError) {
+      console.log('⚠️ Native path resolution failed, trying Tauri APIs fallback:', nativeError);
+    }
+    
+    try {
+      // Get the sandboxed Downloads directory
+      if (!tauriPath) {
+        await loadTauriAPIs();
+      }
+      
+      if (tauriPath && tauriPath.downloadDir) {
+        const downloadsDir = await tauriPath.downloadDir();
+        console.log('📁 Downloads directory from Tauri:', downloadsDir);
+        const fullPath = `${downloadsDir}/${fileName}`;
+        return fullPath;
+      }
+    } catch (error) {
+      console.log('⚠️ Could not get Downloads directory via Tauri APIs:', error);
+    }
+    
+    // Fallback to user's home directory which is more likely to be writable
+    const fallbackPath = `/Users/${process.env.USER || 'user'}/${fileName}`;
+    console.log('📁 Using fallback path:', fallbackPath);
+    return fallbackPath;
+  }
+
+  /**
+   * Format file size for display
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  /**
    * Download and install update with progress tracking
    * @returns {Promise<Object>} Download result
    */
@@ -551,6 +886,13 @@ export class UpdateService {
     }
 
     const cache = UpdateService.updateCache;
+    
+    // Handle test mode - simulate download even without real update
+    if (this.isTestUpgradeMode && (!cache.updateAvailable || !cache.updateInfo?.updateData)) {
+      console.log('🧪 TEST MODE: Simulating update download (no real download)');
+      return await this.simulateTestDownload();
+    }
+    
     if (!cache.updateAvailable || !cache.updateInfo || !cache.updateInfo.updateData) {
       return {
         success: false,
@@ -852,6 +1194,41 @@ export class UpdateService {
   }
 
   /**
+   * Install DMG file (macOS only)
+   * @param {string} filePath - Path to the DMG file
+   * @returns {Promise<Object>} Install result
+   */
+  async installDmgFile(filePath) {
+    if (!this.isStandalone) {
+      return {
+        success: false,
+        error: 'Not running as standalone app'
+      };
+    }
+
+    try {
+      console.log('📦 Installing DMG file:', filePath);
+
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke('install_dmg_file', { filePath: filePath });
+      
+      console.log('✅ DMG installation initiated:', result);
+      
+      return {
+        success: true,
+        message: result
+      };
+    } catch (error) {
+      console.error('❌ Failed to install DMG:', error);
+      
+      return {
+        success: false,
+        error: error.message || 'Failed to install DMG file'
+      };
+    }
+  }
+
+  /**
    * Open downloaded file or reveal in file explorer
    * @param {string} filePath - Path to the downloaded file
    * @returns {Promise<Object>} Open result
@@ -868,20 +1245,83 @@ export class UpdateService {
       console.log('📂 Opening downloaded file:', filePath);
 
       if (!tauriShell) {
-        throw new Error('Tauri shell not available');
+        console.log('🔧 Loading Tauri Shell APIs...');
+        await loadTauriAPIs();
+        if (!tauriShell) {
+          throw new Error('Tauri shell not available after loading APIs');
+        }
+      }
+      
+      // Check if file exists first
+      try {
+        if (tauriFs && !filePath.includes('<update_file>')) {
+          const exists = await tauriFs.exists(filePath);
+          if (!exists) {
+            console.log('⚠️ File does not exist, will try to open anyway:', filePath);
+          }
+        }
+      } catch (checkError) {
+        console.log('🔧 Could not verify file existence, proceeding...');
       }
       
       // For update temp files, we need to open the temp directory since
       // the exact file path may not be accessible directly
-      const platform = this.getCurrentPlatform();
       let pathToOpen = filePath;
       
       if (filePath.includes('<update_file>')) {
         // Open the temp directory instead
         pathToOpen = this.getTempDirectory();
+        console.log('🔧 Opening temp directory instead:', pathToOpen);
       }
       
-      await tauriShell.open(pathToOpen);
+      console.log('🚀 Attempting to open path:', pathToOpen);
+      
+      // Try native Tauri command first - this bypasses ACL restrictions
+      try {
+        console.log('🔧 Using native Tauri command to open file...');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = await invoke('open_file_native', { filePath: pathToOpen });
+        console.log('✅ File opened successfully via native command:', result);
+      } catch (nativeError) {
+        console.log('🔄 Native command failed, trying parent directory...', nativeError);
+        
+        // If the specific file doesn't exist, try opening the parent directory
+        const parentDir = pathToOpen.substring(0, pathToOpen.lastIndexOf('/'));
+        if (parentDir && parentDir !== pathToOpen) {
+          try {
+            console.log('🔧 Trying to open parent directory:', parentDir);
+            const { invoke } = await import('@tauri-apps/api/core');
+            const parentResult = await invoke('open_file_native', { filePath: parentDir });
+            console.log('✅ Parent directory opened successfully:', parentResult);
+            return {
+              success: true,
+              message: `Opened parent directory: ${parentDir}`
+            };
+          } catch (parentError) {
+            console.log('🔄 Parent directory also failed, trying other fallbacks...', parentError);
+          }
+        }
+        
+        // Fallback to Command API
+        try {
+          const { Command } = await import('@tauri-apps/plugin-shell');
+          const cmd = new Command('open', [pathToOpen]);
+          const result = await cmd.execute();
+          
+          if (result.code === 0) {
+            console.log('✅ File opened successfully via Command API');
+          } else {
+            throw new Error(`Command failed with code ${result.code}: ${result.stderr}`);
+          }
+        } catch (commandError) {
+          console.log('🔄 Command API failed, trying shell.open with file:// URL...');
+          
+          // Final fallback to shell.open with file:// URL
+          const urlToOpen = `file://${pathToOpen}`;
+          console.log('🔧 Converting file path to URL:', urlToOpen);
+          await tauriShell.open(urlToOpen);
+        }
+      }
       
       console.log('✅ File/Directory opened successfully');
       
@@ -891,11 +1331,38 @@ export class UpdateService {
       };
     } catch (error) {
       console.error('❌ Failed to open file:', error);
+      console.log('🔧 Error details:', {
+        message: error.message,
+        filePath: filePath,
+        tauriShellAvailable: !!tauriShell
+      });
       
-      return {
-        success: false,
-        error: error.message
-      };
+      // Try fallback approach
+      try {
+        console.log('🔄 Trying fallback approach with shell.open API...');
+        const { open } = await import('@tauri-apps/plugin-shell');
+        
+        // Try to open parent directory as fallback
+        const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+        const parentUrl = `file://${parentDir}`;
+        console.log('🔧 Fallback: Converting parent directory to URL:', parentUrl);
+        
+        await open(parentUrl);
+        
+        console.log('✅ Fallback: Opened parent directory');
+        return {
+          success: true,
+          message: 'Opened parent directory as fallback'
+        };
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        
+        return {
+          success: false,
+          error: `Main error: ${error.message}, Fallback error: ${fallbackError.message}`
+        };
+      }
     }
   }
 
@@ -964,13 +1431,68 @@ export class UpdateService {
         }
       }
 
-      // Execute the reveal command
-      const { Command } = await import('@tauri-apps/plugin-shell');
-      const cmd = new Command(command, args);
-      const result = await cmd.execute();
+      // Try native Tauri command first - this bypasses ACL restrictions
+      try {
+        console.log('🔧 Using native Tauri command to reveal file...');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = await invoke('reveal_file_native', { filePath: filePath });
+        console.log('✅ File revealed successfully via native command:', result);
+      } catch (nativeError) {
+        console.log('🔄 Native reveal command failed, trying parent directory...', nativeError);
+        
+        // If the specific file doesn't exist, try opening the parent directory
+        const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+        if (parentDir && parentDir !== filePath) {
+          try {
+            console.log('🔧 Trying to open parent directory for reveal:', parentDir);
+            const { invoke } = await import('@tauri-apps/api/core');
+            const parentResult = await invoke('open_file_native', { filePath: parentDir });
+            console.log('✅ Parent directory opened successfully for reveal:', parentResult);
+            return {
+              success: true,
+              message: `Opened parent directory: ${parentDir}`
+            };
+          } catch (parentError) {
+            console.log('🔄 Parent directory reveal also failed, trying other fallbacks...', parentError);
+          }
+        }
+        
+        // For macOS, try using the shell.open API which should work better with ACL
+        if (platform === 'macos') {
+          // Use Tauri's shell.open for better compatibility
+          try {
+            console.log('🔧 Using Tauri shell.open for macOS reveal...');
+            const { open } = await import('@tauri-apps/plugin-shell');
+            
+            // On macOS, we can open the parent directory and the file should be selected
+            const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+            const parentUrl = `file://${parentDir}`;
+            console.log('🔧 Converting parent directory to URL for reveal:', parentUrl);
+            
+            await open(parentUrl);
+            console.log('✅ Opened parent directory via shell.open');
+            
+          } catch (openError) {
+            console.log('🔄 shell.open failed, trying Command API...');
+            // Fallback to Command API
+            const { Command } = await import('@tauri-apps/plugin-shell');
+            const cmd = new Command(command, args);
+            const result = await cmd.execute();
 
-      if (result.code !== 0) {
-        throw new Error(`Reveal command failed: ${result.stderr || 'Unknown error'}`);
+            if (result.code !== 0) {
+              throw new Error(`Reveal command failed: ${result.stderr || 'Unknown error'}`);
+            }
+          }
+        } else {
+          // For other platforms, use Command API
+          const { Command } = await import('@tauri-apps/plugin-shell');
+          const cmd = new Command(command, args);
+          const result = await cmd.execute();
+
+          if (result.code !== 0) {
+            throw new Error(`Reveal command failed: ${result.stderr || 'Unknown error'}`);
+          }
+        }
       }
       
       console.log('✅ File revealed successfully in file manager');
@@ -996,7 +1518,10 @@ export class UpdateService {
         }
         
         if (parentPath) {
-          await tauriShell.open(parentPath);
+          const parentUrl = `file://${parentPath}`;
+          console.log('🔧 Final fallback: Converting parent directory to URL:', parentUrl);
+          
+          await tauriShell.open(parentUrl);
           
           return {
             success: true,

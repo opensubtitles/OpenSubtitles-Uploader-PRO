@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.6.12",
+  "version": "1.6.13",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -44,7 +44,8 @@
             "dialog:default",
             "http:default",
             "updater:default",
-            "core:path:default"
+            "core:path:default",
+            "core:event:default"
           ],
           "scope": {
             "fs": {
