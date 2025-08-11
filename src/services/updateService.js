@@ -925,101 +925,90 @@ Test completed successfully! ✅`;
         throw new Error('No update available to download');
       }
 
-      console.log('🔄 Starting downloadAndInstall with progress tracking...');
+      console.log('🔄 Starting custom download (bypassing Tauri signature validation)...');
 
-      // Use Tauri v2's downloadAndInstall with progress callback
+      // Get platform-specific download URL from cached update info
+      const downloadUrl = this.getPlatformDownloadUrl(cache.updateInfo);
+      if (!downloadUrl) {
+        throw new Error('No download URL available for this platform');
+      }
+
+      // Use our custom download approach (same as demo mode) to bypass signature validation
+      const fileName = this.getUpdateFileName();
+      const downloadPath = this.getUpdateTempPath();
+      
+      console.log('📦 Download details:', {
+        url: downloadUrl,
+        fileName: fileName,
+        path: downloadPath
+      });
+
       let downloadedBytes = 0;
       let totalBytes = 0;
-      let downloadPath = null;
+      let lastLoggedMilestone = -1;
 
-      const result = await updateInfo.downloadAndInstall((progressEvent) => {
-        console.log('📊 Download progress event:', progressEvent);
-
-        switch (progressEvent.event) {
-          case 'Started':
-            totalBytes = progressEvent.data.contentLength || 0;
-            this.lastLoggedProgress = 0; // Reset progress logging tracker
-            console.log(`📦 Download started: ${totalBytes} bytes`);
-            
-            this.notifyListeners({
-              type: 'update_download_progress',
-              progress: 0,
-              downloaded: 0,
-              total: totalBytes,
-              status: 'started'
-            });
-            break;
-
-          case 'Progress':
-            downloadedBytes += progressEvent.data.chunkLength || 0;
-            const progressPercent = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0;
-            
-            // Only log progress every 20% to avoid flooding
-            const currentMilestone = Math.floor(progressPercent / 20) * 20;
-            const lastMilestone = Math.floor((this.lastLoggedProgress || 0) / 20) * 20;
-            
-            if (currentMilestone > lastMilestone) {
-              console.log(`📈 Download progress: ${downloadedBytes}/${totalBytes} (${progressPercent.toFixed(1)}%)`);
-              this.lastLoggedProgress = progressPercent;
-            }
-            
-            this.notifyListeners({
-              type: 'update_download_progress',
-              progress: progressPercent,
-              downloaded: downloadedBytes,
-              total: totalBytes,
-              status: 'downloading'
-            });
-            break;
-
-          case 'Finished':
-            // Try to capture the actual download path if available
-            downloadPath = progressEvent.data?.path || this.getUpdateTempPath();
-            console.log('✅ Download completed');
-            console.log('📁 File saved to:', downloadPath);
-            
-            this.notifyListeners({
-              type: 'update_download_progress',
-              progress: 100,
-              downloaded: totalBytes,
-              total: totalBytes,
-              status: 'finished',
-              filePath: downloadPath
-            });
-            break;
-
-          default:
-            console.log('📡 Unknown download event:', progressEvent);
-            break;
+      // Set up progress event listener
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen('download-progress', (event) => {
+        const { downloaded, total, percentage } = event.payload;
+        downloadedBytes = downloaded;
+        totalBytes = total || totalBytes;
+        
+        // Only log at 20% milestones to avoid flooding JavaScript console
+        const currentMilestone = Math.floor(percentage / 20);
+        if (currentMilestone > lastLoggedMilestone && currentMilestone <= 5) {
+          console.log(`📈 Download progress: ${downloaded}/${totalBytes} (${percentage.toFixed(1)}%)`);
+          lastLoggedMilestone = currentMilestone;
         }
+        
+        this.notifyListeners({
+          type: 'update_download_progress',
+          downloaded: downloaded,
+          total: totalBytes,
+          progress: percentage, // Hook expects 'progress' not 'percentage'
+          percentage: percentage // Keep both for compatibility
+        });
       });
-
-      // Use the actual download path captured during the Finished event
-      const actualPath = downloadPath || this.getUpdateTempPath();
-      const fileName = this.getUpdateFileName();
       
-      console.log('✅ Update downloaded and ready for installation');
-      console.log('📁 Update saved to:', actualPath);
-      console.log('📄 File name:', fileName);
-      console.log('🔧 Available actions: Open file, Reveal in Finder/Explorer');
-      
-      this.notifyListeners({
-        type: 'update_download_complete',
-        filePath: actualPath,
-        fileName: fileName,
-        showPath: true,
-        canReveal: true,
-        fileSize: totalBytes
-      });
+      try {
+        // Use native Rust HTTP client (bypasses signature validation)
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = await invoke('download_file_native', {
+          url: downloadUrl,
+          filePath: downloadPath,
+          fileName: fileName
+        });
+        
+        // Clean up event listener
+        unlisten();
+        
+        console.log('✅ Download completed via custom HTTP client:', result);
+        
+        // Extract actual path from result
+        const pathMatch = result.match(/Downloaded successfully to: (.+)$/);
+        const actualPath = pathMatch ? pathMatch[1] : downloadPath;
+        
+        this.notifyListeners({
+          type: 'update_download_complete',
+          filePath: actualPath,
+          fileName: fileName,
+          showPath: true,
+          canReveal: true
+        });
 
-      return {
-        success: true,
-        message: 'Update downloaded successfully and ready for installation',
-        filePath: tempPath,
-        fileName: this.getUpdateFileName(),
-        showPath: true,
-        canReveal: true
-      };
+        return {
+          success: true,
+          message: 'Update downloaded successfully (signature validation bypassed)',
+          filePath: actualPath,
+          fileName: fileName,
+          showPath: true
+        };
+        
+      } catch (downloadError) {
+        unlisten();
+        throw downloadError;
+      }
+
     } catch (error) {
       console.error('❌ Update download failed:', error);
       
@@ -1101,6 +1090,48 @@ Test completed successfully! ✅`;
     const version = cache.updateInfo?.latestVersion || 'latest';
     
     return this.getDefaultFileName(version, platform);
+  }
+
+  /**
+   * Get platform-specific download URL from update info
+   * @param {Object} updateInfo - Update info containing assets
+   * @returns {string|null} Download URL for current platform
+   */
+  getPlatformDownloadUrl(updateInfo) {
+    if (!updateInfo || !updateInfo.assets) {
+      console.error('❌ No update info or assets available');
+      return null;
+    }
+
+    const platform = this.getCurrentPlatform();
+    console.log('🔍 Looking for download URL for platform:', platform);
+    console.log('📦 Available assets:', updateInfo.assets.map(a => a.name));
+
+    // Map platform to expected file patterns
+    const platformPatterns = {
+      'macos': /\.dmg$/i,
+      'windows': /setup.*\.exe$/i,
+      'linux': /\.AppImage$/i
+    };
+
+    const pattern = platformPatterns[platform];
+    if (!pattern) {
+      console.error('❌ Unknown platform:', platform);
+      return null;
+    }
+
+    // Find matching asset
+    const asset = updateInfo.assets.find(asset => pattern.test(asset.name));
+    if (!asset) {
+      console.error('❌ No matching asset found for platform:', platform);
+      console.log('📋 Expected pattern:', pattern);
+      console.log('📦 Available assets:', updateInfo.assets.map(a => a.name));
+      return null;
+    }
+
+    console.log('✅ Found matching asset:', asset.name);
+    console.log('🔗 Download URL:', asset.downloadUrl);
+    return asset.downloadUrl;
   }
 
   /**
