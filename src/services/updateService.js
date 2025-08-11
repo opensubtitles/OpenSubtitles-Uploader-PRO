@@ -1094,44 +1094,89 @@ Test completed successfully! ✅`;
 
   /**
    * Get platform-specific download URL from update info
-   * @param {Object} updateInfo - Update info containing assets
+   * @param {Object} updateInfo - Update info containing assets or platforms
    * @returns {string|null} Download URL for current platform
    */
   getPlatformDownloadUrl(updateInfo) {
-    if (!updateInfo || !updateInfo.assets) {
-      console.error('❌ No update info or assets available');
+    if (!updateInfo) {
+      console.error('❌ No update info available');
       return null;
     }
 
     const platform = this.getCurrentPlatform();
     console.log('🔍 Looking for download URL for platform:', platform);
-    console.log('📦 Available assets:', updateInfo.assets.map(a => a.name));
+    console.log('🔍 Update info structure:', {
+      hasAssets: !!updateInfo.assets,
+      hasRawJson: !!updateInfo.rawJson,
+      hasPlatforms: !!(updateInfo.rawJson && updateInfo.rawJson.platforms)
+    });
 
-    // Map platform to expected file patterns
-    const platformPatterns = {
-      'macos': /\.dmg$/i,
-      'windows': /setup.*\.exe$/i,
-      'linux': /\.AppImage$/i
-    };
+    // Handle real updater format (Tauri updater response with rawJson.platforms)
+    if (updateInfo.rawJson && updateInfo.rawJson.platforms) {
+      console.log('📦 Using real updater format (rawJson.platforms)');
+      const platforms = updateInfo.rawJson.platforms;
+      
+      // Map current platform to Tauri platform keys
+      const platformKeys = {
+        'macos': ['darwin-universal', 'darwin-x86_64', 'darwin-aarch64'],
+        'windows': ['windows-x86_64'],
+        'linux': ['linux-x86_64']
+      };
 
-    const pattern = platformPatterns[platform];
-    if (!pattern) {
-      console.error('❌ Unknown platform:', platform);
+      const keys = platformKeys[platform];
+      if (!keys) {
+        console.error('❌ Unknown platform for real updater:', platform);
+        return null;
+      }
+
+      // Try to find a matching platform
+      for (const key of keys) {
+        if (platforms[key] && platforms[key].url) {
+          console.log('✅ Found platform key:', key);
+          console.log('🔗 Download URL:', platforms[key].url);
+          return platforms[key].url;
+        }
+      }
+
+      console.error('❌ No matching platform found in rawJson.platforms');
+      console.log('📋 Available platforms:', Object.keys(platforms));
       return null;
     }
 
-    // Find matching asset
-    const asset = updateInfo.assets.find(asset => pattern.test(asset.name));
-    if (!asset) {
-      console.error('❌ No matching asset found for platform:', platform);
-      console.log('📋 Expected pattern:', pattern);
+    // Handle demo mode format (GitHub API response with assets array)
+    if (updateInfo.assets) {
+      console.log('📦 Using demo mode format (assets array)');
       console.log('📦 Available assets:', updateInfo.assets.map(a => a.name));
-      return null;
+
+      // Map platform to expected file patterns
+      const platformPatterns = {
+        'macos': /\.dmg$/i,
+        'windows': /setup.*\.exe$/i,
+        'linux': /\.AppImage$/i
+      };
+
+      const pattern = platformPatterns[platform];
+      if (!pattern) {
+        console.error('❌ Unknown platform for demo mode:', platform);
+        return null;
+      }
+
+      // Find matching asset
+      const asset = updateInfo.assets.find(asset => pattern.test(asset.name));
+      if (!asset) {
+        console.error('❌ No matching asset found for platform:', platform);
+        console.log('📋 Expected pattern:', pattern);
+        console.log('📦 Available assets:', updateInfo.assets.map(a => a.name));
+        return null;
+      }
+
+      console.log('✅ Found matching asset:', asset.name);
+      console.log('🔗 Download URL:', asset.downloadUrl);
+      return asset.downloadUrl;
     }
 
-    console.log('✅ Found matching asset:', asset.name);
-    console.log('🔗 Download URL:', asset.downloadUrl);
-    return asset.downloadUrl;
+    console.error('❌ Update info has neither assets array nor rawJson.platforms');
+    return null;
   }
 
   /**
