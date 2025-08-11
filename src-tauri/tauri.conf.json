@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.6.11",
+  "version": "1.6.12",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -36,7 +36,11 @@
           ],
           "permissions": [
             "shell:allow-open",
+            "shell:allow-execute",
             "fs:default",
+            "fs:allow-write-text-file",
+            "fs:allow-create",
+            "fs:allow-write-file",
             "dialog:default",
             "http:default",
             "updater:default",
@@ -45,7 +49,28 @@
           "scope": {
             "fs": {
               "allow": [
-                "$DOWNLOAD/**"
+                "$DOWNLOAD/**",
+                "$TEMP/**",
+                "/tmp/**"
+              ]
+            },
+            "shell": {
+              "allow": [
+                {
+                  "name": "open",
+                  "sidecar": false,
+                  "args": [
+                    {"validator": "^(/[\\w\\s\\-\\.]+)+$"}
+                  ]
+                }
+              ]
+            },
+            "http": {
+              "allow": [
+                "https://api.github.com/*",
+                "https://github.com/*",
+                "https://objects.githubusercontent.com/*",
+                "https://releases.githubusercontent.com/*"
               ]
             }
           }
