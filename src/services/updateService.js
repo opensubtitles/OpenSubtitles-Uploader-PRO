@@ -351,7 +351,9 @@ export class UpdateService {
           latestVersion: hasUpdate ? updateInfo.version : APP_VERSION,
           releaseNotes: hasUpdate ? (updateInfo.body || 'No release notes available') : 'No update available',
           publishedAt: hasUpdate ? updateInfo.date : null,
-          updateData: updateInfo
+          updateData: updateInfo,
+          // CRITICAL: Preserve raw Tauri response for download URL resolution
+          rawJson: updateInfo
         };
       }
 
@@ -928,6 +930,13 @@ Test completed successfully! ✅`;
       console.log('🔄 Starting custom download (bypassing Tauri signature validation)...');
 
       // Get platform-specific download URL from cached update info
+      console.log('🔧 DEBUG: Full cache structure:', {
+        hasUpdateInfo: !!cache.updateInfo,
+        updateInfoKeys: cache.updateInfo ? Object.keys(cache.updateInfo) : 'N/A',
+        hasRawJson: !!(cache.updateInfo && cache.updateInfo.rawJson),
+        rawJsonKeys: (cache.updateInfo && cache.updateInfo.rawJson) ? Object.keys(cache.updateInfo.rawJson) : 'N/A'
+      });
+      
       const downloadUrl = this.getPlatformDownloadUrl(cache.updateInfo);
       if (!downloadUrl) {
         throw new Error('No download URL available for this platform');
@@ -1105,16 +1114,41 @@ Test completed successfully! ✅`;
 
     const platform = this.getCurrentPlatform();
     console.log('🔍 Looking for download URL for platform:', platform);
+    
+    // Debug: log the full structure to understand what we're working with
+    console.log('🔍 Full update info structure:', JSON.stringify(updateInfo, null, 2));
+    
     console.log('🔍 Update info structure:', {
       hasAssets: !!updateInfo.assets,
       hasRawJson: !!updateInfo.rawJson,
-      hasPlatforms: !!(updateInfo.rawJson && updateInfo.rawJson.platforms)
+      hasPlatforms: !!(updateInfo.rawJson && updateInfo.rawJson.platforms),
+      // Check if updateInfo itself has platforms (direct from Tauri response)
+      hasDirectPlatforms: !!updateInfo.platforms,
+      // Check rawJson structure
+      rawJsonStructure: updateInfo.rawJson ? Object.keys(updateInfo.rawJson) : 'N/A'
     });
 
-    // Handle real updater format (Tauri updater response with rawJson.platforms)
-    if (updateInfo.rawJson && updateInfo.rawJson.platforms) {
-      console.log('📦 Using real updater format (rawJson.platforms)');
-      const platforms = updateInfo.rawJson.platforms;
+    // Handle real updater format - check multiple possible locations for platforms data
+    let platforms = null;
+    
+    // Check if platforms are directly in updateInfo (direct Tauri response)
+    if (updateInfo.platforms) {
+      console.log('📦 Using direct platforms from updateInfo');
+      platforms = updateInfo.platforms;
+    }
+    // Check if platforms are in rawJson.rawJson.platforms (nested structure)
+    else if (updateInfo.rawJson && updateInfo.rawJson.rawJson && updateInfo.rawJson.rawJson.platforms) {
+      console.log('📦 Using nested rawJson.rawJson.platforms format');
+      platforms = updateInfo.rawJson.rawJson.platforms;
+    }
+    // Check if platforms are in rawJson.platforms
+    else if (updateInfo.rawJson && updateInfo.rawJson.platforms) {
+      console.log('📦 Using rawJson.platforms format');
+      platforms = updateInfo.rawJson.platforms;
+    }
+
+    if (platforms) {
+      console.log('✅ Found platforms data:', Object.keys(platforms));
       
       // Map current platform to Tauri platform keys
       const platformKeys = {
@@ -1138,7 +1172,7 @@ Test completed successfully! ✅`;
         }
       }
 
-      console.error('❌ No matching platform found in rawJson.platforms');
+      console.error('❌ No matching platform found in platforms data');
       console.log('📋 Available platforms:', Object.keys(platforms));
       return null;
     }

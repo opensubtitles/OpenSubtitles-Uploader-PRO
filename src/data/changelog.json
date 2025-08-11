@@ -1,8 +1,78 @@
 {
-  "generated_at": "2025-08-11T19:04:34.084Z",
+  "generated_at": "2025-08-11T22:54:49.911Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.6.18",
+      "name": "v1.6.18 - Build 176",
+      "published_at": "2025-08-11T22:22:38Z",
+      "body": "Automated release created by GitHub Actions build.\\n\\n**Build Information:**\\n- Build Number: 176\\n- Commit: 09c428e80f47cf4d2a4d44fc5f915a3adc3a3aab\\n- Triggered by: push\\n\\nAssets will be uploaded as builds complete on each platform.\\n\\n🤖 Generated with [Claude Code](https://claude.ai/code)\\n\\nCo-Authored-By: Claude <noreply@anthropic.com>",
+      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.6.18",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.18/latest.json",
+          "size": 1169
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.18_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.18/OpenSubtitles.Uploader.PRO_1.6.18_amd64.AppImage",
+          "size": 91866304
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.18_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.18/OpenSubtitles.Uploader.PRO_1.6.18_amd64.deb",
+          "size": 7388826
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.18_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.18/OpenSubtitles.Uploader.PRO_1.6.18_universal.dmg",
+          "size": 14097823
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.18_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.18/OpenSubtitles.Uploader.PRO_1.6.18_x64-setup.exe",
+          "size": 4719698
+        }
+      ]
+    },
+    {
+      "version": "v1.6.17",
+      "name": "v1.6.17 - Build 175",
+      "published_at": "2025-08-11T19:13:27Z",
+      "body": "Automated release created by GitHub Actions build.\\n\\n**Build Information:**\\n- Build Number: 175\\n- Commit: e4f23be6d616766a0979bed6bfd4e89af05c21dd\\n- Triggered by: push\\n\\nAssets will be uploaded as builds complete on each platform.\\n\\n🤖 Generated with [Claude Code](https://claude.ai/code)\\n\\nCo-Authored-By: Claude <noreply@anthropic.com>",
+      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.6.17",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.17/latest.json",
+          "size": 1169
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.17_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.17/OpenSubtitles.Uploader.PRO_1.6.17_amd64.AppImage",
+          "size": 91862208
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.17_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.17/OpenSubtitles.Uploader.PRO_1.6.17_amd64.deb",
+          "size": 7384458
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.17_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.17/OpenSubtitles.Uploader.PRO_1.6.17_universal.dmg",
+          "size": 14104399
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.6.17_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.17/OpenSubtitles.Uploader.PRO_1.6.17_x64-setup.exe",
+          "size": 4725187
+        }
+      ]
+    },
     {
       "version": "v1.6.16",
       "name": "v1.6.16 - Build 174",
@@ -447,24 +517,6 @@
           "size": 4649635
         }
       ]
-    },
-    {
-      "version": "v1.6.4",
-      "name": "v1.6.4: Streamlined Download UX",
-      "published_at": "2025-08-09T02:08:23Z",
-      "body": "## 🎯 Improved User Experience\n\nThis release removes unnecessary friction from the update download process based on user feedback.\n\n### ✨ **UX Improvements**\n\n**Simplified Download Workflow:**\n- ✅ **One-click download**: \"Download Update\" button starts download immediately\n- ❌ **Removed redundant confirmation**: No more \"Yes, Download\" step\n- 🚀 **Streamlined interaction**: Standard download pattern like other apps\n- 📱 **Better mobile UX**: Fewer taps required\n\n**User Flow Changes:**\n```\nBefore: Update Available → Download Update → Yes, Download → Downloading...\nAfter:  Update Available → Download Update → Downloading...\n```\n\n### 🔧 **Technical Changes**\n\n- Removed `showDownloadConfirm` state management\n- Simplified button logic and UI components  \n- Cleaner code with less conditional rendering\n- Maintained all existing functionality (download, progress, file opening)\n\n### 💡 **User Feedback Addressed**\n\n> *\"when I click on it, it ask me 'Yes, Download' which should not happen. It is extra not needed step for user.\"*\n\nThis release directly addresses this feedback by removing the unnecessary confirmation step. Users already expressed their intent by clicking \"Download Update\" - no additional confirmation is needed.\n\n### 🎯 **Result**\n\n- **Faster updates**: One less click to download\n- **Better UX**: Follows standard download patterns\n- **Less confusion**: Clear, immediate action\n- **Maintained safety**: Still user-initiated (not automatic)\n\n---\n\n**Full Changelog**: [v1.6.3...v1.6.4](https://github.com/opensubtitles/opensubtitles-uploader-pro/compare/v1.6.3...v1.6.4)",
-      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.6.4",
-      "prerelease": false,
-      "assets": []
-    },
-    {
-      "version": "v1.6.3",
-      "name": "v1.6.3: Fixed Download Permissions",
-      "published_at": "2025-08-09T02:00:22Z",
-      "body": "## 🔧 Critical Permission Fix\n\nThis release fixes the download functionality that was failing due to missing filesystem permissions.\n\n### 🐛 **Fixed Issue**\n\n**Problem**: Update detection was working perfectly, but downloads were failing with:\n```\n❌ Update download failed: Command plugin:path|resolve_directory not allowed by ACL\n```\n\n**Root Cause**: Missing `path:default` permission in Tauri configuration prevented access to the Downloads directory.\n\n**Solution**: Added proper Tauri ACL permissions for filesystem path operations.\n\n### ✅ **What's Fixed**\n\n- ✅ **Download Permissions**: Added `path:default` to Tauri capabilities\n- ✅ **Downloads Folder Access**: `downloadDir()` API now works properly  \n- ✅ **Update Downloads**: Download-only update system fully functional\n- ✅ **File System Access**: Proper permissions for OS Downloads directory\n\n### 🎯 **User Impact**\n\n- **Update Detection**: Still working perfectly (detects v1.6.2 → v1.6.3)\n- **Download Process**: Now works without permission errors\n- **User Control**: Complete download workflow with user confirmation\n- **File Opening**: Seamless file discovery after download\n\n### 🔍 **Technical Details**\n\nThe debug logs showed the system was correctly:\n- Detecting new updates ✅\n- Loading Tauri APIs ✅  \n- Initiating download workflow ✅\n- But failing on `downloadDir()` due to missing ACL permission ❌\n\nThis release resolves the ACL issue and makes the download-only update system fully operational.\n\n---\n\n**Full Changelog**: [v1.6.2...v1.6.3](https://github.com/opensubtitles/opensubtitles-uploader-pro/compare/v1.6.2...v1.6.3)",
-      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.6.3",
-      "prerelease": false,
-      "assets": []
     }
   ]
 }
