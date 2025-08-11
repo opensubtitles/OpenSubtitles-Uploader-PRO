@@ -37,6 +37,24 @@ https.get(options, (res) => {
     try {
       const releases = JSON.parse(data);
       
+      // Handle cases where API returns error or non-array
+      if (!Array.isArray(releases)) {
+        console.log('⚠️ GitHub API returned non-array response:', releases);
+        console.log('🔄 Creating minimal changelog with no releases');
+        const emptyChangelog = {
+          generated_at: new Date().toISOString(),
+          generator: 'OpenSubtitles Uploader PRO Build System',
+          total_releases: 0,
+          releases: []
+        };
+        
+        // Write empty JSON changelog
+        const changelogPath = path.join(dataDir, 'changelog.json');
+        fs.writeFileSync(changelogPath, JSON.stringify(emptyChangelog, null, 2));
+        console.log(`✅ Generated ${changelogPath} with 0 releases (empty)`);
+        return;
+      }
+      
       // Filter out drafts and take latest 15 releases
       const validReleases = releases
         .filter(release => !release.draft)
