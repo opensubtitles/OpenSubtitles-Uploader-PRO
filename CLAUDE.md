@@ -74,6 +74,18 @@ gh release create vX.X.X --title "vX.X.X - Description" --notes "..."
 - Release v1.6.14 containing v1.6.13 files (version mismatch)
 - Inconsistent version numbers across package.json, Cargo.toml, tauri.conf.json
 - GitHub releases with wrong version tags
+- Missing latest.json updater manifest (breaks auto-updates)
+- Incomplete multi-platform builds (missing Windows/Linux/macOS assets)
+
+### 📦 REQUIRED Release Assets:
+
+**NEVER release without ALL of these files:**
+- `latest.json` - Tauri updater manifest (CRITICAL for auto-updates)
+- Windows: `.exe` installer 
+- macOS: `.dmg` universal binary
+- Linux: `.AppImage` and/or `.deb` packages
+
+**Auto-updater will FAIL without latest.json!**
 
 ## Testing Commands
 
