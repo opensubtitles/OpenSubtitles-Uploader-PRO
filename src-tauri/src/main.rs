@@ -130,7 +130,6 @@ async fn create_test_file_native(file_path: String, content: String) -> Result<S
         dirs::download_dir().map(|d| d.join(file_name)),
     ];
     
-    let mut actual_file_path = file_path.clone();
     let mut selected_path = None;
     
     // Find the first writable directory
@@ -154,15 +153,15 @@ async fn create_test_file_native(file_path: String, content: String) -> Result<S
         }
     }
     
-    if let Some(writable_path) = selected_path {
-        actual_file_path = writable_path;
-        println!("🔧 Selected writable path: {}", actual_file_path);
+    let actual_file_path = if let Some(writable_path) = selected_path {
+        println!("🔧 Selected writable path: {}", writable_path);
+        writable_path
     } else {
         println!("⚠️ No writable directories found, using original path: {}", file_path);
         // If no writable path found, just return success with the original path
         // This allows the UI to still demonstrate button functionality
         return Ok(format!("Using directory for demo: {}", file_path));
-    }
+    };
     
     println!("🔧 Native command: Creating actual test file at: {}", actual_file_path);
     
@@ -226,7 +225,7 @@ This file can be safely deleted after testing.
 }
 
 #[tauri::command]
-async fn download_with_progress(url: String, file_path: String, file_name: String) -> Result<String, String> {
+async fn download_with_progress(url: String, file_path: String, _file_name: String) -> Result<String, String> {
     println!("🔧 Progressive download: {} -> {}", url, file_path);
     
     // Create parent directory if needed

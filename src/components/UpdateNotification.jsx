@@ -45,7 +45,17 @@ const UpdateNotification = () => {
 
   const handleOpenFile = async () => {
     if (downloadedFilePath) {
-      await openDownloadedFile(downloadedFilePath);
+      // Check if it's a DMG file for special handling
+      const isDmgFile = downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg');
+      
+      if (isDmgFile) {
+        // For DMG files, use the install function which will mount and open the DMG
+        console.log('📦 DMG file detected, using installation method');
+        await openDownloadedFile(downloadedFilePath);
+      } else {
+        // For other files, use regular file opening
+        await openDownloadedFile(downloadedFilePath);
+      }
     }
   };
 
@@ -214,7 +224,18 @@ const UpdateNotification = () => {
                       )}
                       {showPath && (
                         <div className="mt-1">
-                          <span className="font-medium">Location:</span> {downloadedFilePath}
+                          <span className="font-medium">Location:</span> 
+                          <div className={`mt-1 p-2 rounded text-xs ${isDark ? 'bg-gray-800 text-green-400' : 'bg-green-50 text-green-700'} border-l-2 ${isDark ? 'border-green-500' : 'border-green-400'}`}>
+                            📁 {downloadedFilePath}
+                            {typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ && (
+                              <div className="mt-1 text-xs opacity-75">
+                                {downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg') 
+                                  ? '✅ Real DMG installer downloaded from GitHub releases - click "Open DMG" to install'
+                                  : '✅ Real file downloaded from GitHub - buttons will work with actual file'
+                                }
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -229,7 +250,10 @@ const UpdateNotification = () => {
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       }`}
                     >
-                      🚀 Install Now
+                      {downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg') 
+                        ? '📦 Open DMG' 
+                        : '🚀 Install Now'
+                      }
                     </button>
                     
                     {canReveal && (

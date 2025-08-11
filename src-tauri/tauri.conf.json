@@ -61,7 +61,9 @@
                   "name": "open",
                   "sidecar": false,
                   "args": [
-                    {"validator": "^(/[\\w\\s\\-\\.]+)+$"}
+                    {
+                      "validator": "^(/[\\w\\s\\-\\.]+)+$"
+                    }
                   ]
                 }
               ]

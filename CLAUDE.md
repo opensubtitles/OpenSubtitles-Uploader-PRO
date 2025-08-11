@@ -35,11 +35,27 @@ npm run tauri:build
 
 ## Version Management
 
+**CRITICAL**: ALWAYS use the update-version script for version bumps:
+
+```bash
+# Bump version using the script (REQUIRED)
+npm run update-version
+
+# Then commit, tag and push
+git add .
+git commit -m "🚀 RELEASE: Version X.X.X - Description"
+git tag vX.X.X
+git push && git push --tags
+```
+
+**NEVER manually edit version numbers** in package.json, Cargo.toml, or tauri.conf.json - the script handles all files consistently.
+
 After version bumps, always:
-1. Commit changes
-2. Create and push git tag
-3. Trigger GitHub release workflow
-4. Verify release creation
+1. Use `npm run update-version` script
+2. Commit changes with descriptive message
+3. Create and push git tag
+4. Trigger GitHub release workflow
+5. Verify release creation
 
 ## Testing Commands
 
@@ -78,13 +94,34 @@ In debug builds, all command line parameters are logged to:
 2. **Browser DevTools**: JavaScript console.log shows all arguments
 3. **Debug Helper**: Call `getDebugInfo()` in browser console for full launch details
 
+**CLI Help and Version:**
+```bash
+# Show help
+./app --help
+./app -h
+
+# Show version  
+./app --version
+./app -v
+```
+
 **Debug console output example:**
 ```
-🔧 DEBUG: Application launched with 2 arguments:
-🔧 DEBUG: arg[0] = './app'
-🔧 DEBUG: arg[1] = '--test-upgrade'
-🔧 Command line arguments (2):
+🔧 === COMMAND LINE LAUNCH INFO ===
+🔧 Application launched with 3 arguments:
 🔧   [0]: "./app"
 🔧   [1]: "--test-upgrade"
-🔧 Debug helper available: Call getDebugInfo() for launch details
+🔧   [2]: "--verbose"
+🔧 Flags detected:
+🔧   Test upgrade mode: true
+🔧   Verbose mode: true
+🔧   Debug mode: false
+🔧 === END LAUNCH INFO ===
 ```
+
+**Test Download Functionality:**
+- When you click "Download Update" in test mode, it simulates a complete download
+- Shows realistic progress (0%, 20%, 40%, 60%, 80%, 100%)
+- Creates a test file in temp directory
+- Displays Install/Reveal buttons with test mode warning
+- Perfect for testing the entire update workflow
