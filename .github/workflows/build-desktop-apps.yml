@@ -2,6 +2,9 @@ name: Build Desktop Apps
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build-tauri:
@@ -145,25 +148,38 @@ jobs:
             exit 1
           fi
 
+      - name: Get version for release
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="v$(node -p "require('./package.json').version")"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Release version: $VERSION"
+
       - name: Ensure release exists
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔍 Checking if release ${{ github.ref_name }} exists..."
-          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
-            echo "✅ Release ${{ github.ref_name }} already exists"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          echo "🔍 Checking if release $VERSION exists..."
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "✅ Release $VERSION already exists"
           else
-            echo "📦 Creating release ${{ github.ref_name }}..."
-            gh release create "${{ github.ref_name }}" \
-              --title "${{ github.ref_name }} - Build ${{ github.run_number }}" \
+            echo "📦 Creating release $VERSION..."
+            gh release create "$VERSION" \
+              --title "$VERSION - Build ${{ github.run_number }}" \
               --notes "Automated release created by GitHub Actions build.${{ '\n\n' }}**Build Information:**${{ '\n' }}- Build Number: ${{ github.run_number }}${{ '\n' }}- Commit: ${{ github.sha }}${{ '\n' }}- Triggered by: ${{ github.event_name }}${{ '\n\n' }}Assets will be uploaded as builds complete on each platform.${{ '\n\n' }}🤖 Generated with [Claude Code](https://claude.ai/code)${{ '\n\n' }}Co-Authored-By: Claude <noreply@anthropic.com>"
-            echo "✅ Release ${{ github.ref_name }} created successfully"
+            echo "✅ Release $VERSION created successfully"
           fi
 
       - name: Upload macOS Universal artifacts to release
-        if: matrix.target == 'universal-apple-darwin' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.target == 'universal-apple-darwin' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -178,7 +194,7 @@ jobs:
           
           if [ -n "$DMG_FILE" ] && [ -f "$DMG_FILE" ]; then
             echo "✅ Found macOS DMG: $DMG_FILE"
-            gh release upload "${{ github.ref_name }}" "$DMG_FILE" --clobber || {
+            gh release upload "${{ steps.version.outputs.VERSION }}" "$DMG_FILE" --clobber || {
               echo "⚠️ Failed to upload macOS DMG, continuing..."
             }
           else
@@ -190,7 +206,7 @@ jobs:
               echo "✅ Found macOS app: $APP_FILE"
               APP_NAME=$(basename "$APP_FILE")
               tar -czf "${APP_NAME%.app}_macos.tar.gz" -C "$(dirname "$APP_FILE")" "$APP_NAME"
-              gh release upload "${{ github.ref_name }}" "${APP_NAME%.app}_macos.tar.gz" --clobber || {
+              gh release upload "${{ steps.version.outputs.VERSION }}" "${APP_NAME%.app}_macos.tar.gz" --clobber || {
                 echo "⚠️ Failed to upload macOS app archive, continuing..."
               }
             else
@@ -262,7 +278,7 @@ jobs:
           fi
 
       - name: Upload Linux artifacts to release
-        if: matrix.target == 'x86_64-unknown-linux-gnu' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.target == 'x86_64-unknown-linux-gnu' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -279,7 +295,7 @@ jobs:
           # Upload AppImage if found
           if [ -n "$APPIMAGE_FILE" ] && [ -f "$APPIMAGE_FILE" ]; then
             echo "✅ Found AppImage: $APPIMAGE_FILE"
-            gh release upload "${{ github.ref_name }}" "$APPIMAGE_FILE" --clobber
+            gh release upload "${{ steps.version.outputs.VERSION }}" "$APPIMAGE_FILE" --clobber
           else
             echo "⚠️ No AppImage found"
           fi
@@ -287,7 +303,7 @@ jobs:
           # Upload DEB if found
           if [ -n "$DEB_FILE" ] && [ -f "$DEB_FILE" ]; then
             echo "✅ Found DEB: $DEB_FILE"  
-            gh release upload "${{ github.ref_name }}" "$DEB_FILE" --clobber
+            gh release upload "${{ steps.version.outputs.VERSION }}" "$DEB_FILE" --clobber
           else
             echo "⚠️ No DEB file found"
           fi
@@ -299,7 +315,7 @@ jobs:
           fi
 
       - name: Upload Windows artifacts to release
-        if: matrix.target == 'x86_64-pc-windows-msvc' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.target == 'x86_64-pc-windows-msvc' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -326,7 +342,7 @@ jobs:
           
           if [ -n "$NSIS_FILE" ] && [ -f "$NSIS_FILE" ]; then
             echo "✅ Found Windows installer: $NSIS_FILE"
-            gh release upload "${{ github.ref_name }}" "$NSIS_FILE" --clobber || {
+            gh release upload "${{ steps.version.outputs.VERSION }}" "$NSIS_FILE" --clobber || {
               echo "⚠️ Failed to upload Windows installer, continuing..."
             }
           else
@@ -350,7 +366,7 @@ jobs:
   generate-updater-manifest:
     needs: build-tauri
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     
@@ -368,14 +384,26 @@ jobs:
           echo "⏳ Waiting 30 seconds for all release assets to be fully available..."
           sleep 30
 
+      - name: Get version for manifest  
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="v$(node -p "require('./package.json').version")"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Manifest version: $VERSION"
+
       - name: Generate and upload Tauri updater manifest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "📦 Generating Tauri updater manifest for ${{ github.ref_name }}..."
+          echo "📦 Generating Tauri updater manifest for ${{ steps.version.outputs.VERSION }}..."
           
           # Read version from the tag (remove 'v' prefix if present)
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ steps.version.outputs.VERSION }}"
           VERSION_NUM="${VERSION#v}"
           
           echo "Version: $VERSION_NUM"
