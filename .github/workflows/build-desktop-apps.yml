@@ -2,12 +2,6 @@ name: Build Desktop Apps
 
 on:
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: 'Create a release'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   build-tauri:
@@ -444,86 +438,3 @@ jobs:
           
           echo "✅ Updater manifest uploaded successfully"
 
-  create-release:
-    needs: build-tauri
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true'
-    permissions:
-      contents: write
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -la ./artifacts/
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Generate changelog
-        run: |
-          node scripts/generate-changelog.cjs
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add CHANGELOG.md
-          git commit -m "Update changelog for release v1.1.2-build${{ github.run_number }}" || echo "No changes to commit"
-          
-      - name: Extract changelog for release
-        id: changelog
-        run: |
-          # Extract the latest version section from CHANGELOG.md
-          CHANGELOG_SECTION=$(awk '/^## \[/{if(first){exit} first=1; print; next} first{print}' CHANGELOG.md | sed '/^$/d')
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG_SECTION" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v1.1.2-build${{ github.run_number }}
-          name: OpenSubtitles Uploader PRO v1.1.2-build${{ github.run_number }}
-          body: |
-            ${{ steps.changelog.outputs.CHANGELOG }}
-            
-            ## OpenSubtitles Uploader PRO Desktop Apps
-            
-            Native desktop applications for Windows, macOS, and Linux.
-            
-            ### Download the appropriate version for your platform:
-            
-            **Windows:**
-            - `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer
-            
-            **macOS:**
-            - `OpenSubtitles Uploader PRO_macos.tar.gz` - Universal (Intel & Apple Silicon)
-            
-            **Linux:**
-            - `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary
-            
-            ### Installation Instructions:
-            
-            **Windows:** Download and run the `.exe` setup file
-            **macOS:** Download the `.tar.gz` file, extract it, and run the app
-            **Linux:** Download the `.AppImage`, make it executable (`chmod +x *.AppImage`), then run
-            
-            ### Features:
-            - Native file system access
-            - Drag & drop support
-            - All web app features
-            - System notifications
-            - Offline capability
-            
-            Built with Tauri framework for native performance and security.
-          draft: false
-          prerelease: false
-          files: ./artifacts/desktop-app-*/**/*
