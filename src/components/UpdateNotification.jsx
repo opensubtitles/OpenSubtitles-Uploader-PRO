@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppUpdate } from '../hooks/useAppUpdate.js';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+import { getChangelogSummary } from '../utils/changelogUtils.js';
 
 /**
  * Update notification component
@@ -30,6 +31,50 @@ const UpdateNotification = () => {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+
+  // Get platform-specific download URL
+  const getPlatformDownloadUrl = () => {
+    if (!updateInfo || !updateInfo.latestVersion) return null;
+
+    const platform = navigator.platform.toLowerCase();
+    const userAgent = navigator.userAgent.toLowerCase();
+    const version = updateInfo.latestVersion;
+
+    // Determine platform
+    let platformType = 'unknown';
+    let fileExtension = '';
+    let fileName = '';
+
+    if (platform.includes('mac') || userAgent.includes('mac')) {
+      platformType = 'macOS';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_universal.dmg`;
+      fileExtension = '.dmg';
+    } else if (platform.includes('win') || userAgent.includes('windows')) {
+      platformType = 'Windows';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_x64-setup.exe`;
+      fileExtension = '.exe';
+    } else if (platform.includes('linux') || userAgent.includes('linux')) {
+      platformType = 'Linux';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_amd64.AppImage`;
+      fileExtension = '.AppImage';
+    }
+
+    const directUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v${version}/${fileName}`;
+    
+    return {
+      url: directUrl,
+      fileName,
+      platformType,
+      fileExtension
+    };
+  };
+
+  const downloadInfo = getPlatformDownloadUrl();
+
+  // Get changelog summary for what's new
+  const changelogSummary = updateInfo?.currentVersion && updateInfo?.latestVersion 
+    ? getChangelogSummary(updateInfo.currentVersion, updateInfo.latestVersion)
+    : null;
 
   // Don't show if no update available or dismissed
   if (!updateAvailable || isDismissed) {
@@ -98,10 +143,56 @@ const UpdateNotification = () => {
               <div className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-blue-700'}`}>
                 <p>Version {updateInfo?.latestVersion} is available</p>
                 <p className="text-xs mt-1">You're currently using v{updateInfo?.currentVersion}</p>
+                {changelogSummary?.hasChanges && (
+                  <p className="text-xs mt-1 text-green-400">
+                    ✨ {changelogSummary.releaseCount} new release{changelogSummary.releaseCount > 1 ? 's' : ''} with updates
+                  </p>
+                )}
                 {typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ && (
                   <p className="text-xs mt-1 font-semibold text-yellow-500">🧪 TEST MODE - Update forced for testing</p>
                 )}
-                {isExpanded && updateInfo?.releaseNotes && (
+                {isExpanded && downloadInfo && (
+                  <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
+                    <p className="text-xs font-medium mb-1">Download Info:</p>
+                    <p className="text-xs">
+                      <span className="font-medium">Platform:</span> {downloadInfo.platformType}<br/>
+                      <span className="font-medium">File:</span> {downloadInfo.fileName}<br/>
+                      <span className="font-medium">Type:</span> {downloadInfo.fileExtension === '.dmg' ? 'DMG Installer' : 
+                        downloadInfo.fileExtension === '.exe' ? 'Windows Installer' : 
+                        downloadInfo.fileExtension === '.AppImage' ? 'Linux AppImage' : 'Installer'}
+                    </p>
+                  </div>
+                )}
+                {isExpanded && changelogSummary?.hasChanges && (
+                  <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
+                    <p className="text-xs font-medium mb-2">
+                      ✨ What's New {changelogSummary.releaseCount > 1 ? `(${changelogSummary.releaseCount} releases)` : ''}:
+                    </p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {changelogSummary.releases.map((release, index) => (
+                        <div key={release.version} className={`${index > 0 ? 'pt-2 border-t border-gray-600' : ''}`}>
+                          <p className="text-xs font-medium text-blue-400 mb-1">
+                            {release.version}
+                          </p>
+                          <div className="text-xs text-gray-300 leading-relaxed">
+                            {release.body.split('\n').slice(0, 4).map((line, lineIndex) => (
+                              line.trim() && (
+                                <p key={lineIndex} className="mb-1">
+                                  {line.trim()}
+                                </p>
+                              )
+                            ))}
+                            {release.body.split('\n').length > 4 && (
+                              <p className="text-gray-500 italic">...</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {isExpanded && updateInfo?.releaseNotes && !changelogSummary?.hasChanges && (
                   <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
                     <p className="text-xs font-medium mb-1">Release Notes:</p>
                     <p className="text-xs whitespace-pre-wrap">{updateInfo.releaseNotes}</p>
@@ -133,8 +224,11 @@ const UpdateNotification = () => {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {isStandalone ? (
-            // Standalone app - show download workflow
+            // Standalone app - show download links (MANUAL DOWNLOAD MODE - no quarantine issues)
+            // TODO: When Apple Dev certificate is available, restore auto-download functionality
+            // by changing this back to the downloadUpdate button workflow below
             <>
+              {/* FUTURE AUTO-DOWNLOAD (when Apple Dev cert available):
               {!isDownloading && !downloadedFilePath && (
                 <>
                   <button
@@ -147,141 +241,62 @@ const UpdateNotification = () => {
                   >
                     📥 Download Update
                   </button>
-                  
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                      isDark
-                        ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                    }`}
-                  >
-                    {isExpanded ? 'Less Info' : 'More Info'}
-                  </button>
-                </>
-              )}
+              */}
               
+              {/* CURRENT: Direct download link for user's OS to avoid quarantine issues */}
+              {downloadInfo ? (
+                <a
+                  href={downloadInfo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                  title={`Download ${downloadInfo.fileName}`}
+                >
+                  📥 Download for {downloadInfo.platformType}
+                </a>
+              ) : (
+                <a
+                  href={updateInfo?.releaseUrl || `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  📥 Download Update
+                </a>
+              )}
+                  
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
+                  isDark
+                    ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                }`}
+              >
+                {isExpanded ? 'Less Info' : 'More Info'}
+              </button>
+              
+              {/* FUTURE: Restore download progress UI when auto-download is re-enabled
               {isDownloading && (
-                <>
-                  <div className="w-full">
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <div className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Downloading update...
-                      </div>
-                      <div className="text-xs">
-                        {downloadProgress > 0 && `${Math.round(downloadProgress)}%`}
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className={`w-full bg-gray-200 rounded-full h-2 ${isDark ? 'bg-gray-700' : ''}`}>
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                        style={{ width: `${Math.min(downloadProgress, 100)}%` }}
-                      ></div>
-                    </div>
-                    
-                    {/* Download Info */}
-                    {totalBytes > 0 && (
-                      <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {formatFileSize(downloadedBytes)} of {formatFileSize(totalBytes)}
-                      </div>
-                    )}
-                  </div>
-                </>
+                <div className="w-full">
+                  [Progress bar and download status UI]
+                </div>
               )}
               
               {downloadedFilePath && downloadedFileName && (
-                <>
-                  <div className="w-full mb-3">
-                    <div className={`text-xs ${warning ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : (isDark ? 'text-green-400' : 'text-green-700')} mb-2 flex items-center`}>
-                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        {warning ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        )}
-                      </svg>
-                      {warning ? 'Update downloaded with validation warning' : 'Update downloaded successfully!'}
-                    </div>
-                    
-                    {warning && (
-                      <div className={`text-xs ${isDark ? 'text-yellow-300' : 'text-yellow-700'} mb-2 p-2 rounded ${isDark ? 'bg-yellow-900/20' : 'bg-yellow-100'} border-l-2 ${isDark ? 'border-yellow-500' : 'border-yellow-400'}`}>
-                        ⚠️ {warning}
-                      </div>
-                    )}
-                    
-                    <div className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
-                      <div className="font-medium">{downloadedFileName}</div>
-                      {downloadedFileSize > 0 && (
-                        <div className="mt-1">
-                          <span className="font-medium">Size:</span> {formatFileSize(downloadedFileSize)}
-                        </div>
-                      )}
-                      {showPath && (
-                        <div className="mt-1">
-                          <span className="font-medium">Location:</span> 
-                          <div className={`mt-1 p-2 rounded text-xs ${isDark ? 'bg-gray-800 text-green-400' : 'bg-green-50 text-green-700'} border-l-2 ${isDark ? 'border-green-500' : 'border-green-400'}`}>
-                            📁 {downloadedFilePath}
-                            {typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ && (
-                              <div className="mt-1 text-xs opacity-75">
-                                {downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg') 
-                                  ? '✅ Real DMG installer downloaded from GitHub releases - click "Open DMG" to install'
-                                  : '✅ Real file downloaded from GitHub - buttons will work with actual file'
-                                }
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={handleOpenFile}
-                      className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                        isDark
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
-                    >
-                      {downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg') 
-                        ? '📦 Open DMG' 
-                        : '🚀 Install Now'
-                      }
-                    </button>
-                    
-                    {canReveal && (
-                      <button
-                        onClick={handleRevealFile}
-                        className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                          isDark
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
-                      >
-                        📁 Show in {navigator.platform.includes('Mac') ? 'Finder' : 'Explorer'}
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => setIsExpanded(!isExpanded)}
-                      className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                        isDark
-                          ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                      }`}
-                    >
-                      {isExpanded ? 'Less Info' : 'More Info'}
-                    </button>
-                  </div>
-                </>
+                <div className="flex flex-wrap gap-2">
+                  [Downloaded file actions: Open DMG, Reveal in Finder]
+                </div>
               )}
+              */}
             </>
           ) : (
             // Web/browser app - show download links

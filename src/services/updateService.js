@@ -114,6 +114,18 @@ const loadTauriAPIs = async () => {
 
 /**
  * Auto-update service for Tauri application
+ * 
+ * IMPORTANT: This service contains full auto-download functionality that is currently
+ * disabled to avoid macOS quarantine issues with ad-hoc signed apps. When Apple
+ * Developer certificate is available, restore the auto-download functionality by:
+ * 
+ * 1. Uncomment the downloadUpdate button workflow in UpdateNotification.jsx
+ * 2. Remove the manual download link fallback
+ * 3. Re-enable the full download progress UI
+ * 4. Update signingIdentity in tauri.conf.json to use proper Apple Dev cert
+ * 
+ * All download functionality (downloadUpdate, installDmgFile, openDownloadedFile, 
+ * revealDownloadedFile) is preserved and working - just not exposed in UI currently.
  */
 export class UpdateService {
   static instance = null;
@@ -877,6 +889,10 @@ Test completed successfully! ✅`;
 
   /**
    * Download and install update with progress tracking
+   * 
+   * NOTE: This method is fully functional but currently not used in UI to avoid
+   * macOS quarantine issues. Will be re-enabled when Apple Dev certificate is available.
+   * 
    * @returns {Promise<Object>} Download result
    */
   async downloadUpdate() {
