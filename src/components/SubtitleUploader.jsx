@@ -703,12 +703,6 @@ function SubtitleUploaderInner() {
 
   // Handle upload options update
   const handleUploadOptionsUpdate = useCallback((subtitlePath, options) => {
-    console.log(`🔧 DEBUG handleUploadOptionsUpdate called:`);
-    console.log(`   - subtitlePath: "${subtitlePath}"`);
-    console.log(`   - options:`, options);
-    console.log(`   - options.foreignpartsonly: ${options.foreignpartsonly}`);
-    console.log(`   - Previous uploadOptions:`, uploadOptions);
-    
     setUploadOptions(prev => {
       const newOptions = {
         ...prev,
@@ -717,11 +711,17 @@ function SubtitleUploaderInner() {
           ...options                     // Add/overwrite with new options
         }
       };
-      console.log(`   - New uploadOptions:`, newOptions);
+      
+      // Only log if options actually changed
+      const prevOptions = prev[subtitlePath] || {};
+      const hasChanges = Object.keys(options).some(key => prevOptions[key] !== options[key]);
+      if (hasChanges) {
+        addDebugInfo(`Upload options updated for: ${subtitlePath}`);
+      }
+      
       return newOptions;
     });
-    addDebugInfo(`Upload options updated for: ${subtitlePath}`);
-  }, [addDebugInfo, uploadOptions]);
+  }, [addDebugInfo]);
 
   // Handle orphaned subtitles FPS change
   const handleOrphanedSubtitlesFpsChange = useCallback((subtitlePath, fps) => {

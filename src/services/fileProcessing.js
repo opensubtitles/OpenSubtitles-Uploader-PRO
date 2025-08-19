@@ -28,7 +28,12 @@ export class FileProcessingService {
             entry.file(resolve, reject);
           });
         } else {
-          return;
+          // Fallback to getAsFile() for Brave browser compatibility
+          if (item.getAsFile) {
+            file = item.getAsFile();
+          } else {
+            return;
+          }
         }
       } else if (item.getAsFile) {
         file = item.getAsFile();
@@ -215,11 +220,38 @@ export class FileProcessingService {
       const items = Array.from(event.dataTransfer.items || []);
       const files = Array.from(event.dataTransfer.files || []);
       
+      
       // Process items (preferred for directory support)
       if (items.length > 0) {
-        for (const item of items) {
-          if (item.kind === 'file') {
-            await this.processFileHandle(item, collectedFiles, '', config);
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const webkitEntry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          
+          if (item.kind === 'file' || webkitEntry || item.getAsFile) {
+            try {
+              await this.processFileHandle(item, collectedFiles, '', config);
+            } catch (error) {
+              console.error(`Error processing item ${i}:`, error);
+            }
+          }
+        }
+        
+        // Check if we got fewer files than expected (Brave browser issue)
+        if (collectedFiles.length < files.length) {
+          // Process any missing files using the files array
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            // Check if this file is already in our collection
+            const alreadyCollected = collectedFiles.some(f => f.name === file.name && f.size === file.size);
+            
+            if (!alreadyCollected) {
+              try {
+                await this.processFileHandle(file, collectedFiles, '', config);
+              } catch (error) {
+                console.error(`Error processing missing file ${file.name}:`, error);
+              }
+            }
           }
         }
       } else if (files.length > 0) {
