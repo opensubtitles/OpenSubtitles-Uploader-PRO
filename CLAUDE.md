@@ -43,17 +43,20 @@ npm run tauri:build
 # 1. FIRST - Bump version using the script (REQUIRED)
 npm run update-version
 
-# 2. SECOND - Commit and tag the version bump
+# 2. SECOND - Generate changelog for this release (REQUIRED)
+npm run generate-changelog
+
+# 3. THIRD - Commit and tag the version bump
 git add .
 git commit -m "🚀 RELEASE: Version X.X.X - Description"
 git tag vX.X.X
 git push && git push --tags
 
-# 3. THIRD - Trigger builds/release ONLY after version is committed
+# 4. FOURTH - Trigger builds/release ONLY after version is committed
 gh workflow run build-desktop-apps.yml --field create_release=true
 # OR make local build: npm run tauri:build
 
-# 4. FOURTH - Create/publish GitHub release with proper version
+# 5. FIFTH - Create/publish GitHub release with proper version
 gh release create vX.X.X --title "vX.X.X - Description" --notes "..."
 ```
 

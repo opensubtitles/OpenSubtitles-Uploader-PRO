@@ -220,9 +220,14 @@ export const AdBlockerWarning = () => {
         // Full ad blocker detection for other browsers
         const result = await AdBlockerDetection.detectAdBlocker();
         console.log('🚫 Ad blocker detection result:', result);
+        console.log('ℹ️ Note: App functionality is NOT affected by ad-block detection');
         
         setBlockerInfo(result);
         setShowWarning(result.isBlocked);
+        
+        if (result.isBlocked) {
+          console.log('✅ App will continue working normally - this is informational only');
+        }
         
       } catch (error) {
         console.error('❌ Ad blocker detection error:', error);

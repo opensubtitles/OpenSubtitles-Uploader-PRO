@@ -1,11 +1,33 @@
 /**
  * Ad blocker and Brave Shield detection utility
+ * 
+ * This utility detects ad-blockers using multiple methods:
+ * 1. Bait element method (browser-only) - creates fake ad elements and checks if they're hidden
+ * 2. Network request testing - tests if API calls are blocked
+ * 3. Browser-specific detection - identifies Brave Shield, uBlock Origin, etc.
+ * 
+ * Key Features:
+ * - Only runs detection in web browsers, skips desktop apps (Tauri)
+ * - Uses non-intrusive bait element method with proper cleanup
+ * - Differentiates between ad-blockers vs network connectivity issues
+ * - Does NOT prevent app functionality - detection is informational only
+ * 
+ * Addresses Issue #1: False ad-block detection due to network restrictions
  */
 
 export class AdBlockerDetection {
   static isBlocked = false;
   static blockerType = null;
   static detectionComplete = false;
+
+  /**
+   * Check if app is running in a web browser (not Tauri desktop)
+   */
+  static isWebBrowser() {
+    return typeof window !== 'undefined' && 
+           typeof document !== 'undefined' && 
+           window.location.protocol !== 'tauri:';
+  }
 
   /**
    * Detect if ad blockers or Brave Shield are blocking requests
@@ -16,33 +38,32 @@ export class AdBlockerDetection {
     }
 
     try {
-      // Method 1: Test a known tracking URL that ad blockers typically block
-      const testUrls = [
-        'https://google-analytics.com/analytics.js',
-        'https://www.googletagmanager.com/gtm.js',
-        'https://connect.facebook.net/en_US/sdk.js'
-      ];
+      // Only run detection in web browsers, not in Tauri desktop app
+      if (!this.isWebBrowser()) {
+        console.log('🖥️ Running in desktop app - skipping ad-block detection');
+        this.detectionComplete = true;
+        return { isBlocked: false, blockerType: null };
+      }
 
+      console.log('🌐 Running in web browser - performing ad-block detection');
+
+      // Method 1: Bait element test (most reliable for browser extensions)
+      const baitElementBlocked = await this.detectWithBaitElement();
+      
       // Method 2: Check for Brave browser specifically
       const isBrave = await this.detectBrave();
       
-      // Method 3: Test actual API request with short timeout
+      // Method 3: Test actual API request with short timeout (for network issues)
       const apiBlocked = await this.testApiRequest();
 
-      // Try to fetch a test tracking script
-      let trackerBlocked = false;
-      try {
-        const response = await fetch(testUrls[0], { 
-          method: 'HEAD',
-          mode: 'no-cors',
-          timeout: 2000 
-        });
-      } catch (error) {
-        trackerBlocked = true;
-      }
+      console.log('🔍 Detection results:', {
+        baitElementBlocked,
+        isBrave,
+        apiBlocked
+      });
 
-      // Determine blocker type
-      if (apiBlocked || trackerBlocked) {
+      // Determine blocker type based on detection results
+      if (baitElementBlocked) {
         this.isBlocked = true;
         if (isBrave) {
           this.blockerType = 'Brave Shield';
@@ -53,9 +74,21 @@ export class AdBlockerDetection {
         } else {
           this.blockerType = 'Ad Blocker';
         }
+      } else if (apiBlocked) {
+        // API blocked but not bait element - likely network issue
+        this.isBlocked = true;
+        this.blockerType = 'Connection Problem';
       }
 
       this.detectionComplete = true;
+      
+      // Log the result but don't interfere with app functionality
+      console.log('🚫 Ad-block detection complete:', {
+        isBlocked: this.isBlocked,
+        blockerType: this.blockerType,
+        note: 'App will continue working normally regardless'
+      });
+
       return { isBlocked: this.isBlocked, blockerType: this.blockerType };
 
     } catch (error) {
@@ -63,6 +96,61 @@ export class AdBlockerDetection {
       this.detectionComplete = true;
       return { isBlocked: false, blockerType: null };
     }
+  }
+
+  /**
+   * Detect ad-blocker using bait element method (browser-only)
+   */
+  static async detectWithBaitElement() {
+    if (!this.isWebBrowser()) {
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      try {
+        // Create a bait element that looks like an ad
+        const bait = document.createElement('div');
+        bait.innerHTML = '&nbsp;';
+        bait.className = 'adsbox ad-banner advertisement ads google-ad';
+        bait.style.cssText = `
+          position: absolute !important;
+          left: -999px !important;
+          top: -999px !important;
+          width: 1px !important;
+          height: 1px !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        `;
+        
+        // Add to DOM
+        document.body.appendChild(bait);
+        
+        // Check if it's been blocked after a short delay
+        setTimeout(() => {
+          try {
+            const isHidden = bait.offsetHeight === 0 ||
+                           bait.offsetWidth === 0 ||
+                           getComputedStyle(bait).display === 'none' ||
+                           getComputedStyle(bait).visibility === 'hidden' ||
+                           bait.style.display === 'none';
+            
+            // Cleanup
+            if (document.body.contains(bait)) {
+              document.body.removeChild(bait);
+            }
+            
+            resolve(isHidden);
+          } catch (cleanupError) {
+            console.warn('Bait element cleanup error:', cleanupError);
+            resolve(false);
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.warn('Bait element detection failed:', error);
+        resolve(false);
+      }
+    });
   }
 
   /**
