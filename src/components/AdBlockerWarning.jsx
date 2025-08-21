@@ -205,20 +205,21 @@ export const AdBlockerWarning = () => {
         // Web browser logic (not Tauri)
         console.log('🌐 Web browser detected - checking for ad blockers');
         
-        // Quick Brave detection first
+        // Detect if Brave browser (but still run full detection)
         const isBrave = navigator.userAgent.includes('Brave') || 
                        (navigator.brave && await navigator.brave.isBrave().catch(() => false));
         
         if (isBrave) {
-          console.log('🛡️ Brave Shield detected');
-          setBlockerInfo({ isBlocked: true, blockerType: 'Brave Shield' });
-          setShowWarning(true);
-          setIsChecking(false);
-          return;
+          console.log('🛡️ Brave browser detected - testing if Shield is actually blocking...');
         }
 
-        // Full ad blocker detection for other browsers
+        // Full ad blocker detection for all browsers (including Brave)
         const result = await AdBlockerDetection.detectAdBlocker();
+        
+        // If Brave and blocking detected, specify Brave Shield as the cause
+        if (isBrave && result.isBlocked) {
+          result.blockerType = 'Brave Shield';
+        }
         console.log('🚫 Ad blocker detection result:', result);
         console.log('ℹ️ Note: App functionality is NOT affected by ad-block detection');
         

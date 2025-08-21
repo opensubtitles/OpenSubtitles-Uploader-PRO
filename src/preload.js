@@ -3,26 +3,11 @@
  * This script preloads WASM files to optimize loading time
  */
 
-// Preload FFmpeg WASM files
+// Preload FFmpeg WASM files - disabled to avoid unused preload warnings
 const preloadFFmpegWasm = () => {
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-  
-  // Create link elements for preloading
-  const preloadWasm = document.createElement('link');
-  preloadWasm.rel = 'preload';
-  preloadWasm.href = `${baseURL}/ffmpeg-core.wasm`;
-  preloadWasm.as = 'fetch';
-  preloadWasm.crossOrigin = 'anonymous';
-  document.head.appendChild(preloadWasm);
-
-  const preloadJs = document.createElement('link');
-  preloadJs.rel = 'preload';
-  preloadJs.href = `${baseURL}/ffmpeg-core.js`;
-  preloadJs.as = 'fetch';
-  preloadJs.crossOrigin = 'anonymous';
-  document.head.appendChild(preloadJs);
-
-  console.log('🔄 Preloading FFmpeg WASM files...');
+  // FFmpeg WASM preloading disabled because it's loaded on-demand
+  // and causes "unused preload" warnings in browser console
+  console.log('🔄 FFmpeg WASM preloading disabled to avoid browser warnings');
 };
 
 // Preload GuessIt WASM (if available)

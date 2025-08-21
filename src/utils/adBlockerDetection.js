@@ -63,6 +63,7 @@ export class AdBlockerDetection {
       });
 
       // Determine blocker type based on detection results
+      // Fix for Issue #1: Only show ad-blocker warnings for actual browser extension blocking
       if (baitElementBlocked) {
         this.isBlocked = true;
         if (isBrave) {
@@ -75,9 +76,11 @@ export class AdBlockerDetection {
           this.blockerType = 'Ad Blocker';
         }
       } else if (apiBlocked) {
-        // API blocked but not bait element - likely network issue
-        this.isBlocked = true;
-        this.blockerType = 'Connection Problem';
+        // API blocked but not bait element - likely network/DNS/firewall issue
+        // Issue #1 Fix: Don't show warning for network-level blocking
+        console.log('ℹ️ Network-level blocking detected (not browser ad-blocker) - no warning shown');
+        this.isBlocked = false; // Don't trigger warning for network issues
+        this.blockerType = null;
       }
 
       this.detectionComplete = true;

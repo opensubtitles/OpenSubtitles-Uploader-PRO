@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OPENSUBTITLES_COM_API_KEY, getApiHeaders } from '../utils/constants.js';
+import { AdBlockerDetection } from '../utils/adBlockerDetection.js';
 
 export const ApiHealthCheck = ({ onApiBlocked }) => {
   // IMMEDIATE Tauri detection - before any state setup
@@ -18,6 +19,8 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
   const onApiBlockedRef = useRef(onApiBlocked);
   const connectivityCheckRef = useRef(null);
   const [isMonitoringConnectivity, setIsMonitoringConnectivity] = useState(false);
+  const [showErrorWithDelay, setShowErrorWithDelay] = useState(false);
+  const errorDelayTimeoutRef = useRef(null);
 
   // Update the ref when onApiBlocked changes
   useEffect(() => {
@@ -68,6 +71,7 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
         // Re-run the full API health check after a brief delay
         setTimeout(() => {
           hasRunRef.current = false;
+          setShowErrorWithDelay(false); // Reset error display state
           checkApiHealth();
         }, 500);
       }
@@ -195,37 +199,70 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
       // Set final status based on test results
       if (!OPENSUBTITLES_COM_API_KEY) {
         setApiStatus('no-key');
+        setIsChecking(false);
       } else if (apiBlocked || adBlocked) {
         if (isTauriDetected) {
-          // For Tauri apps, treat connection issues as network problems, not ad blocker issues
-          setApiStatus('network-error');
-          if (onApiBlockedRef.current) {
-            onApiBlockedRef.current('network-error');
-          }
-          // Start connectivity monitoring to auto-hide message when connection restored
-          setTimeout(() => startConnectivityMonitoring(), 1000);
-        } else {
-          // For browsers, use existing ad blocker detection logic
-          setApiStatus('blocked');
-          if (onApiBlockedRef.current) {
-            if (isBrave && (apiBlocked || adBlocked)) {
-              onApiBlockedRef.current('Brave Shield');
-            } else {
-              onApiBlockedRef.current(apiBlocked ? 'api-blocked' : 'ad-blocked');
+          // For Tauri apps, add delay before showing network error to prevent flash
+          errorDelayTimeoutRef.current = setTimeout(() => {
+            setApiStatus('network-error');
+            setShowErrorWithDelay(true);
+            if (onApiBlockedRef.current) {
+              onApiBlockedRef.current('network-error');
             }
-          }
+            // Start connectivity monitoring to auto-hide message when connection restored
+            setTimeout(() => startConnectivityMonitoring(), 1000);
+          }, 2000); // 2 second delay before showing error
+        } else {
+          // For browsers, distinguish between network blocking vs real ad-blocker
+          console.log('🔍 Network request failed, testing if real ad-blocker or network issue...');
+          
+          // Use bait element test to distinguish (Issue #1 fix)
+          const testBaitElement = async () => {
+            try {
+              const baitBlocked = await AdBlockerDetection.detectWithBaitElement();
+              console.log('🎣 Bait element test result:', baitBlocked ? 'BLOCKED (real ad-blocker)' : 'OK (network issue)');
+              
+              if (baitBlocked) {
+                // Real ad-blocker detected - show warning
+                setApiStatus('blocked');
+                setShowErrorWithDelay(true);
+                if (onApiBlockedRef.current) {
+                  if (isBrave && (apiBlocked || adBlocked)) {
+                    onApiBlockedRef.current('Brave Shield');
+                  } else {
+                    onApiBlockedRef.current(apiBlocked ? 'api-blocked' : 'ad-blocked');
+                  }
+                }
+              } else {
+                // Network/DNS blocking (hosts file, ISP, etc.) - no warning (Issue #1 fix)
+                console.log('ℹ️ Network-level blocking detected (hosts file, DNS, ISP) - no ad-blocker warning shown');
+                setApiStatus('healthy'); // Treat as healthy, no warning shown
+                setShowErrorWithDelay(true);
+              }
+            } catch (error) {
+              console.warn('Bait element test failed, defaulting to no warning:', error);
+              setApiStatus('healthy'); // Default to no warning on error
+              setShowErrorWithDelay(true);
+            }
+          };
+          
+          testBaitElement();
         }
+        setIsChecking(false);
       } else {
         setApiStatus('healthy');
-      }
-      
-      setIsChecking(false);
+        setShowErrorWithDelay(true);
+        setIsChecking(false);
+      };
   };
 
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
       stopConnectivityMonitoring();
+      if (errorDelayTimeoutRef.current) {
+        clearTimeout(errorDelayTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -246,8 +283,8 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
     );
   }
 
-  if (apiStatus === 'healthy' || dismissed) {
-    return null; // Don't show anything if API is working or dismissed
+  if (apiStatus === 'healthy' || dismissed || (apiStatus !== 'healthy' && !showErrorWithDelay)) {
+    return null; // Don't show anything if API is working, dismissed, or error not ready to show
   }
 
   const getStatusMessage = () => {

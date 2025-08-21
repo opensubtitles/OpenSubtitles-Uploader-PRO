@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { OPENSUBTITLES_COM_API_KEY, USER_AGENT } from '../utils/constants.js';
+import { AdBlockerDetection } from '../utils/adBlockerDetection.js';
 
 export const AdBlockTestPage = () => {
   // IMMEDIATE Tauri detection - same logic as AdBlockerWarning
@@ -19,9 +20,12 @@ export const AdBlockTestPage = () => {
       { name: 'XML-RPC API', url: 'https://api.opensubtitles.org/xml-rpc', status: 'pending', error: null, time: null, category: 'api' }
     ];
     
-    // Only add ad blocker test for web browsers, not Tauri desktop apps
+    // Only add ad blocker tests for web browsers, not Tauri desktop apps
     if (!isTauriDetected) {
-      baseTests.push({ name: 'AdBlock Detection', url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', status: 'pending', error: null, time: null, category: 'adblock' });
+      baseTests.push(
+        { name: 'AdBlock Network Test', url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', status: 'pending', error: null, time: null, category: 'adblock-network' },
+        { name: 'AdBlock DOM Test', url: null, status: 'pending', error: null, time: null, category: 'adblock-dom' }
+      );
     }
     
     return baseTests;
@@ -145,6 +149,49 @@ export const AdBlockTestPage = () => {
     }
   };
 
+  const runDOMTest = async (testIndex, test) => {
+    const startTime = Date.now();
+    
+    // Set test to "testing" status
+    setTests(prev => prev.map((t, idx) => 
+      idx === testIndex ? { ...t, status: 'testing' } : t
+    ));
+    
+    try {
+      console.log('🎣 Running DOM bait element test...');
+      const baitBlocked = await AdBlockerDetection.detectWithBaitElement();
+      const endTime = Date.now();
+      
+      console.log('🎣 DOM bait element result:', baitBlocked ? 'BLOCKED (ad-blocker active)' : 'OK (no DOM blocking)');
+      
+      setTests(prev => prev.map((t, idx) => 
+        idx === testIndex ? { 
+          ...t, 
+          status: baitBlocked ? 'failed' : 'success',
+          error: baitBlocked ? 'DOM elements blocked by ad-blocker extension' : null,
+          time: endTime - startTime
+        } : t
+      ));
+      
+      return { success: !baitBlocked, blocked: baitBlocked, error: null };
+      
+    } catch (error) {
+      const endTime = Date.now();
+      console.error('🎣 DOM test failed:', error);
+      
+      setTests(prev => prev.map((t, idx) => 
+        idx === testIndex ? { 
+          ...t, 
+          status: 'failed', 
+          error: `DOM test error: ${error.message}`,
+          time: endTime - startTime
+        } : t
+      ));
+      
+      return { success: false, blocked: false, error: error.message };
+    }
+  };
+
   const runTests = async () => {
     // Prevent multiple simultaneous runs
     if (isRunning) {
@@ -181,11 +228,20 @@ export const AdBlockTestPage = () => {
     
     // Step 3: Test AdBlock (only in browser)
     if (!isTauriDetected) {
-      const adBlockTest = tests.find(t => t.category === 'adblock');
-      if (adBlockTest) {
-        const testIndex = tests.findIndex(t => t.name === adBlockTest.name);
-        console.log('🛡️ Testing AdBlock detection...');
-        await runSingleTest(testIndex, adBlockTest);
+      // Test network blocking
+      const adBlockNetworkTest = tests.find(t => t.category === 'adblock-network');
+      if (adBlockNetworkTest) {
+        const testIndex = tests.findIndex(t => t.name === adBlockNetworkTest.name);
+        console.log('🌐 Testing AdBlock network detection...');
+        await runSingleTest(testIndex, adBlockNetworkTest);
+      }
+      
+      // Test DOM blocking
+      const adBlockDOMTest = tests.find(t => t.category === 'adblock-dom');
+      if (adBlockDOMTest) {
+        const testIndex = tests.findIndex(t => t.name === adBlockDOMTest.name);
+        console.log('🎣 Testing AdBlock DOM detection...');
+        await runDOMTest(testIndex, adBlockDOMTest);
       }
     }
     
@@ -215,12 +271,14 @@ export const AdBlockTestPage = () => {
     const recs = [];
     const connectivityTest = currentTests.find(t => t.category === 'connectivity');
     const apiTests = currentTests.filter(t => t.category === 'api');
-    const adBlockTest = currentTests.find(t => t.category === 'adblock');
+    const adBlockNetworkTest = currentTests.find(t => t.category === 'adblock-network');
+    const adBlockDOMTest = currentTests.find(t => t.category === 'adblock-dom');
     
     console.log('🔍 Generating recommendations with current test statuses:', {
       connectivity: connectivityTest?.status,
       api: apiTests.map(t => `${t.name}: ${t.status}`),
-      adblock: adBlockTest?.status
+      'adblock-network': adBlockNetworkTest?.status,
+      'adblock-dom': adBlockDOMTest?.status
     });
     
     // Check connectivity first
@@ -275,19 +333,50 @@ export const AdBlockTestPage = () => {
       }
     }
     
-    // Analyze AdBlock test (browser only)
-    if (!isTauriDetected && adBlockTest) {
-      if (adBlockTest.status !== 'success') {
+    // Analyze AdBlock tests (browser only) - Issue #1 improved detection
+    if (!isTauriDetected && (adBlockNetworkTest || adBlockDOMTest)) {
+      const networkBlocked = adBlockNetworkTest?.status !== 'success';
+      const domBlocked = adBlockDOMTest?.status !== 'success';
+      
+      if (networkBlocked && domBlocked) {
+        // Both network and DOM blocked - real ad-blocker extension
         recs.push({
           type: 'adblocker',
-          title: '🛡️ Ad Blocker Confirmed',
-          description: 'An ad blocker is actively blocking advertising-related requests. This is normal but may interfere with the uploader.',
+          title: '🛡️ Ad Blocker Extension Detected',
+          description: 'A browser ad-blocker extension is actively blocking both network requests and DOM elements. This confirms real ad-blocker activity.',
           steps: [
             'For uBlock Origin: Click extension icon → click the big power button to disable for this site',
             'For Adblock Plus: Click extension icon → toggle "Enabled on this site" to OFF',
             'For Brave: Click the Shield 🛡️ icon in address bar → turn off Shields',
             'Alternative: Add "uploader.opensubtitles.org" to your blocker\'s allowlist',
             'This is just a detection test - the uploader may still work fine'
+          ]
+        });
+      } else if (networkBlocked && !domBlocked) {
+        // Network blocked but DOM works - likely hosts file, DNS, or ISP blocking
+        recs.push({
+          type: 'network-blocking',
+          title: '🌐 Network-Level Blocking Detected',
+          description: 'Network requests are blocked but DOM elements work fine. This indicates hosts file, DNS, or ISP-level blocking, not a browser ad-blocker.',
+          steps: [
+            'Check your hosts file for blocked domains (usually in /etc/hosts or C:\\Windows\\System32\\drivers\\etc\\hosts)',
+            'Check if your ISP or corporate network blocks advertising domains',
+            'Try using a different DNS server (8.8.8.8 or 1.1.1.1)',
+            'This type of blocking usually doesn\'t affect the uploader functionality',
+            'No browser extension changes needed - this is network-level blocking'
+          ]
+        });
+      } else if (!networkBlocked && domBlocked) {
+        // Unusual case - DOM blocked but network works
+        recs.push({
+          type: 'dom-only-blocking',
+          title: '🎭 DOM-Only Blocking Detected',
+          description: 'Network requests work but DOM elements are being hidden. This is unusual and may indicate a lightweight ad-blocker or custom CSS rules.',
+          steps: [
+            'Check for browser extensions that modify page appearance',
+            'Look for custom CSS or userscripts that hide ad-like elements',
+            'Try disabling browser extensions one by one to identify the cause',
+            'This type of blocking is rare and may not affect uploader functionality'
           ]
         });
       }
@@ -317,7 +406,8 @@ export const AdBlockTestPage = () => {
         steps: [
           'Internet connectivity: ✅ Working',
           'OpenSubtitles APIs: ✅ Accessible',
-          !isTauriDetected && adBlockTest ? `Ad blocker test: ${adBlockTest.status === 'success' ? '✅ No blocking detected' : '⚠️ Some blocking detected (may not affect uploader)'}` : '✅ Desktop app (no ad blocker concerns)',
+          !isTauriDetected && adBlockNetworkTest ? `Network blocking test: ${adBlockNetworkTest.status === 'success' ? '✅ No network blocking' : '⚠️ Network blocked (hosts/DNS/ISP)'}` : '✅ Desktop app (no network concerns)',
+          !isTauriDetected && adBlockDOMTest ? `DOM blocking test: ${adBlockDOMTest.status === 'success' ? '✅ No DOM blocking' : '⚠️ DOM elements hidden'}` : '✅ Desktop app (no DOM concerns)',
           '📤 Ready to upload subtitles!'
         ].filter(Boolean),
         showUploaderLink: true

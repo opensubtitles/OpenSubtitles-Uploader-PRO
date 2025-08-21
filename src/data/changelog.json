@@ -1,8 +1,63 @@
 {
-  "generated_at": "2025-08-12T00:25:37.103Z",
+  "generated_at": "2025-08-21T21:09:12.778Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.7.3",
+      "name": "v1.7.3 - Build 182",
+      "published_at": "2025-08-12T01:14:55Z",
+      "body": "Automated release created by GitHub Actions build.\\n\\n**Build Information:**\\n- Build Number: 182\\n- Commit: d7c5afd2971fec534ee8e690a837a59118202acd\\n- Triggered by: push\\n\\nAssets will be uploaded as builds complete on each platform.\\n\\n🤖 Generated with [Claude Code](https://claude.ai/code)\\n\\nCo-Authored-By: Claude <noreply@anthropic.com>",
+      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.7.3",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/latest.json",
+          "size": 1157
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.2_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.2_amd64.AppImage",
+          "size": 91858112
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.2_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.2_amd64.deb",
+          "size": 7383412
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.2_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.2_universal.dmg",
+          "size": 14104107
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.2_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.2_x64-setup.exe",
+          "size": 4718889
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.3_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.3_amd64.AppImage",
+          "size": 91862208
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.3_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.3_amd64.deb",
+          "size": 7385536
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.3_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.3_universal.dmg",
+          "size": 14097447
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.7.3_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.3_x64-setup.exe",
+          "size": 4721132
+        }
+      ]
+    },
     {
       "version": "v1.7.1",
       "name": "v1.7.1 - Fixed GitHub Actions Workflow",
@@ -470,41 +525,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.6.9_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.9/OpenSubtitles.Uploader.PRO_1.6.9_x64-setup.exe",
           "size": 4646246
-        }
-      ]
-    },
-    {
-      "version": "v1.1.2-build154",
-      "name": "OpenSubtitles Uploader PRO v1.1.2-build154",
-      "published_at": "2025-08-10T01:30:48Z",
-      "body": "## [1.6.10] - 2025-08-10\n### Changed\n- 🚀 RELEASE: Version 1.6.10\n\n## OpenSubtitles Uploader PRO Desktop Apps\n\nNative desktop applications for Windows, macOS, and Linux.\n\n### Download the appropriate version for your platform:\n\n**Windows:**\n- `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer\n\n**macOS:**\n- `OpenSubtitles Uploader PRO_macos.tar.gz` - Universal (Intel & Apple Silicon)\n\n**Linux:**\n- `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary\n\n### Installation Instructions:\n\n**Windows:** Download and run the `.exe` setup file\n**macOS:** Download the `.tar.gz` file, extract it, and run the app\n**Linux:** Download the `.AppImage`, make it executable (`chmod +x *.AppImage`), then run\n\n### Features:\n- Native file system access\n- Drag & drop support\n- All web app features\n- System notifications\n- Offline capability\n\nBuilt with Tauri framework for native performance and security.\n",
-      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.1.2-build154",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "bundle_dmg.sh",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build154/bundle_dmg.sh",
-          "size": 19300
-        },
-        {
-          "name": "eula-resources-template.xml",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build154/eula-resources-template.xml",
-          "size": 2376
-        },
-        {
-          "name": "icon.icns",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build154/icon.icns",
-          "size": 24079
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.6.10_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build154/OpenSubtitles.Uploader.PRO_1.6.10_universal.dmg",
-          "size": 13925857
-        },
-        {
-          "name": "template.applescript",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build154/template.applescript",
-          "size": 1828
         }
       ]
     }
