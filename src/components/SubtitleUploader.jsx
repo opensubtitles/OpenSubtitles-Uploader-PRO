@@ -2234,6 +2234,7 @@ function SubtitleUploaderInner() {
             getHashCheckSummary={getHashCheckSummary}
             colors={colors}
             isDark={isDark}
+            userInfo={userInfo}
           />
           </div>
         )}

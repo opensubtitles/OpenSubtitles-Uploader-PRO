@@ -67,6 +67,42 @@ class AuthService {
         console.log('🎖️ Rank:', this.userData.UserRank || 'User');
         console.log('🎯 Token stored');
 
+        // Fetch additional user info via getUserInfo to get complete profile data
+        try {
+          console.log('📋 Fetching additional user info via getUserInfo...');
+          const { UserService } = await import('./userService.js');
+          const detailedUserInfo = await UserService.getUserInfo(this.token);
+          
+          if (detailedUserInfo) {
+            // Prioritize getUserInfo data over login data - use getUserInfo as primary source
+            this.userData = { ...detailedUserInfo, ...this.userData };
+            
+            // Validate user rank permissions
+            const uploadPermission = UserService.canUserUpload(this.userData);
+            console.log('🎖️ Upload permission check:', uploadPermission);
+            
+            // Store rank validation result
+            this.userData._rankValidation = uploadPermission.rankValidation;
+            this.userData._canUpload = uploadPermission.canUpload;
+            this.userData._uploadRestrictionReason = uploadPermission.reason;
+            
+            // Update localStorage with enhanced user data (getUserInfo priority)
+            localStorage.setItem('opensubtitles_user_data', JSON.stringify(this.userData));
+            
+            console.log('✅ Enhanced user info retrieved via getUserInfo (using as primary data source)');
+            console.log('📋 Enhanced user data:', this.userData);
+            
+            if (!uploadPermission.canUpload) {
+              console.log('⚠️ User login successful but upload access restricted:', uploadPermission.reason);
+            }
+          } else {
+            console.log('⚠️ getUserInfo failed or returned no data, using login data only');
+          }
+        } catch (getUserInfoError) {
+          console.warn('⚠️ getUserInfo call failed after login:', getUserInfoError.message);
+          console.log('📝 Continuing with basic login data only');
+        }
+
         return {
           success: true,
           token: this.token,
@@ -86,7 +122,7 @@ class AuthService {
       console.error('❌ Error stack:', error.stack);
       
       // Clear any existing authentication data
-      this.clearAuthData();
+      await this.clearAuthData();
       
       return {
         success: false,
@@ -126,7 +162,7 @@ class AuthService {
       }
 
       // Clear authentication data regardless of API response
-      this.clearAuthData();
+      await this.clearAuthData();
 
       console.log('✅ Logout successful');
       return {
@@ -137,7 +173,7 @@ class AuthService {
       console.error('❌ Logout failed:', error);
       
       // Clear auth data even if logout API call failed
-      this.clearAuthData();
+      await this.clearAuthData();
       
       return {
         success: false,
@@ -160,30 +196,28 @@ class AuthService {
       const tokenToUse = sessionId || this.token || '';
       console.log('🔐 Using token:', tokenToUse ? tokenToUse.substring(0, 10) + '...' : 'null');
       
-      const response = await xmlrpcCall('GetUserInfo', [tokenToUse]);
-      console.log('🔐 GetUserInfo response:', response);
-      console.log('🔐 Response status:', response?.status);
-      console.log('🔐 Response data keys:', response?.data ? Object.keys(response.data) : 'no data');
+      // Use UserService caching for GetUserInfo calls
+      const { UserService } = await import('./userService.js');
+      const userData = await UserService.getUserInfo(tokenToUse);
       
-      if (response && response.status && response.status.includes('200') && response.data) {
+      if (userData) {
         console.log('✅ User is authenticated via session ID');
-        console.log('✅ User data:', response.data);
+        console.log('✅ User data:', userData);
         
         // Store the valid session data
         this.token = tokenToUse;
         this.isAuthenticated = true;
-        this.userData = response.data;
+        this.userData = userData;
         
-        return response.data;
+        return userData;
       } else {
         console.log('❌ User is not authenticated');
-        console.log('❌ Response status:', response?.status);
-        this.clearAuthData();
+        await this.clearAuthData();
         return null;
       }
     } catch (error) {
       console.log('❌ Authentication check failed:', error.message);
-      this.clearAuthData();
+      await this.clearAuthData();
       return null;
     }
   }
@@ -231,9 +265,9 @@ class AuthService {
 
   /**
    * Restore authentication from localStorage
-   * @returns {boolean} True if authentication was restored
+   * @returns {Promise<boolean>} True if authentication was restored
    */
-  restoreAuthFromStorage() {
+  async restoreAuthFromStorage() {
     try {
       const token = localStorage.getItem('opensubtitles_token');
       const userData = localStorage.getItem('opensubtitles_user_data');
@@ -256,12 +290,12 @@ class AuthService {
           return true;
         } else {
           console.log('🕐 Stored token expired, clearing...');
-          this.clearAuthData();
+          await this.clearAuthData();
         }
       }
     } catch (error) {
       console.error('❌ Failed to restore authentication:', error);
-      this.clearAuthData();
+      await this.clearAuthData();
     }
     return false;
   }
@@ -269,7 +303,7 @@ class AuthService {
   /**
    * Clear all authentication data
    */
-  clearAuthData() {
+  async clearAuthData() {
     this.token = null;
     this.userData = null;
     this.isAuthenticated = false;
@@ -278,6 +312,14 @@ class AuthService {
     localStorage.removeItem('opensubtitles_token');
     localStorage.removeItem('opensubtitles_user_data');
     localStorage.removeItem('opensubtitles_login_time');
+    
+    // Clear UserService cache when auth data is cleared (avoid circular import)
+    try {
+      const { UserService } = await import('./userService.js');
+      UserService.clearUserInfoCache();
+    } catch (error) {
+      console.warn('⚠️ Could not clear UserService cache:', error.message);
+    }
   }
 
   /**
@@ -295,7 +337,9 @@ class AuthService {
 // Create singleton instance
 const authService = new AuthService();
 
-// Try to restore authentication on module load
-authService.restoreAuthFromStorage();
+// Try to restore authentication on module load (async)
+authService.restoreAuthFromStorage().catch(error => {
+  console.warn('⚠️ Failed to restore authentication on module load:', error.message);
+});
 
 export default authService;

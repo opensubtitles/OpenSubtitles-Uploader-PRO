@@ -122,6 +122,30 @@ const UpdateNotification = () => {
     setIsDismissed(true);
   };
 
+  const handleMoreInfo = () => {
+    // Open GitHub release page in browser
+    const releaseUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`;
+    
+    if (typeof window !== 'undefined') {
+      // For both standalone and web apps, open in external browser
+      if (window.__TAURI__) {
+        // Tauri app - open in external browser using Tauri v2 plugin
+        import('@tauri-apps/plugin-shell').then(({ open }) => {
+          open(releaseUrl);
+        }).catch((error) => {
+          console.warn('Failed to open external browser via Tauri shell, falling back to window.open:', error);
+          window.open(releaseUrl, '_blank', 'noopener,noreferrer');
+        });
+      } else {
+        // Web app - open in new tab
+        window.open(releaseUrl, '_blank', 'noopener,noreferrer');
+      }
+    }
+    
+    // Also expand the notification to show details
+    setIsExpanded(true);
+  };
+
   return (
     <div className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg border ${
       isDark 
@@ -274,14 +298,15 @@ const UpdateNotification = () => {
               )}
                   
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleMoreInfo}
                 className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
                   isDark
                     ? 'bg-gray-600 hover:bg-gray-700 text-white'
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
                 }`}
+                title={`View release notes for v${updateInfo?.latestVersion} on GitHub`}
               >
-                {isExpanded ? 'Less Info' : 'More Info'}
+                More Info
               </button>
               
               {/* FUTURE: Restore download progress UI when auto-download is re-enabled
@@ -317,14 +342,15 @@ const UpdateNotification = () => {
               )}
               
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleMoreInfo}
                 className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
                   isDark
                     ? 'bg-gray-600 hover:bg-gray-700 text-white'
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
                 }`}
+                title={`View release notes for v${updateInfo?.latestVersion} on GitHub`}
               >
-                {isExpanded ? 'Less Info' : 'More Info'}
+                More Info
               </button>
             </>
           )}

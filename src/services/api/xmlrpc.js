@@ -405,11 +405,13 @@ export class XmlRpcService {
     try {
       const token = this.getAuthToken();
       
+      
       const xmlRpcBody = `<?xml version="1.0"?>
 <methodCall>
   <methodName>GetUserInfo</methodName>
   <params>
     <param><value><string>${token}</string></value></param>
+    <param><value><string>1</string></value></param>
   </params>
 </methodCall>`;
 
@@ -428,6 +430,7 @@ export class XmlRpcService {
       }
 
       const xmlText = await response.text();
+      
       const xmlDoc = this.parseXmlRpcResponse(xmlText);
       
       // Parse response
@@ -435,12 +438,14 @@ export class XmlRpcService {
       if (responseStruct) {
         const result = this.extractStructData(responseStruct);
         
+        
         if (result.status === '200 OK' && result.data) {
           return result.data;
         } else if (result.status && result.status.includes('401')) {
           // Handle 401 Unauthorized gracefully - user isn't logged in
           return null;
         } else {
+          console.log('❌ GetUserInfo: Failed with status:', result.status);
           throw new Error(`GetUserInfo failed: ${result.status || 'Unknown error'}`);
         }
       }
@@ -1074,8 +1079,6 @@ export class XmlRpcService {
    */
   static async xmlrpcCall(methodName, params) {
     try {
-      console.log(`🌐 ${methodName}: Starting network request...`);
-      console.log(`🌐 ${methodName}: URL: ${API_ENDPOINTS.OPENSUBTITLES_XMLRPC}`);
       
       // Build XML-RPC body
       const paramsXml = params.map(param => {
@@ -1097,8 +1100,6 @@ export class XmlRpcService {
 </methodCall>`;
 
       const headers = getApiHeaders('text/xml');
-      console.log(`🌐 ${methodName}: Headers:`, headers);
-      console.log(`🌐 ${methodName}: Body length: ${xmlRpcBody.length} chars`);
 
       const response = await delayedFetch(API_ENDPOINTS.OPENSUBTITLES_XMLRPC, {
         method: 'POST',
@@ -1106,9 +1107,6 @@ export class XmlRpcService {
         body: xmlRpcBody,
       });
 
-      console.log(`🌐 ${methodName}: Response received`);
-      console.log(`🌐 ${methodName}: Status: ${response.status} ${response.statusText}`);
-      console.log(`🌐 ${methodName}: Headers:`, Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         console.error(`❌ ${methodName}: Request failed with status: ${response.status} ${response.statusText}`);
@@ -1116,10 +1114,8 @@ export class XmlRpcService {
       }
 
       const xmlText = await response.text();
-      console.log(`🌐 ${methodName}: XML response length: ${xmlText.length} chars`);
       
       const xmlDoc = this.parseXmlRpcResponse(xmlText);
-      console.log(`✅ ${methodName}: Parsed response successfully`);
       
       // Parse response
       const responseStruct = xmlDoc.querySelector('methodResponse param value struct');

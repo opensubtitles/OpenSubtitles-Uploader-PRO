@@ -1,4 +1,5 @@
 import React from 'react';
+import { UserService } from '../services/userService.js';
 
 export const UploadButton = ({
   pairedFiles,
@@ -15,7 +16,8 @@ export const UploadButton = ({
   hashCheckProcessed,
   getHashCheckSummary,
   colors,
-  isDark
+  isDark,
+  userInfo
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -36,6 +38,16 @@ export const UploadButton = ({
     const errors = [];
     const warnings = [];
     let readySubtitlesCount = 0;
+
+    // Check user rank permissions first
+    const uploadPermission = userInfo ? UserService.canUserUpload(userInfo) : null;
+    if (!uploadPermission || !uploadPermission.canUpload) {
+      errors.push({
+        type: 'rank_restriction',
+        message: uploadPermission?.reason || 'User rank validation failed'
+      });
+      return { errors, warnings, readySubtitlesCount: 0 };
+    }
 
     // Group enabled subtitles by video file
     const videoGroups = new Map();
