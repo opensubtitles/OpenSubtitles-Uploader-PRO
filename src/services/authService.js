@@ -1,5 +1,6 @@
 import { xmlrpcCall } from './api/xmlrpc.js';
 import { APP_VERSION } from '../utils/constants.js';
+import { logSensitiveData } from '../utils/securityUtils.js';
 
 /**
  * Authentication service for OpenSubtitles XML-RPC API
@@ -54,7 +55,7 @@ class AuthService {
         this.userData = response.data || {};
         this.isAuthenticated = true;
 
-        console.log('🔐 Token received:', this.token ? `${this.token.substring(0, 10)}...` : 'null');
+        logSensitiveData('🔐 Token received', this.token, 'token');
         console.log('🔐 User data received:', this.userData);
 
         // Store in localStorage for persistence
@@ -194,7 +195,7 @@ class AuthService {
       
       // Use provided sessionId or stored token
       const tokenToUse = sessionId || this.token || '';
-      console.log('🔐 Using token:', tokenToUse ? tokenToUse.substring(0, 10) + '...' : 'null');
+      logSensitiveData('🔐 Using token', tokenToUse, 'token');
       
       // Use UserService caching for GetUserInfo calls
       const { UserService } = await import('./userService.js');

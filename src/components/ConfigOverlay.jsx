@@ -11,6 +11,7 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
   const dropdownRef = useRef(null);
   const fpsDropdownRef = useRef(null);
 
+
   // FPS options for dropdown
   const fpsOptions = [
     { value: '', label: 'Select FPS' },
@@ -78,6 +79,21 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
 
   const handleLanguageSearch = (searchTerm) => {
     setLanguageSearch(searchTerm);
+  };
+
+  // Handle reset config to defaults
+  const handleResetConfig = () => {
+    const defaultConfig = {
+      defaultLanguage: '',
+      defaultFps: '',
+      globalComment: '',
+      defaultTranslator: '',
+      uploadOptionsExpanded: true,
+      extractMkvSubtitles: true,
+      uploadMovieHashOnly: false
+    };
+    setLocalConfig(defaultConfig);
+    onConfigChange(defaultConfig);
   };
 
   // Get the current language display
@@ -559,6 +575,38 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
                 <span>All subtitles will be pre-filled with "{localConfig.defaultTranslator}"</span>
               </div>
             )}
+          </div>
+          
+          {/* Minimal separator line */}
+          <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
+          
+          {/* Configuration Actions */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium" style={{ color: colors.text }}>
+              Configuration Actions
+            </label>
+            <p className="text-xs" style={{ color: colors.textSecondary }}>
+              Reset all settings to their default values
+            </p>
+            
+            {/* Reset Config Button */}
+            <button
+              onClick={handleResetConfig}
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              style={{
+                backgroundColor: colors.error + '20',
+                color: colors.error,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = colors.error + '30';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = colors.error + '20';
+              }}
+              title="Reset all settings to default values"
+            >
+              Reset Config
+            </button>
           </div>
           
             </>

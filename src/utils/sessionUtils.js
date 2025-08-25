@@ -6,6 +6,8 @@
  * between different parts of the application.
  */
 
+import { logSensitiveData } from './securityUtils.js';
+
 /**
  * Utility to safely read cookies
  * @param {string} name - Cookie name to read
@@ -97,7 +99,7 @@ export const detectSession = () => {
   if (urlSid) {
     result.sessionId = urlSid;
     result.source = SessionSource.URL_PARAMETER;
-    console.log('🔍 Session detected from URL parameter:', result.debug.urlSid);
+    logSensitiveData('🔍 Session detected from URL parameter', urlSid, 'session');
     return result;
   }
 
@@ -108,7 +110,7 @@ export const detectSession = () => {
   if (storedToken) {
     result.sessionId = storedToken;
     result.source = SessionSource.STORED_TOKEN;
-    console.log('🔍 Session detected from stored token:', result.debug.storedToken);
+    logSensitiveData('🔍 Session detected from stored token', storedToken, 'session');
     return result;
   }
 
@@ -119,7 +121,7 @@ export const detectSession = () => {
   if (rememberSid) {
     result.sessionId = rememberSid;
     result.source = SessionSource.REMEMBER_SID_COOKIE;
-    console.log('🔍 Session detected from remember_sid cookie:', result.debug.rememberSid);
+    logSensitiveData('🔍 Session detected from remember_sid cookie', rememberSid, 'session');
     return result;
   }
 
@@ -130,7 +132,7 @@ export const detectSession = () => {
   if (phpSessId) {
     result.sessionId = phpSessId;
     result.source = SessionSource.PHPSESSID_COOKIE;
-    console.log('🔍 Session detected from PHPSESSID cookie:', result.debug.phpSessId);
+    logSensitiveData('🔍 Session detected from PHPSESSID cookie', phpSessId, 'session');
     return result;
   }
 
@@ -183,7 +185,7 @@ export const logSessionDetection = (context = 'Unknown') => {
   
   // Only log session detection if a session was found
   if (info.sessionId && info.sessionId !== 'none') {
-    console.log(`🔍 Session detected from ${info.source}: ${info.sessionId.substring(0, 10)}...`);
+    logSensitiveData(`🔍 Session detected from ${info.source}`, info.sessionId, 'session');
   }
   
   return info;

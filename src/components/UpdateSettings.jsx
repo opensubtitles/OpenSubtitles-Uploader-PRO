@@ -12,14 +12,11 @@ const UpdateSettings = () => {
     updateAvailable,
     updateInfo,
     isChecking,
-    isInstalling,
     error,
     lastChecked,
     autoCheckEnabled,
     currentVersion,
     checkForUpdates,
-    installUpdate,
-    restartApp,
     startAutoUpdates,
     stopAutoUpdates,
     clearUpdateCache,
@@ -35,10 +32,58 @@ const UpdateSettings = () => {
     await checkForUpdates(true); // Force check
   };
 
-  const handleInstallUpdate = async () => {
-    const result = await installUpdate();
-    if (result.success) {
-      console.log('✅ Update installed successfully');
+  // Get platform-specific download URL (same as UpdateNotification popup)
+  const getPlatformDownloadUrl = () => {
+    if (!updateInfo || !updateInfo.latestVersion) return null;
+
+    const platform = navigator.platform.toLowerCase();
+    const userAgent = navigator.userAgent.toLowerCase();
+    const version = updateInfo.latestVersion;
+
+    // Determine platform
+    let platformType = 'unknown';
+    let fileName = '';
+
+    if (platform.includes('mac') || userAgent.includes('mac')) {
+      platformType = 'macOS';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_universal.dmg`;
+    } else if (platform.includes('win') || userAgent.includes('windows')) {
+      platformType = 'Windows';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_x64-setup.exe`;
+    } else if (platform.includes('linux') || userAgent.includes('linux')) {
+      platformType = 'Linux';
+      fileName = `OpenSubtitles.Uploader.PRO_${version}_amd64.AppImage`;
+    }
+
+    const directUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v${version}/${fileName}`;
+    
+    return {
+      url: directUrl,
+      fileName,
+      platformType
+    };
+  };
+
+  const downloadInfo = getPlatformDownloadUrl();
+
+  const handleMoreInfo = () => {
+    // Open GitHub release page in browser (same as UpdateNotification popup)
+    const releaseUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`;
+    
+    if (typeof window !== 'undefined') {
+      // For both standalone and web apps, open in external browser
+      if (window.__TAURI__) {
+        // Tauri app - open in external browser using Tauri v2 plugin
+        import('@tauri-apps/plugin-shell').then(({ open }) => {
+          open(releaseUrl);
+        }).catch((error) => {
+          console.warn('Failed to open external browser via Tauri shell, falling back to window.open:', error);
+          window.open(releaseUrl, '_blank', 'noopener,noreferrer');
+        });
+      } else {
+        // Web app - open in new tab
+        window.open(releaseUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -164,29 +209,48 @@ const UpdateSettings = () => {
           )}
         </button>
 
-        {updateAvailable && !isInstalling && (
-          <button
-            onClick={handleInstallUpdate}
-            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+        {updateAvailable && downloadInfo && (
+          <a
+            href={downloadInfo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors inline-block ${
+              isDark 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+            title={`Download ${downloadInfo.fileName} for ${downloadInfo.platformType}`}
+          >
+            Download Update
+          </a>
+        )}
+
+        {updateAvailable && !downloadInfo && (
+          <a
+            href={updateInfo?.releaseUrl || `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors inline-block ${
               isDark 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-green-600 hover:bg-green-700 text-white'
             }`}
           >
-            Install Update
-          </button>
+            Download Update
+          </a>
         )}
 
-        {isInstalling && (
+        {updateAvailable && (
           <button
-            onClick={restartApp}
+            onClick={handleMoreInfo}
             className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
               isDark 
-                ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                : 'bg-gray-400 hover:bg-gray-500 text-white'
             }`}
+            title={`View release notes for v${updateInfo?.latestVersion} on GitHub`}
           >
-            Restart App
+            More Info
           </button>
         )}
 
@@ -198,7 +262,7 @@ const UpdateSettings = () => {
               : 'bg-gray-400 hover:bg-gray-500 text-white'
           }`}
         >
-          Clear Cache
+          Clear Update Check
         </button>
       </div>
 

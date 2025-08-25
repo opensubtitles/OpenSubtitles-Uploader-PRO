@@ -583,11 +583,19 @@ export class SubtitleUploadService {
         foreignpartsonly: subtitleFeatures.foreignpartsonly === '1' || videoFeatures.foreignpartsonly === '1' ? '1' : '0'
       };
       
-      // Consistent logic for all features: prioritize auto-detected '1' values over manual '0' values
-      // This ensures consistent behavior between paired and orphaned subtitles
-      const finalHigdefinition = autoDetectedFeatures.highdefinition === '1' ? '1' : (subtitleOptions.highdefinition || '0');
-      const finalHearingimpaired = autoDetectedFeatures.hearingimpaired === '1' ? '1' : (subtitleOptions.hearingimpaired || '0');
-      const finalForeignpartsonly = autoDetectedFeatures.foreignpartsonly === '1' ? '1' : (subtitleOptions.foreignpartsonly || '0');
+      // CRITICAL FIX: User's explicit UI choice should ALWAYS override auto-detection
+      // This ensures users upload exactly what they see on screen (paired subtitles)
+      const finalHigdefinition = subtitleOptions.highdefinition !== undefined ? subtitleOptions.highdefinition : (autoDetectedFeatures.highdefinition || '0');
+      const finalHearingimpaired = subtitleOptions.hearingimpaired !== undefined ? subtitleOptions.hearingimpaired : (autoDetectedFeatures.hearingimpaired || '0');
+      const finalForeignpartsonly = subtitleOptions.foreignpartsonly !== undefined ? subtitleOptions.foreignpartsonly : (autoDetectedFeatures.foreignpartsonly || '0');
+      
+      // Debug logging for feature selection
+      if (addDebugInfo) {
+        addDebugInfo(`🔍 Feature Decision (Paired):`);
+        addDebugInfo(`   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`);
+        addDebugInfo(`   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`);
+        addDebugInfo(`   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`);
+      }
       
       // Prepare baseinfo section
       const baseinfo = {
@@ -782,11 +790,19 @@ export class SubtitleUploadService {
       const autoDetectedFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
       
       
-      // Consistent logic for all features: prioritize auto-detected '1' values over manual '0' values
-      // This ensures consistent behavior between paired and orphaned subtitles
-      const finalHigdefinition = autoDetectedFeatures.highdefinition === '1' ? '1' : (subtitleOptions.highdefinition || '0');
-      const finalHearingimpaired = autoDetectedFeatures.hearingimpaired === '1' ? '1' : (subtitleOptions.hearingimpaired || '0');
-      const finalForeignpartsonly = autoDetectedFeatures.foreignpartsonly === '1' ? '1' : (subtitleOptions.foreignpartsonly || '0');
+      // CRITICAL FIX: User's explicit UI choice should ALWAYS override auto-detection
+      // This ensures users upload exactly what they see on screen (orphaned subtitles)
+      const finalHigdefinition = subtitleOptions.highdefinition !== undefined ? subtitleOptions.highdefinition : (autoDetectedFeatures.highdefinition || '0');
+      const finalHearingimpaired = subtitleOptions.hearingimpaired !== undefined ? subtitleOptions.hearingimpaired : (autoDetectedFeatures.hearingimpaired || '0');
+      const finalForeignpartsonly = subtitleOptions.foreignpartsonly !== undefined ? subtitleOptions.foreignpartsonly : (autoDetectedFeatures.foreignpartsonly || '0');
+      
+      // Debug logging for feature selection
+      if (addDebugInfo) {
+        addDebugInfo(`🔍 Feature Decision (Orphaned):`);
+        addDebugInfo(`   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`);
+        addDebugInfo(`   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`);
+        addDebugInfo(`   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`);
+      }
       
       // Prepare baseinfo section (only include fields we can determine for orphaned subtitles)
       const baseinfo = {

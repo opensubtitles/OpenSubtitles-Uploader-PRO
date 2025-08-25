@@ -158,3 +158,48 @@ In debug builds, all command line parameters are logged to:
 - Creates a test file in temp directory
 - Displays Install/Reveal buttons with test mode warning
 - Perfect for testing the entire update workflow
+
+## Security Guidelines
+
+### 🔒 CRITICAL: Token and Session Security
+
+**NEVER log tokens, session IDs, or any authentication data in plain text!**
+
+```javascript
+// ❌ NEVER DO THIS - Security vulnerability
+console.log('Token:', token.substring(0, 10) + '...'); // Still exposes partial token!
+console.log('Session ID:', sessionId); // Exposes full session ID!
+
+// ✅ ALWAYS USE SECURITY UTILITY
+import { logSensitiveData } from '../utils/securityUtils.js';
+logSensitiveData('🔐 Token received', token, 'token'); // Shows: [HIDDEN]
+```
+
+**Security Rules:**
+1. **ALWAYS use `logSensitiveData()`** from `securityUtils.js` for any authentication data
+2. **NEVER show partial tokens** (even `token.substring(0, 5)` is a vulnerability)
+3. **NEVER log session IDs, cookies, or authentication headers** in plain text
+4. **Use `[HIDDEN]` replacement** for all sensitive data in logs
+5. **Audit all console.log statements** to ensure no token leakage
+
+**Approved Security Functions:**
+```javascript
+// Import the security utility
+import { logSensitiveData, hideSensitiveData, createSafeDebugObject } from '../utils/securityUtils.js';
+
+// Safe logging
+logSensitiveData('🔐 Using token', token, 'token');           // [HIDDEN]
+logSensitiveData('🔍 Session found', sessionId, 'session');   // [HIDDEN]
+
+// Safe string formatting
+const safeToken = hideSensitiveData(token, 'token');          // [HIDDEN]
+
+// Safe debug objects
+const safeDebug = createSafeDebugObject(userData, ['token', 'sessionId']);
+```
+
+**Why This Matters:**
+- Tokens in logs can be extracted and used maliciously
+- Browser console logs are visible to anyone with developer tools access
+- Log files should be safe to share for debugging without exposing credentials
+- Compliance with security standards requires protecting authentication data

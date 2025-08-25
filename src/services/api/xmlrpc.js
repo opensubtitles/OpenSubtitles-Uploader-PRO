@@ -4,6 +4,7 @@ import { retryAsync } from '../../utils/retryUtils.js';
 import { delayedFetch } from '../../utils/networkUtils.js';
 import authService from '../authService.js';
 import { detectSession, logSessionDetection } from '../../utils/sessionUtils.js';
+import { logSensitiveData } from '../../utils/securityUtils.js';
 
 /**
  * OpenSubtitles XML-RPC API service
@@ -19,7 +20,7 @@ export class XmlRpcService {
     const sessionDetection = logSessionDetection('XML-RPC Service');
     
     if (sessionDetection.sessionId) {
-      console.log(`🔑 XML-RPC: ✅ Using session from ${sessionDetection.source}: ${sessionDetection.sessionId.substring(0, 10)}...`);
+      logSensitiveData(`🔑 XML-RPC: ✅ Using session from ${sessionDetection.source}`, sessionDetection.sessionId, 'session');
       return sessionDetection.sessionId;
     }
     

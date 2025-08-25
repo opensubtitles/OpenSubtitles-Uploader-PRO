@@ -1,6 +1,7 @@
 import { XmlRpcService } from './api/xmlrpc.js';
 import authService from './authService.js';
 import { detectSession, logSessionDetection } from '../utils/sessionUtils.js';
+import { logSensitiveData } from '../utils/securityUtils.js';
 
 /**
  * User session service for OpenSubtitles authentication
@@ -19,7 +20,7 @@ export class UserService {
     for (const [key, entry] of this._userInfoCache) {
       if (now > entry.expiresAt) {
         this._userInfoCache.delete(key);
-        console.log(`🗑️ Expired getUserInfo cache entry removed: ${key.substring(0, 10)}...`);
+        console.log('🗑️ Expired getUserInfo cache entry removed');
       }
     }
   }
@@ -45,7 +46,7 @@ export class UserService {
     const sessionDetection = logSessionDetection('UserService.getSessionId');
     
     if (sessionDetection.sessionId) {
-      console.log(`👤 UserService: ✅ Using session from ${sessionDetection.source}: ${sessionDetection.sessionId.substring(0, 10)}...`);
+      logSensitiveData(`👤 UserService: ✅ Using session from ${sessionDetection.source}`, sessionDetection.sessionId, 'session');
       return sessionDetection.sessionId;
     }
     
@@ -85,7 +86,7 @@ export class UserService {
         } else {
           // Expired cache entry
           this._userInfoCache.delete(cacheKey);
-          console.log(`🗑️ Removed expired cache entry for token: ${cacheKey.substring(0, 10)}...`);
+          console.log('🗑️ Removed expired cache entry');
         }
       }
       

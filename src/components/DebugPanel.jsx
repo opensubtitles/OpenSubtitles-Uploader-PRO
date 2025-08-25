@@ -57,8 +57,8 @@ export const DebugPanel = ({
     try {
       let content = '=== DEBUG INFORMATION ===\n\n';
       
-      // Add debug mode status
-      content += `Debug mode: ${debugMode ? 'ON' : 'OFF'}\n`;
+      // Add verbose log status
+      content += `Verbose log: ${debugMode ? 'ON' : 'OFF'}\n`;
       content += `Timestamp: ${new Date().toISOString()}\n\n`;
       
       // Add session info
@@ -176,7 +176,7 @@ export const DebugPanel = ({
             className="accent-blue-500"
             style={{accentColor: themeColors.link}}
           />
-          Debug mode
+          Verbose log
         </label>
       </summary>
       
@@ -191,7 +191,7 @@ export const DebugPanel = ({
                border: `1px solid ${themeColors.border}`
              }}>
           <div className="mb-2" style={{color: themeColors.textSecondary}}>
-            Debug mode: <span style={{color: debugMode ? themeColors.success : themeColors.link, fontWeight: 'bold'}}>
+            Verbose log: <span style={{color: debugMode ? themeColors.success : themeColors.link, fontWeight: 'bold'}}>
               {debugMode ? "ON" : "OFF"}
             </span>
             <div className="text-xs mt-1" style={{color: themeColors.textMuted}}>
@@ -327,7 +327,7 @@ export const DebugPanel = ({
               }}
               title="Delete all stored language and XML-RPC cache"
             >
-              🗑️ Clear All Cache
+              🗑️ Clear Cache
             </button>
           </div>
           

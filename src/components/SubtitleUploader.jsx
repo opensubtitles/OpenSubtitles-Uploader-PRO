@@ -1749,8 +1749,19 @@ function SubtitleUploaderInner() {
     }
   };
 
-  // Clear files and related state
+  // Clear files and related state (simulate page refresh)
   const handleClearFiles = () => {
+    addDebugInfo('🧹 Clear All clicked - resetting ALL application state...');
+    
+    // Clear all hook state completely (same as file drop)
+    clearAllState(); // Movie guesses, features, processing state - THIS CLEARS IMDB IDs!
+    clearAllGuessItState(); // GuessIt data and processing state
+    clearAllLanguageState(); // Language detection processing state
+    clearSubtitleLanguages(); // Subtitle language selections
+    clearHashCheckResults(); // Clear CheckSubHash results
+    clearAllVideoMetadata(); // Clear video metadata
+    
+    // Clear files and UI state
     clearFiles();
     clearDebugInfo();
     setError(null);
@@ -1770,8 +1781,7 @@ function SubtitleUploaderInner() {
     // Clear progress state
     cancelProgress();
     
-    // Clear CheckSubHash results
-    clearHashCheckResults();
+    addDebugInfo('✅ Clear All completed - all state reset (equivalent to page refresh)');
     
     // Clear all processing states
     files.forEach(file => {

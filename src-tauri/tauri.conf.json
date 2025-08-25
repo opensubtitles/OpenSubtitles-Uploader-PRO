@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
