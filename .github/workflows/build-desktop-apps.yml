@@ -429,9 +429,9 @@ jobs:
           
           # Fetch actual release notes from GitHub
           echo "📝 Fetching release notes for $VERSION..."
-          RELEASE_NOTES=$(gh release view "$VERSION" --json body --jq -r '.body // "OpenSubtitles Uploader PRO '"$VERSION"' - New release with improvements and bug fixes"')
+          RELEASE_NOTES=$(gh release view "$VERSION" --json body | jq -r '.body // "OpenSubtitles Uploader PRO '"$VERSION"' - New release with improvements and bug fixes"')
           
-          # Escape quotes and newlines for JSON
+          # Escape quotes and newlines for JSON (Linux compatible)
           RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
           
           # Create updater manifest with proper Tauri v2 format and actual release notes
