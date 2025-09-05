@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatFileSize, areTitlesSimilar } from '../../utils/fileUtils.js';
+import { formatFileSize, areTitlesSimilar, formatImdbId, getImdbUrl } from '../../utils/fileUtils.js';
 import { XmlRpcService } from '../../services/api/xmlrpc.js';
 
 export const VideoFile = ({ video, movieGuess, features, onMovieChange, colors, isDark, isOrphanedSubtitle = false }) => {
@@ -383,7 +383,7 @@ export const VideoFile = ({ video, movieGuess, features, onMovieChange, colors, 
                         <div className="sm:col-span-2">
                           <span style={{color: colors?.link || '#2878C0'}}>IMDb ID:</span>{" "}
                           <a 
-                            href={`https://www.imdb.com/title/tt${movieGuess.imdbid}/`}
+                            href={getImdbUrl(movieGuess.imdbid)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="underline font-mono"
@@ -391,7 +391,7 @@ export const VideoFile = ({ video, movieGuess, features, onMovieChange, colors, 
                             onMouseEnter={(e) => e.target.style.color = colors?.linkHover || '#185DA0'}
                             onMouseLeave={(e) => e.target.style.color = colors?.link || '#2878C0'}
                           >
-                            {movieGuess.imdbid}
+                            {formatImdbId(movieGuess.imdbid)}
                           </a>
                         </div>
                       </div>
@@ -460,7 +460,7 @@ export const VideoFile = ({ video, movieGuess, features, onMovieChange, colors, 
                                   {movie.title} {movie.year && `(${movie.year})`}
                                 </div>
                                 <div className="text-xs mt-1" style={{color: colors?.textSecondary}}>
-                                  IMDb: {movie.imdbid} | Kind: {movie.kind || 'movie'}
+                                  IMDb: {formatImdbId(movie.imdbid)} | Kind: {movie.kind || 'movie'}
                                 </div>
                               </div>
                             </div>

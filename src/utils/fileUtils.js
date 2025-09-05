@@ -1,6 +1,34 @@
 import { VIDEO_EXTENSIONS, SUBTITLE_EXTENSIONS, ARCHIVE_EXTENSIONS, VIDEO_MIME_TYPES, SUBTITLE_MIME_TYPES, ARCHIVE_MIME_TYPES } from './constants.js';
 
 /**
+ * Format IMDb ID to ensure proper 7-digit format with leading zeros
+ * Examples: 749451 -> 0749451, 133093 -> 0133093, 1234567 -> 1234567
+ * @param {string|number} imdbId - Raw IMDb ID (with or without 'tt' prefix)
+ * @returns {string} - Properly formatted IMDb ID (7 digits, no 'tt' prefix)
+ */
+export const formatImdbId = (imdbId) => {
+  if (!imdbId) return '';
+  
+  // Convert to string and remove 'tt' prefix if present
+  let id = imdbId.toString().toLowerCase().replace(/^tt/, '');
+  
+  // Pad to 7 digits with leading zeros
+  return id.padStart(7, '0');
+};
+
+/**
+ * Generate properly formatted IMDb URL
+ * @param {string|number} imdbId - Raw IMDb ID (with or without 'tt' prefix)
+ * @returns {string} - Complete IMDb URL with properly formatted ID
+ */
+export const getImdbUrl = (imdbId) => {
+  if (!imdbId) return '';
+  
+  const formattedId = formatImdbId(imdbId);
+  return `https://www.imdb.com/title/tt${formattedId}/`;
+};
+
+/**
  * Check if a file is a video file based on extension
  */
 export const isVideoFile = (fileOrName) => {

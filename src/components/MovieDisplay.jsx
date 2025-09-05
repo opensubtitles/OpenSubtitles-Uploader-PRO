@@ -1,5 +1,5 @@
 import React from 'react';
-import { areTitlesSimilar } from '../utils/fileUtils.js';
+import { areTitlesSimilar, formatImdbId, getImdbUrl } from '../utils/fileUtils.js';
 import { MetadataTags } from './MetadataTags.jsx';
 
 export const MovieDisplay = ({
@@ -127,7 +127,7 @@ export const MovieDisplay = ({
     if (finalMovieData?.kind === 'episode' && finalMovieData.imdbid && fetchFeaturesByImdbId) {
       // Check if we already have episode features data
       if (!featuresByImdbId[finalMovieData.imdbid]) {
-        console.log(`Fetching episode features for IMDb ID: ${finalMovieData.imdbid}`);
+        console.log(`Fetching episode features for IMDb ID: ${formatImdbId(finalMovieData.imdbid)}`);
         fetchFeaturesByImdbId(finalMovieData.imdbid);
       }
     }
@@ -741,7 +741,7 @@ export const MovieDisplay = ({
                     <div>
                       <span className="font-semibold" style={{color: themeColors.success}}>🎯 Upload IMDb:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${finalMovieData.imdbid}/`}
+                        href={getImdbUrl(finalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono font-bold"
@@ -749,7 +749,7 @@ export const MovieDisplay = ({
                       onMouseEnter={(e) => e.target.style.color = themeColors.success}
                       onMouseLeave={(e) => e.target.style.color = themeColors.success}
                       >
-                        {finalMovieData.imdbid}
+                        {formatImdbId(finalMovieData.imdbid)}
                       </a>
                       <span className="text-xs ml-2" style={{color: themeColors.success}}>(Episode)</span>
                       
@@ -757,7 +757,7 @@ export const MovieDisplay = ({
                       
                       <span style={{color: themeColors.link}}>TV Series:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${finalMovieData.parent_imdb_id || originalMovieData.imdbid}/`}
+                        href={getImdbUrl(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono"
@@ -765,7 +765,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.link}
                         onMouseLeave={(e) => e.target.style.color = themeColors.linkHover}
                       >
-                        {finalMovieData.parent_imdb_id || originalMovieData.imdbid}
+                        {formatImdbId(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
                       </a>
                     </div>
                     
@@ -785,7 +785,7 @@ export const MovieDisplay = ({
                     <div>
                       <span className="font-semibold" style={{color: '#28a745'}}>🎯 Upload IMDb:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${originalMovieData.imdbid}/`}
+                        href={getImdbUrl(originalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono font-bold"
@@ -793,7 +793,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.success}
                         onMouseLeave={(e) => e.target.style.color = themeColors.success}
                       >
-                        {originalMovieData.imdbid}
+                        {formatImdbId(originalMovieData.imdbid)}
                       </a>
                       <span className="text-xs ml-2" style={{color: '#28a745'}}>
                         ({(() => {
@@ -856,7 +856,7 @@ export const MovieDisplay = ({
                     <div>
                       <span className="font-semibold" style={{color: themeColors.success}}>🎯 Upload IMDb:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${finalMovieData.imdbid}/`}
+                        href={getImdbUrl(finalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono font-bold"
@@ -864,7 +864,7 @@ export const MovieDisplay = ({
                       onMouseEnter={(e) => e.target.style.color = themeColors.success}
                       onMouseLeave={(e) => e.target.style.color = themeColors.success}
                       >
-                        {finalMovieData.imdbid}
+                        {formatImdbId(finalMovieData.imdbid)}
                       </a>
                       <span className="text-xs ml-2" style={{color: themeColors.success}}>(Episode)</span>
                       
@@ -872,7 +872,7 @@ export const MovieDisplay = ({
                       
                       <span style={{color: themeColors.link}}>TV Series:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${finalMovieData.parent_imdb_id || originalMovieData.imdbid}/`}
+                        href={getImdbUrl(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono"
@@ -880,7 +880,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.link}
                         onMouseLeave={(e) => e.target.style.color = themeColors.linkHover}
                       >
-                        {finalMovieData.parent_imdb_id || originalMovieData.imdbid}
+                        {formatImdbId(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
                       </a>
                     </div>
                     
@@ -900,7 +900,7 @@ export const MovieDisplay = ({
                     <div>
                       <span className="font-semibold" style={{color: '#28a745'}}>🎯 Upload IMDb:</span>{" "}
                       <a 
-                        href={`https://www.imdb.com/title/tt${originalMovieData.imdbid}/`}
+                        href={getImdbUrl(originalMovieData.imdbid)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline font-mono font-bold"
@@ -908,7 +908,7 @@ export const MovieDisplay = ({
                         onMouseEnter={(e) => e.target.style.color = themeColors.success}
                         onMouseLeave={(e) => e.target.style.color = themeColors.success}
                       >
-                        {originalMovieData.imdbid}
+                        {formatImdbId(originalMovieData.imdbid)}
                       </a>
                       <span className="text-xs ml-2" style={{color: '#28a745'}}>
                         ({bestMovieData.kind === 'tv series' ? 'TV Series' : 'Movie'})
