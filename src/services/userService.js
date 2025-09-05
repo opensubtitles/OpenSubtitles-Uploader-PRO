@@ -201,6 +201,9 @@ export class UserService {
     const userRanks = this.getUserRanks(userInfo);
     const currentRank = this.getUserRank(userInfo);
     
+    // Create effective ranks array - use UserRanks if available, otherwise fall back to UserRank
+    const effectiveRanks = userRanks.length > 0 ? userRanks : (currentRank ? [currentRank] : []);
+    
     // Allowed ranks for application usage
     const allowedRanks = [
       'super admin',
@@ -222,14 +225,14 @@ export class UserService {
     ];
     
     // Check for forbidden ranks first (higher priority)
-    const hasForbiddenRank = userRanks.some(rank => 
+    const hasForbiddenRank = effectiveRanks.some(rank => 
       forbiddenRanks.some(forbidden => 
         rank.toLowerCase().includes(forbidden.toLowerCase())
       )
     );
     
     if (hasForbiddenRank) {
-      const forbiddenRank = userRanks.find(rank => 
+      const forbiddenRank = effectiveRanks.find(rank => 
         forbiddenRanks.some(forbidden => 
           rank.toLowerCase().includes(forbidden.toLowerCase())
         )
@@ -238,20 +241,20 @@ export class UserService {
       return {
         allowed: false,
         reason: `Access denied: Your account has "${forbiddenRank}" restriction which prevents uploading.`,
-        userRanks: userRanks,
+        userRanks: effectiveRanks,
         forbiddenRank: forbiddenRank
       };
     }
     
     // Check if user has any allowed rank
-    const hasAllowedRank = userRanks.some(rank => 
+    const hasAllowedRank = effectiveRanks.some(rank => 
       allowedRanks.some(allowed => 
         rank.toLowerCase().trim() === allowed.toLowerCase().trim()
       )
     );
     
     if (hasAllowedRank) {
-      const matchedRank = userRanks.find(rank => 
+      const matchedRank = effectiveRanks.find(rank => 
         allowedRanks.some(allowed => 
           rank.toLowerCase().trim() === allowed.toLowerCase().trim()
         )
@@ -259,7 +262,7 @@ export class UserService {
       return {
         allowed: true,
         reason: `Access granted with rank: ${matchedRank}`,
-        userRanks: userRanks,
+        userRanks: effectiveRanks,
         allowedRank: matchedRank
       };
     }
@@ -269,7 +272,7 @@ export class UserService {
     return {
       allowed: false,
       reason: `Access denied: Your account rank "${currentRank}" is not sufficient for uploading. Required ranks: ${allowedRanks.join(', ')}.`,
-      userRanks: userRanks,
+      userRanks: effectiveRanks,
       currentRank: currentRank
     };
   }

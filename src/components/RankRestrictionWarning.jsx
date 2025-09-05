@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useUserSession } from '../hooks/useUserSession.js';
 import { UserService } from '../services/userService.js';
 
@@ -7,6 +7,7 @@ import { UserService } from '../services/userService.js';
  */
 const RankRestrictionWarning = () => {
   const { userInfo, isLoading } = useUserSession();
+  const [isVisible, setIsVisible] = useState(true);
 
   // Don't show anything while loading
   if (isLoading) {
@@ -16,8 +17,8 @@ const RankRestrictionWarning = () => {
   // Check if user can upload
   const uploadPermission = userInfo ? UserService.canUserUpload(userInfo) : null;
 
-  // Don't show if user can upload or not logged in
-  if (!userInfo || !uploadPermission || uploadPermission.canUpload) {
+  // Don't show if user can upload, not logged in, or manually closed
+  if (!userInfo || !uploadPermission || uploadPermission.canUpload || !isVisible) {
     return null;
   }
 
@@ -69,12 +70,30 @@ const RankRestrictionWarning = () => {
                 <ul className="list-disc list-inside space-y-1">
                   {isForbiddenRank ? (
                     <>
-                      <li>Contact OpenSubtitles support to resolve account restrictions</li>
+                      <li>
+                        <a 
+                          href="https://opensubtitles.org/contact" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-red-100 underline hover:text-white"
+                        >
+                          Contact OpenSubtitles support
+                        </a> to resolve account restrictions
+                      </li>
                       <li>Check your account status on the OpenSubtitles website</li>
                     </>
                   ) : (
                     <>
-                      <li>Contact OpenSubtitles support to request rank upgrade</li>
+                      <li>
+                        <a 
+                          href="https://opensubtitles.org/contact" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-red-100 underline hover:text-white"
+                        >
+                          Contact OpenSubtitles support
+                        </a> to request rank upgrade
+                      </li>
                       <li>Contribute to the community to earn higher ranks</li>
                       <li>Check rank requirements on the OpenSubtitles website</li>
                     </>
@@ -84,6 +103,15 @@ const RankRestrictionWarning = () => {
               </div>
             </div>
           </div>
+          <button
+            onClick={() => setIsVisible(false)}
+            className="flex-shrink-0 ml-4 text-red-200 hover:text-white transition-colors duration-200"
+            aria-label="Close warning"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
