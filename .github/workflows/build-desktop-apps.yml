@@ -427,11 +427,18 @@ jobs:
             echo "⚠️ Falling back to DMG URL: $MACOS_URL"
           fi
           
-          # Create updater manifest with proper Tauri v2 format
+          # Fetch actual release notes from GitHub
+          echo "📝 Fetching release notes for $VERSION..."
+          RELEASE_NOTES=$(gh release view "$VERSION" --json body --jq -r '.body // "OpenSubtitles Uploader PRO '"$VERSION"' - New release with improvements and bug fixes"')
+          
+          # Escape quotes and newlines for JSON
+          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          
+          # Create updater manifest with proper Tauri v2 format and actual release notes
           cat > latest.json << EOF
           {
             "version": "$VERSION",
-            "notes": "OpenSubtitles Uploader PRO $VERSION - Automatic update",
+            "notes": "$RELEASE_NOTES_ESCAPED",
             "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platforms": {
               "windows-x86_64": {
