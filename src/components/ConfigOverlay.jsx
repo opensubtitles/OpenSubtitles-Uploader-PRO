@@ -8,6 +8,7 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
   const [languageSearch, setLanguageSearch] = useState('');
   const [fpsDropdownOpen, setFpsDropdownOpen] = useState(false);
   const [fpsSearchTerm, setFpsSearchTerm] = useState('');
+  const [translatorError, setTranslatorError] = useState('');
   const dropdownRef = useRef(null);
   const fpsDropdownRef = useRef(null);
 
@@ -32,7 +33,24 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
 
   useEffect(() => {
     setLocalConfig(config);
+    // Validate translator when config changes
+    if (config.defaultTranslator) {
+      const error = validateTranslator(config.defaultTranslator);
+      setTranslatorError(error);
+    } else {
+      setTranslatorError('');
+    }
   }, [config]);
+
+  // Translator validation function
+  const validateTranslator = (value) => {
+    if (!value) return ''; // Empty is allowed
+    const translatorRegex = /^[\w-]{3,20}$/;
+    if (!translatorRegex.test(value)) {
+      return 'Translator must be 3-20 characters, letters, numbers, underscore, hyphen only';
+    }
+    return '';
+  };
 
   // Click outside to close dropdowns
   useEffect(() => {
@@ -60,6 +78,17 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
   }, [isLanguageDropdownOpen, fpsDropdownOpen]);
 
   const handleChange = (key, value) => {
+    // Validate translator field
+    if (key === 'defaultTranslator') {
+      const error = validateTranslator(value);
+      setTranslatorError(error);
+      // Don't save if there's an error
+      if (error) {
+        setLocalConfig({ ...localConfig, [key]: value });
+        return;
+      }
+    }
+    
     const newConfig = { ...localConfig, [key]: value };
     setLocalConfig(newConfig);
     onConfigChange(newConfig);
@@ -523,32 +552,37 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
               Default Translator
             </label>
             <p className="text-xs" style={{ color: colors.textSecondary }}>
-              Pre-fill translator field for all subtitles (current and future)
+              Pre-fill translator field for all subtitles (3-20 characters, a-Z 0-9 _ -)
             </p>
             <input
               type="text"
               value={localConfig.defaultTranslator || ''}
               onChange={(e) => handleChange('defaultTranslator', e.target.value)}
-              placeholder="Enter default translator name..."
-              className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+              placeholder="Enter default translator name (3-20 chars, a-Z 0-9 _ -)"
+              className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 ${translatorError ? 'border-red-500' : ''}`}
               style={{
                 backgroundColor: colors.background,
-                borderColor: colors.border,
+                borderColor: translatorError ? '#ef4444' : colors.border,
                 color: colors.text,
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = colors.primary;
-                e.target.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+                e.target.style.borderColor = translatorError ? '#ef4444' : colors.primary;
+                e.target.style.boxShadow = `0 0 0 2px ${translatorError ? '#ef4444' : colors.primary}20`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
+                e.target.style.borderColor = translatorError ? '#ef4444' : colors.border;
                 e.target.style.boxShadow = 'none';
               }}
-              maxLength={32}
+              maxLength={20}
             />
+            {translatorError && (
+              <div className="text-xs text-red-500">
+                {translatorError}
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-xs" style={{ color: colors.textSecondary }}>
-                {localConfig.defaultTranslator?.length || 0}/32 characters
+                {localConfig.defaultTranslator?.length || 0}/20 characters
               </span>
               {localConfig.defaultTranslator && (
                 <button
@@ -569,7 +603,7 @@ export const ConfigOverlay = ({ isOpen, onClose, config, onConfigChange, colors,
                 </button>
               )}
             </div>
-            {localConfig.defaultTranslator && (
+            {localConfig.defaultTranslator && !translatorError && (
               <div className="flex items-center gap-2 text-xs" style={{ color: colors.success }}>
                 <span>✓</span>
                 <span>All subtitles will be pre-filled with "{localConfig.defaultTranslator}"</span>

@@ -40,6 +40,7 @@ export const SubtitleUploadOptions = ({
   const [localReleaseNameValue, setLocalReleaseNameValue] = useState('');
   const [localCommentValue, setLocalCommentValue] = useState('');
   const [localTranslatorValue, setLocalTranslatorValue] = useState('');
+  const [translatorError, setTranslatorError] = useState('');
   const [localMovieAkaValue, setLocalMovieAkaValue] = useState('');
   
   // Refs to track if we've already processed auto-detection for this file
@@ -54,16 +55,33 @@ export const SubtitleUploadOptions = ({
     processedHearingImpairedRef.current = false;
   }, [subtitlePath]);
 
+  // Translator validation function
+  const validateTranslator = (value) => {
+    if (!value) return ''; // Empty is allowed
+    const translatorRegex = /^[\w-]{3,20}$/;
+    if (!translatorRegex.test(value)) {
+      return 'Translator must be 3-20 characters, letters, numbers, underscore, hyphen only';
+    }
+    return '';
+  };
+
   // Initialize translator with default value from config when subtitle path changes
   useEffect(() => {
     if (config.defaultTranslator && !uploadOptions?.subtranslator && !localTranslatorValue) {
-      setLocalTranslatorValue(config.defaultTranslator);
-      // Also notify parent component to update the options
-      if (onUpdateOptions) {
-        onUpdateOptions(subtitlePath, {
-          ...uploadOptions,
-          subtranslator: config.defaultTranslator
-        });
+      // Validate default translator from config
+      const error = validateTranslator(config.defaultTranslator);
+      if (!error) {
+        setLocalTranslatorValue(config.defaultTranslator);
+        setTranslatorError('');
+        // Also notify parent component to update the options
+        if (onUpdateOptions) {
+          onUpdateOptions(subtitlePath, {
+            ...uploadOptions,
+            subtranslator: config.defaultTranslator
+          });
+        }
+      } else {
+        setTranslatorError('Default translator from config is invalid: ' + error);
       }
     }
   }, [subtitlePath, config.defaultTranslator, uploadOptions?.subtranslator, localTranslatorValue]);
@@ -388,6 +406,9 @@ export const SubtitleUploadOptions = ({
       setLocalCommentValue(value);
     } else if (field === 'subtranslator') {
       setLocalTranslatorValue(value);
+      // Validate translator input
+      const error = validateTranslator(value);
+      setTranslatorError(error);
     } else if (field === 'movieaka') {
       setLocalMovieAkaValue(value);
     }
@@ -511,34 +532,41 @@ export const SubtitleUploadOptions = ({
       </div>
 
       {/* Translator */}
-      <div className="flex items-center gap-2 relative" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1 text-xs min-w-[80px]">
-          <span title="Subtitle Translator">🌐</span>
-          <span style={{ color: colors.textSecondary }}>Translator</span>
-        </div>
-        <input
-          type="text"
-          value={localTranslatorValue || currentOptions.subtranslator || ''}
-          onChange={(e) => handleFieldChange('subtranslator', e.target.value)}
-          placeholder="Who translated the subtitles"
-          className="flex-1 px-2 py-1 text-xs rounded border"
-          style={{
-            backgroundColor: colors.cardBackground,
-            borderColor: colors.border,
-            color: colors.text
-          }}
-        />
-        {config.defaultTranslator && currentOptions.subtranslator === config.defaultTranslator && (
-          <div 
-            className="absolute top-0 right-0 -mt-1 -mr-1 px-1 py-0.5 text-xs rounded-full text-white flex items-center gap-1"
+      <div className="flex flex-col gap-1 relative" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-xs min-w-[80px]">
+            <span title="Subtitle Translator">🌐</span>
+            <span style={{ color: colors.textSecondary }}>Translator</span>
+          </div>
+          <input
+            type="text"
+            value={localTranslatorValue || currentOptions.subtranslator || ''}
+            onChange={(e) => handleFieldChange('subtranslator', e.target.value)}
+            placeholder="Who translated the subtitles (3-20 chars, a-Z 0-9 _ -)"
+            className={`flex-1 px-2 py-1 text-xs rounded border ${translatorError ? 'border-red-500' : ''}`}
             style={{
-              backgroundColor: colors.info || colors.primary,
-              fontSize: '10px'
+              backgroundColor: colors.cardBackground,
+              borderColor: translatorError ? '#ef4444' : colors.border,
+              color: colors.text
             }}
-            title="Default translator applied from config"
-          >
-            <span>🌐</span>
-            <span>Default</span>
+          />
+          {config.defaultTranslator && currentOptions.subtranslator === config.defaultTranslator && !translatorError && (
+            <div 
+              className="absolute top-0 right-0 -mt-1 -mr-1 px-1 py-0.5 text-xs rounded-full text-white flex items-center gap-1"
+              style={{
+                backgroundColor: colors.info || colors.primary,
+                fontSize: '10px'
+              }}
+              title="Default translator applied from config"
+            >
+              <span>🌐</span>
+              <span>Default</span>
+            </div>
+          )}
+        </div>
+        {translatorError && (
+          <div className="text-xs text-red-500 ml-[84px]">
+            {translatorError}
           </div>
         )}
       </div>
