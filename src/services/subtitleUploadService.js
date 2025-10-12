@@ -982,12 +982,10 @@ export class SubtitleUploadService {
       return false;
     }
     
-    // Then check for positive HI patterns (removed CC, added PSDH)
-    const hiPatterns = [
-      'hi', 'sdh', 'psdh', 'hearing.impaired', 'hearing_impaired', 'hearingimpaired'
-    ];
-    
-    return hiPatterns.some(pattern => lowerStr.includes(pattern));
+    // FIXED: Use word boundaries like UI to prevent false positives (Chicago, Yudhishir, etc.)
+    // This prevents substring matches in names like "Chicago" -> "hi"
+    const hiRegex = /\bsdh\b|\bpsdh\b|\bhi\b|hi[_-]|[_-]hi|\bhearing[._-]?impaired\b|\bhearingimpaired\b/i;
+    return hiRegex.test(lowerStr);
   }
   
   /**
@@ -1011,20 +1009,23 @@ export class SubtitleUploadService {
       return false;
     }
     
-    // More specific filename patterns for hearing impaired (removed CC patterns, added PSDH)
+    // FIXED: More specific filename patterns using word boundaries to prevent false positives
+    // This prevents matches in names like "Chicago.srt" -> "hi"
     const filenamePatterns = [
-      /\.hi\./i,
-      /\.sdh\./i,
-      /\.psdh\./i,
-      /\bhi\b/i,
-      /\bsdh\b/i,
-      /\bpsdh\b/i,
-      /_hi\./i,
-      /_sdh\./i,
-      /_psdh\./i,
-      /[-.]hi[-.]?/i,
-      /[-.]sdh[-.]?/i,
-      /[-.]psdh[-.]?/i
+      /\.hi\./i,           // .hi. in filename
+      /\.sdh\./i,          // .sdh. in filename  
+      /\.psdh\./i,         // .psdh. in filename
+      /\bhi\b/i,           // hi as separate word
+      /\bsdh\b/i,          // sdh as separate word
+      /\bpsdh\b/i,         // psdh as separate word
+      /_hi\./i,            // _hi. pattern
+      /_sdh\./i,           // _sdh. pattern
+      /_psdh\./i,          // _psdh. pattern
+      /[-.]hi[-.]?/i,      // -hi- or .hi- patterns
+      /[-.]sdh[-.]?/i,     // -sdh- or .sdh- patterns
+      /[-.]psdh[-.]?/i,    // -psdh- or .psdh- patterns
+      /hi[_-]/i,           // hi_ or hi- patterns
+      /[_-]hi$/i           // ending with _hi or -hi
     ];
     
     return filenamePatterns.some(pattern => pattern.test(lowerFilename));
