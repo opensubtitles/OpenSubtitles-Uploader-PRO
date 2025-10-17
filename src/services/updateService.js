@@ -599,7 +599,7 @@ export class UpdateService {
         console.log('⚠️ Could not get system Downloads path, using default:', pathError);
       }
       
-      const testFileName = 'OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+      const testFileName = `OpenSubtitles-Uploader-PRO-Test-v${APP_VERSION}.dmg`;
       const testFilePath = `${actualDownloadsPath}/${testFileName}`;
       
       console.log('🎯 TEST MODE: File operations will target:', testFilePath);
@@ -636,7 +636,7 @@ export class UpdateService {
       console.log('🔧 Using fallback test file path for UI testing');
       
       // Return a realistic fallback path for UI testing
-      const fallbackPath = '/tmp/OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+      const fallbackPath = `/tmp/OpenSubtitles-Uploader-PRO-Test-v${APP_VERSION}.dmg`;
       
       // Try to create a simple fallback file using Tauri APIs
       try {
@@ -647,12 +647,12 @@ export class UpdateService {
 
         // Get temp directory and create test file
         const tempDir = await tauriPath.tempDir();
-        const testFileName = 'OpenSubtitles-Uploader-PRO-Test-v1.6.11.dmg';
+        const testFileName = `OpenSubtitles-Uploader-PRO-Test-v${APP_VERSION}.dmg`;
         const testFilePath = await tauriPath.join(tempDir, testFileName);
         
         const testContent = `🧪 TEST MODE UPDATE FILE (FALLBACK)
 Generated: ${new Date().toISOString()}
-Version: 1.6.11 (Test Mode - Fallback)
+Version: ${APP_VERSION} (Test Mode - Fallback)
 
 This is a fallback test file for updater functionality testing.
 The actual update installer would normally be a .dmg/.exe file.

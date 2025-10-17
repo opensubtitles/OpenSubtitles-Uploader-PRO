@@ -1,6 +1,7 @@
 import { XmlRpcService } from './api/xmlrpc.js';
 import { SubtitleHashService } from './subtitleHash.js';
 import { HD_DETECTION_REGEX } from '../utils/constants.js';
+import { cleanReleaseName } from '../utils/releaseNameUtils.js';
 
 /**
  * Service for uploading subtitles to OpenSubtitles
@@ -598,9 +599,19 @@ export class SubtitleUploadService {
       }
       
       // Prepare baseinfo section
+      // Clean the release name by removing language codes and extra markers
+      const rawReleaseName = video.name.replace(/\.(mkv|mp4|avi|mov|wmv|flv|webm)$/i, '');
+      const cleanedReleaseName = cleanReleaseName(rawReleaseName, combinedLanguages);
+
+      if (addDebugInfo && rawReleaseName !== cleanedReleaseName) {
+        addDebugInfo(`🧹 Release name cleaned:`);
+        addDebugInfo(`   - Before: "${rawReleaseName}"`);
+        addDebugInfo(`   - After: "${cleanedReleaseName}"`);
+      }
+
       const baseinfo = {
         idmovieimdb: uploadImdbId,
-        moviereleasename: subtitleOptions.moviereleasename || video.name.replace(/\.(mkv|mp4|avi|mov|wmv|flv|webm)$/i, ''), // Use custom release name or video name
+        moviereleasename: subtitleOptions.moviereleasename || cleanedReleaseName, // Use custom release name or cleaned video name
         movieaka: subtitleOptions.movieaka || '', // Movie title in subtitle language
         sublanguageid: languageId,
         subauthorcomment: subtitleOptions.subauthorcomment || '',
@@ -805,9 +816,19 @@ export class SubtitleUploadService {
       }
       
       // Prepare baseinfo section (only include fields we can determine for orphaned subtitles)
+      // Clean the release name by removing language codes and extra markers
+      const rawReleaseName = subtitle.name.replace(/\.(srt|sub|ass|ssa|vtt)$/i, '');
+      const cleanedReleaseName = cleanReleaseName(rawReleaseName, combinedLanguages);
+
+      if (addDebugInfo && rawReleaseName !== cleanedReleaseName) {
+        addDebugInfo(`🧹 Release name cleaned (orphaned):`);
+        addDebugInfo(`   - Before: "${rawReleaseName}"`);
+        addDebugInfo(`   - After: "${cleanedReleaseName}"`);
+      }
+
       const baseinfo = {
         idmovieimdb: uploadImdbId,
-        moviereleasename: subtitleOptions.moviereleasename || subtitle.name.replace(/\.(srt|sub|ass|ssa|vtt)$/i, ''), // Use custom release name or subtitle name
+        moviereleasename: subtitleOptions.moviereleasename || cleanedReleaseName, // Use custom release name or cleaned subtitle name
         movieaka: subtitleOptions.movieaka || '', // Movie title in subtitle language
         sublanguageid: languageId,
         subauthorcomment: subtitleOptions.subauthorcomment || '',
