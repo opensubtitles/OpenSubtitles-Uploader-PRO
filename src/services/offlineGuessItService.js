@@ -47,24 +47,28 @@ export class OfflineGuessItService {
    * @returns {Promise<Object>} - GuessIt result
    */
   static async guessFromFilename(filename, options = {}) {
-    if (!await this.initialize()) {
+    if (!(await this.initialize())) {
       throw new Error('GuessIt WASM not initialized');
     }
 
     // Check cache first
     const cacheKey = `${CACHE_KEYS.GUESSIT_CACHE}_${filename}`;
     const cached = CacheService.loadFromCache(cacheKey);
-    
+
     if (cached) {
       return cached;
     }
 
     try {
       const result = await guessit(filename, options);
-      
+
       // Cache the result
-      CacheService.saveToCacheWithDuration(cacheKey, result, DEFAULT_SETTINGS.GUESSIT_CACHE_DURATION);
-      
+      CacheService.saveToCacheWithDuration(
+        cacheKey,
+        result,
+        DEFAULT_SETTINGS.GUESSIT_CACHE_DURATION
+      );
+
       return result;
     } catch (error) {
       console.error('GuessIt WASM error:', error);
@@ -81,7 +85,7 @@ export class OfflineGuessItService {
   static async guessFromSubtitleFile(subtitleFile) {
     // Import getBestMovieDetectionName dynamically to avoid circular dependencies
     const { getBestMovieDetectionName } = await import('../utils/fileUtils.js');
-    
+
     const bestName = getBestMovieDetectionName(subtitleFile);
     return this.guessFromFilename(bestName);
   }
@@ -94,28 +98,28 @@ export class OfflineGuessItService {
    */
   static async enhancedGuess(filename, options = {}) {
     const result = await this.guessFromFilename(filename, options);
-    
+
     // Add enhanced fields
     const enhanced = {
       ...result,
-      
+
       // Add formatted title
       formatted_title: this.formatTitle(result),
-      
+
       // Add year extraction
       year: this.extractYear(result),
-      
+
       // Add type detection
       media_type: this.detectMediaType(result),
-      
+
       // Add quality information
       quality_info: this.extractQualityInfo(result),
-      
+
       // Add episode information for TV shows
       episode_info: this.extractEpisodeInfo(result),
-      
+
       // Add original filename for reference
-      original_filename: filename
+      original_filename: filename,
     };
 
     return enhanced;
@@ -126,14 +130,14 @@ export class OfflineGuessItService {
    */
   static formatTitle(guessitResult) {
     const { title, year, season, episode, episode_title } = guessitResult;
-    
+
     if (season !== undefined && episode !== undefined) {
       // TV show episode
       const seasonStr = String(season).padStart(2, '0');
       const episodeStr = String(episode).padStart(2, '0');
       const episodeTitle = episode_title ? ` - ${episode_title}` : '';
       const yearStr = year ? ` (${year})` : '';
-      
+
       return `${title} - S${seasonStr}E${episodeStr}${episodeTitle}${yearStr}`;
     } else if (title && year) {
       // Movie with year
@@ -142,7 +146,7 @@ export class OfflineGuessItService {
       // Just title
       return title;
     }
-    
+
     return 'Unknown Title';
   }
 
@@ -158,15 +162,15 @@ export class OfflineGuessItService {
    */
   static detectMediaType(guessitResult) {
     const { type, season, episode } = guessitResult;
-    
+
     if (type) {
       return type;
     }
-    
+
     if (season !== undefined || episode !== undefined) {
       return 'episode';
     }
-    
+
     return 'movie';
   }
 
@@ -174,14 +178,7 @@ export class OfflineGuessItService {
    * Extract quality information
    */
   static extractQualityInfo(guessitResult) {
-    const {
-      screen_size,
-      video_codec,
-      audio_codec,
-      source,
-      release_group,
-      format
-    } = guessitResult;
+    const { screen_size, video_codec, audio_codec, source, release_group, format } = guessitResult;
 
     return {
       resolution: screen_size || null,
@@ -189,7 +186,7 @@ export class OfflineGuessItService {
       audio_codec: audio_codec || null,
       source: source || null,
       release_group: release_group || null,
-      format: format || null
+      format: format || null,
     };
   }
 
@@ -198,7 +195,7 @@ export class OfflineGuessItService {
    */
   static extractEpisodeInfo(guessitResult) {
     const { season, episode, episode_title, part } = guessitResult;
-    
+
     if (season === undefined && episode === undefined) {
       return null;
     }
@@ -207,7 +204,7 @@ export class OfflineGuessItService {
       season: season || null,
       episode: episode || null,
       episode_title: episode_title || null,
-      part: part || null
+      part: part || null,
     };
   }
 
@@ -218,7 +215,7 @@ export class OfflineGuessItService {
    * @returns {Promise<Array<Object>>} - Array of GuessIt results
    */
   static async batchGuess(filenames, options = {}) {
-    if (!await this.initialize()) {
+    if (!(await this.initialize())) {
       throw new Error('GuessIt WASM not initialized');
     }
 
@@ -229,10 +226,10 @@ export class OfflineGuessItService {
     for (let i = 0; i < filenames.length; i += concurrency) {
       const batch = filenames.slice(i, i + concurrency);
       const batchResults = await Promise.all(
-        batch.map(filename => 
+        batch.map(filename =>
           this.enhancedGuess(filename, options).catch(error => ({
             filename,
-            error: error.message
+            error: error.message,
           }))
         )
       );
@@ -248,15 +245,41 @@ export class OfflineGuessItService {
   static getSupportedExtensions() {
     return [
       // Video extensions
-      '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v',
-      '.mpg', '.mpeg', '.3gp', '.ts', '.vob', '.ogv',
-      
+      '.mp4',
+      '.mkv',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.webm',
+      '.m4v',
+      '.mpg',
+      '.mpeg',
+      '.3gp',
+      '.ts',
+      '.vob',
+      '.ogv',
+
       // Subtitle extensions
-      '.srt', '.vtt', '.ass', '.ssa', '.sub', '.idx', '.sup', '.sbv',
-      '.dfxp', '.ttml', '.xml', '.txt',
-      
+      '.srt',
+      '.vtt',
+      '.ass',
+      '.ssa',
+      '.sub',
+      '.idx',
+      '.sup',
+      '.sbv',
+      '.dfxp',
+      '.ttml',
+      '.xml',
+      '.txt',
+
       // Archive extensions
-      '.zip', '.rar', '.7z', '.tar', '.gz'
+      '.zip',
+      '.rar',
+      '.7z',
+      '.tar',
+      '.gz',
     ];
   }
 

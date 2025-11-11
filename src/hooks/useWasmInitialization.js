@@ -14,7 +14,7 @@ export const useWasmInitialization = () => {
     percentage: 0,
     ffmpeg: { loaded: false, error: null },
     guessit: { loaded: false, error: null },
-    currentComponent: 'Initializing...'
+    currentComponent: 'Initializing...',
   });
 
   useEffect(() => {
@@ -23,9 +23,9 @@ export const useWasmInitialization = () => {
     const initializeWasm = async () => {
       try {
         // Update progress callback
-        const onProgressUpdate = (progress) => {
+        const onProgressUpdate = progress => {
           if (cancelled) return;
-          
+
           let currentComponent = 'Initializing...';
           if (!progress.ffmpeg.loaded && !progress.ffmpeg.error) {
             currentComponent = 'Loading FFmpeg...';
@@ -40,13 +40,13 @@ export const useWasmInitialization = () => {
             ...progress,
             isLoading: progress.percentage < 100,
             isInitialized: progress.percentage === 100,
-            currentComponent
+            currentComponent,
           }));
         };
 
         // Start initialization
         await WasmInitializationService.initializeAll(onProgressUpdate);
-        
+
         if (!cancelled) {
           // Final status update
           const finalStatus = WasmInitializationService.getLoadingStatus();
@@ -55,10 +55,9 @@ export const useWasmInitialization = () => {
             ...finalStatus,
             isLoading: false,
             isInitialized: true,
-            currentComponent: 'Ready!'
+            currentComponent: 'Ready!',
           }));
         }
-
       } catch (error) {
         console.error('WASM initialization error:', error);
         if (!cancelled) {
@@ -67,7 +66,7 @@ export const useWasmInitialization = () => {
             isLoading: false,
             isInitialized: false,
             error: error.message,
-            currentComponent: 'Initialization failed'
+            currentComponent: 'Initialization failed',
           }));
         }
       }
@@ -91,6 +90,6 @@ export const useWasmInitialization = () => {
     guessitLoaded: loadingStatus.guessit.loaded,
     ffmpegError: loadingStatus.ffmpeg.error,
     guessitError: loadingStatus.guessit.error,
-    error: loadingStatus.error
+    error: loadingStatus.error,
   };
 };

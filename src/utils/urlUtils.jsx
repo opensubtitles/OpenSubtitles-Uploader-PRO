@@ -8,31 +8,30 @@
  * @param {string} url - URL to open
  * @returns {Promise<boolean>} - Success status
  */
-export const openExternal = async (url) => {
+export const openExternal = async url => {
   try {
     // Enhanced Tauri environment detection
-    const isTauri = (
-      typeof window !== 'undefined' && 
-      (window.__TAURI__ !== undefined || 
-       window.location.protocol === 'tauri:' ||
-       window.location.origin.startsWith('tauri://'))
-    );
-    
+    const isTauri =
+      typeof window !== 'undefined' &&
+      (window.__TAURI__ !== undefined ||
+        window.location.protocol === 'tauri:' ||
+        window.location.origin.startsWith('tauri://'));
+
     console.log('🔍 Environment detection:', {
       isTauri,
       hasTauriGlobal: typeof window !== 'undefined' && !!window.__TAURI__,
       protocol: window.location.protocol,
       origin: window.location.origin,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     });
-    
+
     if (isTauri) {
       console.log('🔗 Opening URL in Tauri environment:', url);
-      
+
       try {
         // Try multiple Tauri shell import methods
         let shellOpen;
-        
+
         try {
           // Method 1: Direct import
           const shell = await import('@tauri-apps/plugin-shell');
@@ -40,7 +39,7 @@ export const openExternal = async (url) => {
           console.log('✅ Tauri shell imported via direct import');
         } catch (importError) {
           console.log('⚠️ Direct import failed, trying window.__TAURI__:', importError.message);
-          
+
           // Method 2: Use window.__TAURI__ if available
           if (window.__TAURI__?.shell?.open) {
             shellOpen = window.__TAURI__.shell.open;
@@ -49,7 +48,7 @@ export const openExternal = async (url) => {
             throw new Error('No Tauri shell API available');
           }
         }
-        
+
         if (shellOpen) {
           await shellOpen(url);
           console.log('✅ URL opened successfully via Tauri shell');
@@ -57,7 +56,6 @@ export const openExternal = async (url) => {
         } else {
           throw new Error('Tauri shell.open function not found');
         }
-        
       } catch (tauriError) {
         console.error('❌ Tauri shell failed:', tauriError);
         throw tauriError; // Re-throw to trigger fallback
@@ -70,7 +68,7 @@ export const openExternal = async (url) => {
     }
   } catch (error) {
     console.error('❌ Failed to open URL via Tauri shell:', error);
-    
+
     // Fallback to window.open even in Tauri if shell fails
     try {
       console.log('🔗 Fallback: Attempting window.open for URL:', url);
@@ -88,14 +86,14 @@ export const openExternal = async (url) => {
  * @param {string} url - URL to open
  * @returns {Function} - Click handler function
  */
-export const createExternalLinkHandler = (url) => {
-  return async (event) => {
+export const createExternalLinkHandler = url => {
+  return async event => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     console.log('🔗 External link handler triggered for:', url);
     const success = await openExternal(url);
-    
+
     if (!success) {
       console.warn('⚠️ Could not open external URL:', url);
     }
@@ -112,7 +110,7 @@ export const createExternalLinkHandler = (url) => {
  */
 export const ExternalLink = ({ href, children, className = '', ...props }) => {
   const handleClick = createExternalLinkHandler(href);
-  
+
   return (
     <a
       href={href}

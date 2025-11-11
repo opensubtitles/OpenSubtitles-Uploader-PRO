@@ -4,33 +4,69 @@ import { AdBlockerDetection } from '../utils/adBlockerDetection.js';
 
 export const AdBlockTestPage = () => {
   // IMMEDIATE Tauri detection - same logic as AdBlockerWarning
-  const isTauriDetected = (
-    typeof window !== 'undefined' && 
-    (window.location.protocol === 'tauri:' || 
-     window.location.href.includes('tauri://localhost'))
-  );
-  
+  const isTauriDetected =
+    typeof window !== 'undefined' &&
+    (window.location.protocol === 'tauri:' || window.location.href.includes('tauri://localhost'));
+
   console.log('🔥 AdBlockTestPage - Tauri Detection:', isTauriDetected);
-  console.log('🔥 AdBlockTestPage - URL:', typeof window !== 'undefined' ? window.location.href : 'undefined');
-  
+  console.log(
+    '🔥 AdBlockTestPage - URL:',
+    typeof window !== 'undefined' ? window.location.href : 'undefined'
+  );
+
   const [tests, setTests] = useState(() => {
     const baseTests = [
-      { name: 'Internet Connectivity', url: 'https://httpbin.org/get', status: 'pending', error: null, time: null, category: 'connectivity' },
-      { name: 'OpenSubtitles API', url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported', status: 'pending', error: null, time: null, category: 'api' },
-      { name: 'XML-RPC API', url: 'https://api.opensubtitles.org/xml-rpc', status: 'pending', error: null, time: null, category: 'api' }
+      {
+        name: 'Internet Connectivity',
+        url: 'https://httpbin.org/get',
+        status: 'pending',
+        error: null,
+        time: null,
+        category: 'connectivity',
+      },
+      {
+        name: 'OpenSubtitles API',
+        url: 'https://api.opensubtitles.com/api/v1/utilities/fasttext/language/supported',
+        status: 'pending',
+        error: null,
+        time: null,
+        category: 'api',
+      },
+      {
+        name: 'XML-RPC API',
+        url: 'https://api.opensubtitles.org/xml-rpc',
+        status: 'pending',
+        error: null,
+        time: null,
+        category: 'api',
+      },
     ];
-    
+
     // Only add ad blocker tests for web browsers, not Tauri desktop apps
     if (!isTauriDetected) {
       baseTests.push(
-        { name: 'AdBlock Network Test', url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', status: 'pending', error: null, time: null, category: 'adblock-network' },
-        { name: 'AdBlock DOM Test', url: null, status: 'pending', error: null, time: null, category: 'adblock-dom' }
+        {
+          name: 'AdBlock Network Test',
+          url: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+          status: 'pending',
+          error: null,
+          time: null,
+          category: 'adblock-network',
+        },
+        {
+          name: 'AdBlock DOM Test',
+          url: null,
+          status: 'pending',
+          error: null,
+          time: null,
+          category: 'adblock-dom',
+        }
       );
     }
-    
+
     return baseTests;
   });
-  
+
   const [browserInfo, setBrowserInfo] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -41,7 +77,7 @@ export const AdBlockTestPage = () => {
       const ua = navigator.userAgent;
       let browser = 'Unknown';
       let isBlocking = false;
-      
+
       if (ua.includes('Brave')) {
         browser = 'Brave';
         isBlocking = true;
@@ -54,7 +90,7 @@ export const AdBlockTestPage = () => {
       } else if (ua.includes('Edge')) {
         browser = 'Edge';
       }
-      
+
       setBrowserInfo({ browser, isBlocking, userAgent: ua });
     };
 
@@ -64,13 +100,11 @@ export const AdBlockTestPage = () => {
 
   const runSingleTest = async (testIndex, test) => {
     const startTime = Date.now();
-    
+
     // Set test to "testing" status
-    setTests(prev => prev.map((t, idx) => 
-      idx === testIndex ? { ...t, status: 'testing' } : t
-    ));
-    
-    const getHeaders = (test) => {
+    setTests(prev => prev.map((t, idx) => (idx === testIndex ? { ...t, status: 'testing' } : t)));
+
+    const getHeaders = test => {
       switch (test.category) {
         case 'connectivity':
           return {}; // No special headers for connectivity test
@@ -79,12 +113,12 @@ export const AdBlockTestPage = () => {
             return {
               'Api-Key': OPENSUBTITLES_COM_API_KEY || 'test-key',
               'User-Agent': USER_AGENT,
-              'X-User-Agent': USER_AGENT
+              'X-User-Agent': USER_AGENT,
             };
           } else {
             return {
               'User-Agent': USER_AGENT,
-              'X-User-Agent': USER_AGENT
+              'X-User-Agent': USER_AGENT,
             };
           }
         case 'adblock':
@@ -93,38 +127,41 @@ export const AdBlockTestPage = () => {
           return {};
       }
     };
-    
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // Longer timeout for more accurate results
-      
+
       const response = await fetch(test.url, {
         method: 'HEAD',
         signal: controller.signal,
         headers: getHeaders(test),
         mode: 'cors',
-        cache: 'no-cache'
+        cache: 'no-cache',
       });
-      
+
       clearTimeout(timeoutId);
       const endTime = Date.now();
-      
-      setTests(prev => prev.map((t, idx) => 
-        idx === testIndex ? { 
-          ...t, 
-          status: response.ok ? 'success' : 'failed', 
-          error: response.ok ? null : `HTTP ${response.status} ${response.statusText}`,
-          time: endTime - startTime
-        } : t
-      ));
-      
+
+      setTests(prev =>
+        prev.map((t, idx) =>
+          idx === testIndex
+            ? {
+                ...t,
+                status: response.ok ? 'success' : 'failed',
+                error: response.ok ? null : `HTTP ${response.status} ${response.statusText}`,
+                time: endTime - startTime,
+              }
+            : t
+        )
+      );
+
       return { success: response.ok, status: response.status, error: null };
-      
     } catch (error) {
       const endTime = Date.now();
       let status = 'failed';
       let errorMsg = error.message;
-      
+
       if (error.name === 'AbortError') {
         status = 'timeout';
         errorMsg = 'Request timeout';
@@ -135,59 +172,71 @@ export const AdBlockTestPage = () => {
         status = 'network';
         errorMsg = 'Network connection failed';
       }
-      
-      setTests(prev => prev.map((t, idx) => 
-        idx === testIndex ? { 
-          ...t, 
-          status, 
-          error: errorMsg,
-          time: endTime - startTime
-        } : t
-      ));
-      
+
+      setTests(prev =>
+        prev.map((t, idx) =>
+          idx === testIndex
+            ? {
+                ...t,
+                status,
+                error: errorMsg,
+                time: endTime - startTime,
+              }
+            : t
+        )
+      );
+
       return { success: false, status: null, error: errorMsg };
     }
   };
 
   const runDOMTest = async (testIndex, test) => {
     const startTime = Date.now();
-    
+
     // Set test to "testing" status
-    setTests(prev => prev.map((t, idx) => 
-      idx === testIndex ? { ...t, status: 'testing' } : t
-    ));
-    
+    setTests(prev => prev.map((t, idx) => (idx === testIndex ? { ...t, status: 'testing' } : t)));
+
     try {
       console.log('🎣 Running DOM bait element test...');
       const baitBlocked = await AdBlockerDetection.detectWithBaitElement();
       const endTime = Date.now();
-      
-      console.log('🎣 DOM bait element result:', baitBlocked ? 'BLOCKED (ad-blocker active)' : 'OK (no DOM blocking)');
-      
-      setTests(prev => prev.map((t, idx) => 
-        idx === testIndex ? { 
-          ...t, 
-          status: baitBlocked ? 'failed' : 'success',
-          error: baitBlocked ? 'DOM elements blocked by ad-blocker extension' : null,
-          time: endTime - startTime
-        } : t
-      ));
-      
+
+      console.log(
+        '🎣 DOM bait element result:',
+        baitBlocked ? 'BLOCKED (ad-blocker active)' : 'OK (no DOM blocking)'
+      );
+
+      setTests(prev =>
+        prev.map((t, idx) =>
+          idx === testIndex
+            ? {
+                ...t,
+                status: baitBlocked ? 'failed' : 'success',
+                error: baitBlocked ? 'DOM elements blocked by ad-blocker extension' : null,
+                time: endTime - startTime,
+              }
+            : t
+        )
+      );
+
       return { success: !baitBlocked, blocked: baitBlocked, error: null };
-      
     } catch (error) {
       const endTime = Date.now();
       console.error('🎣 DOM test failed:', error);
-      
-      setTests(prev => prev.map((t, idx) => 
-        idx === testIndex ? { 
-          ...t, 
-          status: 'failed', 
-          error: `DOM test error: ${error.message}`,
-          time: endTime - startTime
-        } : t
-      ));
-      
+
+      setTests(prev =>
+        prev.map((t, idx) =>
+          idx === testIndex
+            ? {
+                ...t,
+                status: 'failed',
+                error: `DOM test error: ${error.message}`,
+                time: endTime - startTime,
+              }
+            : t
+        )
+      );
+
       return { success: false, blocked: false, error: error.message };
     }
   };
@@ -198,26 +247,26 @@ export const AdBlockTestPage = () => {
       console.log('⚠️ Tests already running, skipping...');
       return;
     }
-    
+
     setIsRunning(true);
     // Reset all tests to pending
     setTests(prev => prev.map(t => ({ ...t, status: 'pending', error: null, time: null })));
     setRecommendations([]);
-    
+
     // Step 1: Test internet connectivity first
     console.log('🌐 Testing internet connectivity...');
     const connectivityResult = await runSingleTest(0, tests[0]);
-    
+
     if (!connectivityResult.success) {
       console.log('❌ No internet connectivity - skipping other tests');
-      // Let the final generateRecommendations handle this case after state update
-      setTimeout(() => generateRecommendations(), 200);
+      // Let the final generateRecommendationsWithCurrentState handle this case after state update
+      setTimeout(() => generateRecommendationsWithCurrentState(tests), 200);
       setIsRunning(false);
       return;
     }
-    
+
     console.log('✅ Internet connectivity OK - proceeding with API tests');
-    
+
     // Step 2: Test OpenSubtitles APIs
     const apiTests = tests.filter(t => t.category === 'api');
     for (let i = 0; i < apiTests.length; i++) {
@@ -225,7 +274,7 @@ export const AdBlockTestPage = () => {
       console.log(`🔧 Testing ${apiTests[i].name}...`);
       await runSingleTest(testIndex, apiTests[i]);
     }
-    
+
     // Step 3: Test AdBlock (only in browser)
     if (!isTauriDetected) {
       // Test network blocking
@@ -235,7 +284,7 @@ export const AdBlockTestPage = () => {
         console.log('🌐 Testing AdBlock network detection...');
         await runSingleTest(testIndex, adBlockNetworkTest);
       }
-      
+
       // Test DOM blocking
       const adBlockDOMTest = tests.find(t => t.category === 'adblock-dom');
       if (adBlockDOMTest) {
@@ -244,13 +293,18 @@ export const AdBlockTestPage = () => {
         await runDOMTest(testIndex, adBlockDOMTest);
       }
     }
-    
+
     // Wait for all tests to complete before generating recommendations
     const checkTestsComplete = () => {
       setTests(currentTests => {
-        const allComplete = currentTests.every(test => test.status !== 'pending' && test.status !== 'testing');
-        console.log('🔍 Checking test completion:', currentTests.map(t => `${t.name}: ${t.status}`));
-        
+        const allComplete = currentTests.every(
+          test => test.status !== 'pending' && test.status !== 'testing'
+        );
+        console.log(
+          '🔍 Checking test completion:',
+          currentTests.map(t => `${t.name}: ${t.status}`)
+        );
+
         if (allComplete) {
           console.log('✅ All tests complete, generating recommendations');
           setTimeout(() => generateRecommendationsWithCurrentState(currentTests), 50);
@@ -258,47 +312,48 @@ export const AdBlockTestPage = () => {
           console.log('⏳ Tests still running, checking again in 100ms');
           setTimeout(checkTestsComplete, 100);
         }
-        
+
         return currentTests; // Return unchanged state
       });
     };
-    
+
     setTimeout(checkTestsComplete, 200);
     setIsRunning(false);
   };
 
-  const generateRecommendationsWithCurrentState = (currentTests) => {
+  const generateRecommendationsWithCurrentState = currentTests => {
     const recs = [];
     const connectivityTest = currentTests.find(t => t.category === 'connectivity');
     const apiTests = currentTests.filter(t => t.category === 'api');
     const adBlockNetworkTest = currentTests.find(t => t.category === 'adblock-network');
     const adBlockDOMTest = currentTests.find(t => t.category === 'adblock-dom');
-    
+
     console.log('🔍 Generating recommendations with current test statuses:', {
       connectivity: connectivityTest?.status,
       api: apiTests.map(t => `${t.name}: ${t.status}`),
       'adblock-network': adBlockNetworkTest?.status,
-      'adblock-dom': adBlockDOMTest?.status
+      'adblock-dom': adBlockDOMTest?.status,
     });
-    
+
     // Check connectivity first
     if (connectivityTest?.status !== 'success') {
       recs.push({
         type: 'no-internet',
         title: '🌐 No Internet Connection',
-        description: 'Cannot reach the internet. This is a basic connectivity issue, not related to ad blockers or browser settings.',
+        description:
+          'Cannot reach the internet. This is a basic connectivity issue, not related to ad blockers or browser settings.',
         steps: [
           'Check your internet connection (WiFi/Ethernet)',
           'Try accessing other websites like google.com',
           'Restart your router/modem if needed',
           'Contact your internet service provider if the problem persists',
-          'Check if you\'re behind a corporate firewall that blocks access'
-        ]
+          "Check if you're behind a corporate firewall that blocks access",
+        ],
       });
       setRecommendations(recs);
       return; // Don't analyze other tests if no internet
     }
-    
+
     // Analyze API connectivity issues
     const failedApiTests = apiTests.filter(t => t.status !== 'success');
     if (failedApiTests.length > 0) {
@@ -307,96 +362,102 @@ export const AdBlockTestPage = () => {
         recs.push({
           type: 'network-issue',
           title: '📡 OpenSubtitles Server Connection Issue',
-          description: 'Internet works, but cannot reach OpenSubtitles servers. This could be a server issue or firewall blocking.',
+          description:
+            'Internet works, but cannot reach OpenSubtitles servers. This could be a server issue or firewall blocking.',
           steps: [
             'Check if OpenSubtitles.org is currently down (try visiting the website)',
             'Your firewall might be blocking the desktop application',
             'Try temporarily disabling your firewall/antivirus to test',
-            'Check if you\'re behind a corporate firewall',
-            'Contact your network administrator if in a corporate environment'
-          ]
+            "Check if you're behind a corporate firewall",
+            'Contact your network administrator if in a corporate environment',
+          ],
         });
       } else {
         // Browser - could be ad blocker or CORS
         recs.push({
           type: 'api-blocked',
           title: '🚫 OpenSubtitles API Access Blocked',
-          description: 'Internet works, but OpenSubtitles APIs are blocked. This is likely caused by ad blockers or browser security settings.',
+          description:
+            'Internet works, but OpenSubtitles APIs are blocked. This is likely caused by ad blockers or browser security settings.',
           steps: [
             'Disable uBlock Origin, Adblock Plus, or other ad blockers for this site',
             'Add "uploader.opensubtitles.org" to your ad blocker\'s allowlist',
             'Try browsing in incognito/private mode (extensions usually disabled)',
             'Temporarily disable all browser extensions to test',
-            'Check if your antivirus has web protection that blocks API calls'
-          ]
+            'Check if your antivirus has web protection that blocks API calls',
+          ],
         });
       }
     }
-    
+
     // Analyze AdBlock tests (browser only) - Issue #1 improved detection
     if (!isTauriDetected && (adBlockNetworkTest || adBlockDOMTest)) {
       const networkBlocked = adBlockNetworkTest?.status !== 'success';
       const domBlocked = adBlockDOMTest?.status !== 'success';
-      
+
       if (networkBlocked && domBlocked) {
         // Both network and DOM blocked - real ad-blocker extension
         recs.push({
           type: 'adblocker',
           title: '🛡️ Ad Blocker Extension Detected',
-          description: 'A browser ad-blocker extension is actively blocking both network requests and DOM elements. This confirms real ad-blocker activity.',
+          description:
+            'A browser ad-blocker extension is actively blocking both network requests and DOM elements. This confirms real ad-blocker activity.',
           steps: [
             'For uBlock Origin: Click extension icon → click the big power button to disable for this site',
             'For Adblock Plus: Click extension icon → toggle "Enabled on this site" to OFF',
             'For Brave: Click the Shield 🛡️ icon in address bar → turn off Shields',
             'Alternative: Add "uploader.opensubtitles.org" to your blocker\'s allowlist',
-            'This is just a detection test - the uploader may still work fine'
-          ]
+            'This is just a detection test - the uploader may still work fine',
+          ],
         });
       } else if (networkBlocked && !domBlocked) {
         // Network blocked but DOM works - likely hosts file, DNS, or ISP blocking
         recs.push({
           type: 'network-blocking',
           title: '🌐 Network-Level Blocking Detected',
-          description: 'Network requests are blocked but DOM elements work fine. This indicates hosts file, DNS, or ISP-level blocking, not a browser ad-blocker.',
+          description:
+            'Network requests are blocked but DOM elements work fine. This indicates hosts file, DNS, or ISP-level blocking, not a browser ad-blocker.',
           steps: [
             'Check your hosts file for blocked domains (usually in /etc/hosts or C:\\Windows\\System32\\drivers\\etc\\hosts)',
             'Check if your ISP or corporate network blocks advertising domains',
             'Try using a different DNS server (8.8.8.8 or 1.1.1.1)',
-            'This type of blocking usually doesn\'t affect the uploader functionality',
-            'No browser extension changes needed - this is network-level blocking'
-          ]
+            "This type of blocking usually doesn't affect the uploader functionality",
+            'No browser extension changes needed - this is network-level blocking',
+          ],
         });
       } else if (!networkBlocked && domBlocked) {
         // Unusual case - DOM blocked but network works
         recs.push({
           type: 'dom-only-blocking',
           title: '🎭 DOM-Only Blocking Detected',
-          description: 'Network requests work but DOM elements are being hidden. This is unusual and may indicate a lightweight ad-blocker or custom CSS rules.',
+          description:
+            'Network requests work but DOM elements are being hidden. This is unusual and may indicate a lightweight ad-blocker or custom CSS rules.',
           steps: [
             'Check for browser extensions that modify page appearance',
             'Look for custom CSS or userscripts that hide ad-like elements',
             'Try disabling browser extensions one by one to identify the cause',
-            'This type of blocking is rare and may not affect uploader functionality'
-          ]
+            'This type of blocking is rare and may not affect uploader functionality',
+          ],
         });
       }
-      
+
       // Special case: Brave browser
       if (browserInfo?.browser === 'Brave') {
         recs.push({
           type: 'brave',
           title: '🛡️ Brave Browser Detected',
-          description: 'Brave browser blocks ads and trackers by default, which may interfere with some functionality.',
+          description:
+            'Brave browser blocks ads and trackers by default, which may interfere with some functionality.',
           steps: [
             'Click the Shield icon (🛡️) in your address bar',
             'Turn off "Shields" for this domain (uploader.opensubtitles.org)',
             'Refresh this page to retest',
-            'You can re-enable shields after testing if the uploader works'
-          ]
+            'You can re-enable shields after testing if the uploader works',
+          ],
         });
       }
     }
-    
+
     // Success case
     if (recs.length === 0) {
       recs.push({
@@ -406,72 +467,95 @@ export const AdBlockTestPage = () => {
         steps: [
           'Internet connectivity: ✅ Working',
           'OpenSubtitles APIs: ✅ Accessible',
-          !isTauriDetected && adBlockNetworkTest ? `Network blocking test: ${adBlockNetworkTest.status === 'success' ? '✅ No network blocking' : '⚠️ Network blocked (hosts/DNS/ISP)'}` : '✅ Desktop app (no network concerns)',
-          !isTauriDetected && adBlockDOMTest ? `DOM blocking test: ${adBlockDOMTest.status === 'success' ? '✅ No DOM blocking' : '⚠️ DOM elements hidden'}` : '✅ Desktop app (no DOM concerns)',
-          '📤 Ready to upload subtitles!'
+          !isTauriDetected && adBlockNetworkTest
+            ? `Network blocking test: ${adBlockNetworkTest.status === 'success' ? '✅ No network blocking' : '⚠️ Network blocked (hosts/DNS/ISP)'}`
+            : '✅ Desktop app (no network concerns)',
+          !isTauriDetected && adBlockDOMTest
+            ? `DOM blocking test: ${adBlockDOMTest.status === 'success' ? '✅ No DOM blocking' : '⚠️ DOM elements hidden'}`
+            : '✅ Desktop app (no DOM concerns)',
+          '📤 Ready to upload subtitles!',
         ].filter(Boolean),
-        showUploaderLink: true
+        showUploaderLink: true,
       });
     }
-    
+
     setRecommendations(recs);
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = status => {
     switch (status) {
-      case 'pending': return '⏸️';
-      case 'testing': return '⏳';
-      case 'success': return '✅';
-      case 'failed': return '❌';
-      case 'timeout': return '⏱️';
-      case 'cors': return '🔒';
-      case 'network': return '🌐';
-      default: return '❓';
+      case 'pending':
+        return '⏸️';
+      case 'testing':
+        return '⏳';
+      case 'success':
+        return '✅';
+      case 'failed':
+        return '❌';
+      case 'timeout':
+        return '⏱️';
+      case 'cors':
+        return '🔒';
+      case 'network':
+        return '🌐';
+      default:
+        return '❓';
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status) {
-      case 'success': return 'text-green-600 bg-green-50 border-green-200';
-      case 'failed': return 'text-red-600 bg-red-50 border-red-200';
-      case 'timeout': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'testing': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'pending': return 'text-gray-600 bg-gray-50 border-gray-200';
-      case 'cors': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'network': return 'text-orange-600 bg-orange-50 border-orange-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'success':
+        return 'text-green-600 bg-green-50 border-green-200';
+      case 'failed':
+        return 'text-red-600 bg-red-50 border-red-200';
+      case 'timeout':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'testing':
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'pending':
+        return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'cors':
+        return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'network':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        
         {/* Header */}
-        <div className={`rounded-lg shadow-sm border p-6 mb-6 ${
-          isTauriDetected ? 'bg-blue-50 border-blue-200' : 'bg-white'
-        }`}>
+        <div
+          className={`rounded-lg shadow-sm border p-6 mb-6 ${
+            isTauriDetected ? 'bg-blue-50 border-blue-200' : 'bg-white'
+          }`}
+        >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isTauriDetected ? '📡 Desktop App - Network Diagnostics' : '🔍 OpenSubtitles Uploader - Connection Diagnostics'}
+            {isTauriDetected
+              ? '📡 Desktop App - Network Diagnostics'
+              : '🔍 OpenSubtitles Uploader - Connection Diagnostics'}
           </h1>
           <p className={isTauriDetected ? 'text-blue-700' : 'text-gray-600'}>
-            {isTauriDetected 
+            {isTauriDetected
               ? 'This page performs sequential network tests to diagnose connectivity issues. Tests run in order: Internet → APIs → Analysis.'
-              : 'This page performs comprehensive connectivity tests to identify the root cause of any access issues. Tests run sequentially to provide accurate diagnosis.'
-            }
+              : 'This page performs comprehensive connectivity tests to identify the root cause of any access issues. Tests run sequentially to provide accurate diagnosis.'}
           </p>
           {isTauriDetected && (
             <div className="mt-3 p-3 bg-blue-100 rounded-lg">
               <p className="text-blue-800 text-sm font-medium">
-                💡 <strong>Desktop App Detected:</strong> Ad blockers cannot affect desktop applications. 
-                Any issues detected are network connectivity or firewall problems.
+                💡 <strong>Desktop App Detected:</strong> Ad blockers cannot affect desktop
+                applications. Any issues detected are network connectivity or firewall problems.
               </p>
             </div>
           )}
           {!isTauriDetected && (
             <div className="mt-3 p-3 bg-green-100 rounded-lg">
               <p className="text-green-800 text-sm font-medium">
-                🔍 <strong>Improved Testing:</strong> Tests run in sequence (Internet → APIs → AdBlock) to distinguish between connectivity issues and browser blocking.
+                🔍 <strong>Improved Testing:</strong> Tests run in sequence (Internet → APIs →
+                AdBlock) to distinguish between connectivity issues and browser blocking.
               </p>
             </div>
           )}
@@ -488,10 +572,9 @@ export const AdBlockTestPage = () => {
                 {isTauriDetected ? 'Environment:' : 'Browser:'}
               </span>
               <span className="ml-2 text-gray-900">
-                {isTauriDetected 
-                  ? 'Desktop Application (Tauri)' 
-                  : (browserInfo?.browser || 'Detecting...')
-                }
+                {isTauriDetected
+                  ? 'Desktop Application (Tauri)'
+                  : browserInfo?.browser || 'Detecting...'}
               </span>
               {isTauriDetected && (
                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
@@ -515,9 +598,12 @@ export const AdBlockTestPage = () => {
 
         {/* Sequential Tests */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Sequential Connectivity Tests</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Sequential Connectivity Tests
+          </h2>
           <p className="text-sm text-gray-600 mb-4">
-            Tests run in order: Internet connectivity → OpenSubtitles APIs → Ad blocker detection (browser only)
+            Tests run in order: Internet connectivity → OpenSubtitles APIs → Ad blocker detection
+            (browser only)
           </p>
           <div className="space-y-4">
             {tests.map((test, index) => (
@@ -538,7 +624,7 @@ export const AdBlockTestPage = () => {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-4 flex space-x-3">
             <button
               onClick={runTests}
@@ -588,7 +674,6 @@ export const AdBlockTestPage = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

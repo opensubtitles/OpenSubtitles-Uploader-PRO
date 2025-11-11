@@ -23,18 +23,26 @@ const LanguageDataSingleton = {
   restRetryCount: 0,
   xmlRpcRetryCount: 0,
   maxRetries: 10,
-  
+
   // Global logging function to prevent duplicates
   log(message) {
-    if (globalDebugFunction && !this.combineLogShown && message.includes('Combining language data')) {
+    if (
+      globalDebugFunction &&
+      !this.combineLogShown &&
+      message.includes('Combining language data')
+    ) {
       this.combineLogShown = true;
       globalDebugFunction(message);
-    } else if (globalDebugFunction && !this.combineCompleteLogShown && message.includes('Languages:')) {
+    } else if (
+      globalDebugFunction &&
+      !this.combineCompleteLogShown &&
+      message.includes('Languages:')
+    ) {
       this.combineCompleteLogShown = true;
       globalDebugFunction(message);
     }
   },
-  
+
   reset() {
     this.restApiLoaded = false;
     this.xmlRpcLoaded = false;
@@ -50,24 +58,24 @@ const LanguageDataSingleton = {
       clearTimeout(this.combineTimeout);
       this.combineTimeout = null;
     }
-  }
+  },
 };
 
 /**
  * Custom hook for managing language data from multiple APIs
  */
-export const useLanguageData = (addDebugInfo) => {
+export const useLanguageData = addDebugInfo => {
   const [languageMap, setLanguageMap] = useState({});
   const [xmlRpcLanguages, setXmlRpcLanguages] = useState([]);
   const [combinedLanguages, setCombinedLanguages] = useState({});
   const [languagesLoading, setLanguagesLoading] = useState(true);
   const [languagesError, setLanguagesError] = useState(null);
   const [subtitleLanguages, setSubtitleLanguages] = useState({});
-  
+
   const languagesLoadedRef = useRef(false);
   const xmlRpcLanguagesRef = useRef(false);
   const combinedRef = useRef(false);
-  
+
   // Set global debug function on first hook instance
   if (!globalDebugFunction) {
     globalDebugFunction = addDebugInfo;
@@ -81,21 +89,25 @@ export const useLanguageData = (addDebugInfo) => {
       }
       return;
     }
-    
+
     // Check if we've exceeded max retries
     if (LanguageDataSingleton.restRetryCount >= LanguageDataSingleton.maxRetries) {
-      addDebugInfo(`❌ REST API: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`);
+      addDebugInfo(
+        `❌ REST API: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`
+      );
       setLanguagesError(`Max retries exceeded (${LanguageDataSingleton.maxRetries})`);
       setLanguagesLoading(false);
       return;
     }
-    
+
     LanguageDataSingleton.restLoading = true;
     LanguageDataSingleton.restRetryCount++;
-    addDebugInfo(`📥 Loading REST API languages... (attempt ${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries})`);
+    addDebugInfo(
+      `📥 Loading REST API languages... (attempt ${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries})`
+    );
     setLanguagesLoading(true);
     setLanguagesError(null);
-    
+
     try {
       const { data, fromCache } = await retryAsync(
         () => OpenSubtitlesApiService.getSupportedLanguages(),
@@ -107,19 +119,25 @@ export const useLanguageData = (addDebugInfo) => {
           }
         }
       );
-      
+
       LanguageDataSingleton.restData = data;
       LanguageDataSingleton.restApiLoaded = true;
       setLanguageMap(data);
-      addDebugInfo(`✅ REST: ${Object.keys(data).length} languages ${fromCache ? '(cached)' : '(API)'}`);
+      addDebugInfo(
+        `✅ REST: ${Object.keys(data).length} languages ${fromCache ? '(cached)' : '(API)'}`
+      );
     } catch (error) {
-      addDebugInfo(`❌ Error loading languages (attempt ${LanguageDataSingleton.restRetryCount}): ${error.message}`);
+      addDebugInfo(
+        `❌ Error loading languages (attempt ${LanguageDataSingleton.restRetryCount}): ${error.message}`
+      );
       setLanguagesError(error.message);
       setLanguageMap({});
-      
+
       // If not at max retries, allow another attempt later
       if (LanguageDataSingleton.restRetryCount < LanguageDataSingleton.maxRetries) {
-        addDebugInfo(`⏳ Will retry in 10 seconds... (${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`);
+        addDebugInfo(
+          `⏳ Will retry in 10 seconds... (${LanguageDataSingleton.restRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`
+        );
         setTimeout(() => {
           LanguageDataSingleton.restLoading = false;
           loadLanguages();
@@ -142,17 +160,21 @@ export const useLanguageData = (addDebugInfo) => {
       }
       return;
     }
-    
+
     // Check if we've exceeded max retries
     if (LanguageDataSingleton.xmlRpcRetryCount >= LanguageDataSingleton.maxRetries) {
-      addDebugInfo(`❌ XML-RPC: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`);
+      addDebugInfo(
+        `❌ XML-RPC: Max retries (${LanguageDataSingleton.maxRetries}) exceeded. Skipping language loading.`
+      );
       return;
     }
-    
+
     LanguageDataSingleton.xmlRpcLoading = true;
     LanguageDataSingleton.xmlRpcRetryCount++;
-    addDebugInfo(`📥 Loading XML-RPC languages... (attempt ${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries})`);
-    
+    addDebugInfo(
+      `📥 Loading XML-RPC languages... (attempt ${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries})`
+    );
+
     try {
       const { data, fromCache } = await retryAsync(
         () => XmlRpcService.getSubLanguages(),
@@ -164,17 +186,21 @@ export const useLanguageData = (addDebugInfo) => {
           }
         }
       );
-      
+
       LanguageDataSingleton.xmlRpcData = data;
       LanguageDataSingleton.xmlRpcLoaded = true;
       setXmlRpcLanguages(data);
       addDebugInfo(`✅ XML-RPC: ${data.length} languages ${fromCache ? '(cached)' : '(API)'}`);
     } catch (error) {
-      addDebugInfo(`❌ XML-RPC GetSubLanguages failed (attempt ${LanguageDataSingleton.xmlRpcRetryCount}): ${error.message}`);
-      
+      addDebugInfo(
+        `❌ XML-RPC GetSubLanguages failed (attempt ${LanguageDataSingleton.xmlRpcRetryCount}): ${error.message}`
+      );
+
       // If not at max retries, allow another attempt later
       if (LanguageDataSingleton.xmlRpcRetryCount < LanguageDataSingleton.maxRetries) {
-        addDebugInfo(`⏳ XML-RPC will retry in 5 seconds... (${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`);
+        addDebugInfo(
+          `⏳ XML-RPC will retry in 5 seconds... (${LanguageDataSingleton.xmlRpcRetryCount}/${LanguageDataSingleton.maxRetries} attempts)`
+        );
         setTimeout(() => {
           LanguageDataSingleton.xmlRpcLoading = false;
           loadXmlRpcLanguages();
@@ -193,7 +219,7 @@ export const useLanguageData = (addDebugInfo) => {
     if (xmlRpcLanguages.length === 0 || Object.keys(languageMap).length <= 1) {
       return;
     }
-    
+
     // Prevent multiple combines on page reload
     if (LanguageDataSingleton.dataCombined || LanguageDataSingleton.combining) {
       if (LanguageDataSingleton.combinedData) {
@@ -201,27 +227,28 @@ export const useLanguageData = (addDebugInfo) => {
       }
       return;
     }
-    
+
     LanguageDataSingleton.combining = true;
-    
+
     // Use singleton logging to prevent duplicates
-    LanguageDataSingleton.log("🔗 Combining language data...");
-    
+    LanguageDataSingleton.log('🔗 Combining language data...');
+
     const combined = {};
     let matchedCount = 0;
     let unmatchedXmlRpc = 0;
     let unmatchedRest = 0;
-    
+
     // Start with XML-RPC languages (upload enabled)
     xmlRpcLanguages.forEach(xmlLang => {
       const iso639 = xmlLang.ISO639?.toLowerCase();
       if (!iso639) return;
-      
+
       // Find matching REST API language
-      const restLang = Object.entries(languageMap).find(([key, lang]) => 
-        key.toLowerCase() === iso639 || lang.language_code?.toLowerCase() === iso639
+      const restLang = Object.entries(languageMap).find(
+        ([key, lang]) =>
+          key.toLowerCase() === iso639 || lang.language_code?.toLowerCase() === iso639
       )?.[1];
-      
+
       if (restLang) {
         combined[iso639] = {
           subLanguageID: xmlLang.SubLanguageID,
@@ -232,7 +259,7 @@ export const useLanguageData = (addDebugInfo) => {
           originalName: restLang.originalName,
           iso639_3: restLang.iso639_3,
           canUpload: true,
-          displayName: restLang.name || xmlLang.LanguageName
+          displayName: restLang.name || xmlLang.LanguageName,
         };
         matchedCount++;
       } else {
@@ -242,45 +269,47 @@ export const useLanguageData = (addDebugInfo) => {
           iso639: xmlLang.ISO639,
           flag: '🏳️',
           canUpload: true,
-          displayName: xmlLang.LanguageName
+          displayName: xmlLang.LanguageName,
         };
         unmatchedXmlRpc++;
       }
     });
-    
+
     // Add REST API languages that weren't in XML-RPC (detection only)
     Object.entries(languageMap).forEach(([code, restLang]) => {
       if (code === 'default') return;
-      
+
       const iso639 = restLang.iso639_3?.toLowerCase() || restLang.language_code?.toLowerCase();
       if (!iso639 || combined[iso639]) return;
-      
+
       combined[iso639] = {
         flag: restLang.flag,
         language_code: restLang.language_code,
         originalName: restLang.originalName,
         iso639_3: restLang.iso639_3,
         canUpload: false,
-        displayName: restLang.name
+        displayName: restLang.name,
       };
       unmatchedRest++;
     });
-    
+
     LanguageDataSingleton.combinedData = combined;
     LanguageDataSingleton.dataCombined = true;
     LanguageDataSingleton.combining = false;
-    
+
     setCombinedLanguages(combined);
-    
+
     // Use singleton logging to prevent duplicates
-    LanguageDataSingleton.log(`✅ Languages: ${matchedCount} matched, ${unmatchedXmlRpc} XML-RPC only, ${unmatchedRest} REST only`);
+    LanguageDataSingleton.log(
+      `✅ Languages: ${matchedCount} matched, ${unmatchedXmlRpc} XML-RPC only, ${unmatchedRest} REST only`
+    );
   }, [xmlRpcLanguages, languageMap, addDebugInfo]);
 
   // Handle subtitle language selection
   const handleSubtitleLanguageChange = useCallback((subtitlePath, languageCode) => {
     setSubtitleLanguages(prev => ({
       ...prev,
-      [subtitlePath]: languageCode
+      [subtitlePath]: languageCode,
     }));
   }, []);
 
@@ -290,87 +319,99 @@ export const useLanguageData = (addDebugInfo) => {
   }, []);
 
   // Get language info
-  const getLanguageInfo = useCallback((languageCode) => {
-    if (!languageCode) {
-      return { flag: '🏳️', name: 'Unknown' };
-    }
-    
-    let code;
-    if (typeof languageCode === 'object' && languageCode.language_code) {
-      code = languageCode.language_code.toLowerCase();
-    } else if (typeof languageCode === 'string') {
-      code = languageCode.toLowerCase();
-    } else {
-      return { flag: '🏳️', name: 'Unknown' };
-    }
-    
-    if (languageMap[code]) {
-      return languageMap[code];
-    }
-    return { flag: '🏳️', name: code.toUpperCase() };
-  }, [languageMap]);
+  const getLanguageInfo = useCallback(
+    languageCode => {
+      if (!languageCode) {
+        return { flag: '🏳️', name: 'Unknown' };
+      }
+
+      let code;
+      if (typeof languageCode === 'object' && languageCode.language_code) {
+        code = languageCode.language_code.toLowerCase();
+      } else if (typeof languageCode === 'string') {
+        code = languageCode.toLowerCase();
+      } else {
+        return { flag: '🏳️', name: 'Unknown' };
+      }
+
+      if (languageMap[code]) {
+        return languageMap[code];
+      }
+      return { flag: '🏳️', name: code.toUpperCase() };
+    },
+    [languageMap]
+  );
 
   // Get selected language for subtitle
-  const getSubtitleLanguage = useCallback((subtitle) => {
-    const selected = subtitleLanguages[subtitle.fullPath];
-    if (selected) return selected;
-    
-    // Default to detected language if available
-    if (subtitle.detectedLanguage && 
-        typeof subtitle.detectedLanguage === 'object' && 
-        subtitle.detectedLanguage.language_code) {
-      return subtitle.detectedLanguage.language_code.toLowerCase();
-    }
-    
-    return '';
-  }, [subtitleLanguages]);
+  const getSubtitleLanguage = useCallback(
+    subtitle => {
+      const selected = subtitleLanguages[subtitle.fullPath];
+      if (selected) return selected;
+
+      // Default to detected language if available
+      if (
+        subtitle.detectedLanguage &&
+        typeof subtitle.detectedLanguage === 'object' &&
+        subtitle.detectedLanguage.language_code
+      ) {
+        return subtitle.detectedLanguage.language_code.toLowerCase();
+      }
+
+      return '';
+    },
+    [subtitleLanguages]
+  );
 
   // Get language options for subtitle dropdown
-  const getLanguageOptionsForSubtitle = useCallback((subtitle) => {
-    const options = [];
-    
-    // Add detected languages first
-    if (subtitle.detectedLanguage && 
-        typeof subtitle.detectedLanguage === 'object' && 
-        subtitle.detectedLanguage.all_languages) {
-      
-      subtitle.detectedLanguage.all_languages
-        .sort((a, b) => b.confidence - a.confidence)
-        .forEach(lang => {
-          const code = lang.language_code.toLowerCase();
-          const combinedLang = combinedLanguages[code];
-          if (combinedLang && combinedLang.canUpload) {
-            options.push({
-              code,
-              ...combinedLang,
-              confidence: lang.confidence,
-              isDetected: true
-            });
-          }
+  const getLanguageOptionsForSubtitle = useCallback(
+    subtitle => {
+      const options = [];
+
+      // Add detected languages first
+      if (
+        subtitle.detectedLanguage &&
+        typeof subtitle.detectedLanguage === 'object' &&
+        subtitle.detectedLanguage.all_languages
+      ) {
+        subtitle.detectedLanguage.all_languages
+          .sort((a, b) => b.confidence - a.confidence)
+          .forEach(lang => {
+            const code = lang.language_code.toLowerCase();
+            const combinedLang = combinedLanguages[code];
+            if (combinedLang && combinedLang.canUpload) {
+              options.push({
+                code,
+                ...combinedLang,
+                confidence: lang.confidence,
+                isDetected: true,
+              });
+            }
+          });
+      }
+
+      // Add other upload-enabled languages
+      const detectedCodes = new Set(options.map(opt => opt.code));
+      Object.entries(combinedLanguages)
+        .filter(([code, lang]) => lang.canUpload && !detectedCodes.has(code))
+        .sort(([_, a], [__, b]) => a.displayName.localeCompare(b.displayName))
+        .forEach(([code, lang]) => {
+          options.push({
+            code,
+            ...lang,
+            isDetected: false,
+          });
         });
-    }
-    
-    // Add other upload-enabled languages
-    const detectedCodes = new Set(options.map(opt => opt.code));
-    Object.entries(combinedLanguages)
-      .filter(([code, lang]) => lang.canUpload && !detectedCodes.has(code))
-      .sort(([_, a], [__, b]) => a.displayName.localeCompare(b.displayName))
-      .forEach(([code, lang]) => {
-        options.push({
-          code,
-          ...lang,
-          isDetected: false
-        });
-      });
-    
-    return options;
-  }, [combinedLanguages]);
+
+      return options;
+    },
+    [combinedLanguages]
+  );
 
   // Initialize language loading
   useEffect(() => {
     loadLanguages();
     loadXmlRpcLanguages();
-    
+
     // Cleanup function for StrictMode
     return () => {
       // Reset refs if component unmounts during StrictMode double-render
@@ -386,19 +427,24 @@ export const useLanguageData = (addDebugInfo) => {
   // Combine language data when both APIs have loaded
   useEffect(() => {
     const languageMapSize = Object.keys(languageMap).length;
-    
+
     // If singleton already has combined data, use it
     if (LanguageDataSingleton.dataCombined && LanguageDataSingleton.combinedData) {
       setCombinedLanguages(LanguageDataSingleton.combinedData);
       return;
     }
-    
-    if (xmlRpcLanguages.length > 0 && languageMapSize > 1 && !LanguageDataSingleton.dataCombined && !LanguageDataSingleton.combining) {
+
+    if (
+      xmlRpcLanguages.length > 0 &&
+      languageMapSize > 1 &&
+      !LanguageDataSingleton.dataCombined &&
+      !LanguageDataSingleton.combining
+    ) {
       // Use timeout to debounce multiple rapid calls from StrictMode
       if (LanguageDataSingleton.combineTimeout) {
         clearTimeout(LanguageDataSingleton.combineTimeout);
       }
-      
+
       LanguageDataSingleton.combineTimeout = setTimeout(() => {
         combineLanguageData();
         LanguageDataSingleton.combineTimeout = null;
@@ -419,7 +465,6 @@ export const useLanguageData = (addDebugInfo) => {
     getSubtitleLanguage,
     getLanguageOptionsForSubtitle,
     loadLanguages,
-    loadXmlRpcLanguages
+    loadXmlRpcLanguages,
   };
 };
-

@@ -27,107 +27,122 @@ export const useTestMode = () => {
     const newMode = !isTestMode;
     setIsTestMode(newMode);
     localStorage.setItem('uploader_test_mode', newMode.toString());
-    
+
     if (!newMode) {
       setCurrentTestCase(null);
     }
   }, [isTestMode]);
 
-  const startTestCase = useCallback((description) => {
-    if (!isTestMode) return;
+  const startTestCase = useCallback(
+    description => {
+      if (!isTestMode) return;
 
-    const testCase = {
-      id: Date.now(),
-      description,
-      timestamp: new Date().toISOString(),
-      originalFiles: [],
-      pairedFiles: [],
-      validationResults: {},
-      status: 'recording'
-    };
+      const testCase = {
+        id: Date.now(),
+        description,
+        timestamp: new Date().toISOString(),
+        originalFiles: [],
+        pairedFiles: [],
+        validationResults: {},
+        status: 'recording',
+      };
 
-    setCurrentTestCase(testCase);
-  }, [isTestMode]);
+      setCurrentTestCase(testCase);
+    },
+    [isTestMode]
+  );
 
-  const recordFiles = useCallback((files, pairedFiles) => {
-    if (!isTestMode || !currentTestCase) return;
+  const recordFiles = useCallback(
+    (files, pairedFiles) => {
+      if (!isTestMode || !currentTestCase) return;
 
-    const fileData = files.map(file => ({
-      name: file.name,
-      fullPath: file.fullPath,
-      size: file.size,
-      type: file.type,
-      isVideo: file.isVideo,
-      isSubtitle: file.isSubtitle,
-      isMedia: file.isMedia,
-      movieHash: file.movieHash,
-      detectedLanguage: file.detectedLanguage,
-      guessItData: file.guessItData,
-      movieData: file.movieData,
-      featuresData: file.featuresData
-    }));
+      const fileData = files.map(file => ({
+        name: file.name,
+        fullPath: file.fullPath,
+        size: file.size,
+        type: file.type,
+        isVideo: file.isVideo,
+        isSubtitle: file.isSubtitle,
+        isMedia: file.isMedia,
+        movieHash: file.movieHash,
+        detectedLanguage: file.detectedLanguage,
+        guessItData: file.guessItData,
+        movieData: file.movieData,
+        featuresData: file.featuresData,
+      }));
 
-    const pairData = pairedFiles.map(pair => ({
-      id: pair.id,
-      video: {
-        name: pair.video.name,
-        fullPath: pair.video.fullPath,
-        movieHash: pair.video.movieHash,
-        guessItData: pair.video.guessItData,
-        movieData: pair.video.movieData,
-        featuresData: pair.video.featuresData
-      },
-      subtitles: pair.subtitles.map(sub => ({
-        name: sub.name,
-        fullPath: sub.fullPath,
-        language: sub.language,
-        detectedLanguage: sub.detectedLanguage,
-        uploadLanguage: sub.uploadLanguage,
-        movieData: sub.movieData,
-        featuresData: sub.featuresData
-      }))
-    }));
+      const pairData = pairedFiles.map(pair => ({
+        id: pair.id,
+        video: {
+          name: pair.video.name,
+          fullPath: pair.video.fullPath,
+          movieHash: pair.video.movieHash,
+          guessItData: pair.video.guessItData,
+          movieData: pair.video.movieData,
+          featuresData: pair.video.featuresData,
+        },
+        subtitles: pair.subtitles.map(sub => ({
+          name: sub.name,
+          fullPath: sub.fullPath,
+          language: sub.language,
+          detectedLanguage: sub.detectedLanguage,
+          uploadLanguage: sub.uploadLanguage,
+          movieData: sub.movieData,
+          featuresData: sub.featuresData,
+        })),
+      }));
 
-    setCurrentTestCase(prev => ({
-      ...prev,
-      originalFiles: fileData,
-      pairedFiles: pairData,
-      status: 'validating'
-    }));
-  }, [isTestMode, currentTestCase]);
+      setCurrentTestCase(prev => ({
+        ...prev,
+        originalFiles: fileData,
+        pairedFiles: pairData,
+        status: 'validating',
+      }));
+    },
+    [isTestMode, currentTestCase]
+  );
 
-  const validatePairing = useCallback((validationResults) => {
-    if (!isTestMode || !currentTestCase) return;
+  const validatePairing = useCallback(
+    validationResults => {
+      if (!isTestMode || !currentTestCase) return;
 
-    setCurrentTestCase(prev => ({
-      ...prev,
-      validationResults,
-      status: 'completed'
-    }));
-  }, [isTestMode, currentTestCase]);
+      setCurrentTestCase(prev => ({
+        ...prev,
+        validationResults,
+        status: 'completed',
+      }));
+    },
+    [isTestMode, currentTestCase]
+  );
 
-  const saveTestCase = useCallback((expectedResults) => {
-    if (!isTestMode || !currentTestCase) return;
+  const saveTestCase = useCallback(
+    expectedResults => {
+      if (!isTestMode || !currentTestCase) return;
 
-    const finalTestCase = {
-      ...currentTestCase,
-      expectedResults,
-      status: 'saved'
-    };
+      const finalTestCase = {
+        ...currentTestCase,
+        expectedResults,
+        status: 'saved',
+      };
 
-    const newTestCases = [...testCases, finalTestCase];
-    setTestCases(newTestCases);
-    localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
-    setCurrentTestCase(null);
+      const newTestCases = [...testCases, finalTestCase];
+      setTestCases(newTestCases);
+      localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+      setCurrentTestCase(null);
 
-    return finalTestCase;
-  }, [isTestMode, currentTestCase, testCases]);
+      return finalTestCase;
+    },
+    [isTestMode, currentTestCase, testCases]
+  );
 
-  const deleteTestCase = useCallback((id) => {
-    const newTestCases = testCases.filter(tc => tc.id !== id);
-    setTestCases(newTestCases);
-    localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
-  }, [testCases]);
+  const deleteTestCase = useCallback(
+    id => {
+      const newTestCases = testCases.filter(tc => tc.id !== id);
+      setTestCases(newTestCases);
+      localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+    },
+    [testCases]
+  );
 
   const exportTestCases = useCallback(() => {
     const exportData = {
@@ -143,9 +158,9 @@ export const useTestMode = () => {
           type: f.type,
           isVideo: f.isVideo,
           isSubtitle: f.isSubtitle,
-          isMedia: f.isMedia
-        }))
-      }))
+          isMedia: f.isMedia,
+        })),
+      })),
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -157,27 +172,30 @@ export const useTestMode = () => {
     URL.revokeObjectURL(url);
   }, [testCases]);
 
-  const importTestCases = useCallback((file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importData = JSON.parse(e.target.result);
-          if (importData.version && importData.testCases) {
-            const newTestCases = [...testCases, ...importData.testCases];
-            setTestCases(newTestCases);
-            localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
-            resolve(importData.testCases.length);
-          } else {
-            reject(new Error('Invalid test case format'));
+  const importTestCases = useCallback(
+    file => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const importData = JSON.parse(e.target.result);
+            if (importData.version && importData.testCases) {
+              const newTestCases = [...testCases, ...importData.testCases];
+              setTestCases(newTestCases);
+              localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+              resolve(importData.testCases.length);
+            } else {
+              reject(new Error('Invalid test case format'));
+            }
+          } catch (error) {
+            reject(error);
           }
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.readAsText(file);
-    });
-  }, [testCases]);
+        };
+        reader.readAsText(file);
+      });
+    },
+    [testCases]
+  );
 
   const clearTestCases = useCallback(() => {
     setTestCases([]);
@@ -196,6 +214,6 @@ export const useTestMode = () => {
     deleteTestCase,
     exportTestCases,
     importTestCases,
-    clearTestCases
+    clearTestCases,
   };
 };

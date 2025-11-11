@@ -14,25 +14,27 @@ export class CacheService {
     try {
       // Convert to JSON string
       const jsonString = JSON.stringify(data);
-      
+
       // Convert string to Uint8Array
       const encoder = new TextEncoder();
       const uint8Array = encoder.encode(jsonString);
-      
+
       // Compress using deflate
       const compressed = pako.deflate(uint8Array);
-      
+
       // Convert to base64 and add compression marker
       const base64 = btoa(String.fromCharCode.apply(null, compressed));
       const compressedWithMarker = 'PAKO:' + base64;
-      
+
       // Log compression stats for debugging
-      const compressionRatio = (compressed.length / uint8Array.length * 100).toFixed(1);
+      const compressionRatio = ((compressed.length / uint8Array.length) * 100).toFixed(1);
       const sizeSavings = uint8Array.length - compressed.length;
       const withMarkerSize = compressedWithMarker.length;
-      
-      console.log(`📦 Cache compression: ${uint8Array.length} → ${compressed.length} bytes (${compressionRatio}%) | With marker: ${withMarkerSize} bytes | Saved: ${sizeSavings} bytes`);
-      
+
+      console.log(
+        `📦 Cache compression: ${uint8Array.length} → ${compressed.length} bytes (${compressionRatio}%) | With marker: ${withMarkerSize} bytes | Saved: ${sizeSavings} bytes`
+      );
+
       return compressedWithMarker;
     } catch (error) {
       console.error('Cache compression failed, storing uncompressed:', error);
@@ -53,31 +55,33 @@ export class CacheService {
         // Backward compatibility: parse as regular JSON
         return JSON.parse(compressedData);
       }
-      
+
       // Remove compression marker
       const base64Data = compressedData.substring(5); // Remove 'PAKO:'
-      
+
       // Decode base64 to binary
       const binaryString = atob(base64Data);
       const compressedBytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         compressedBytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       // Decompress using inflate
       const decompressed = pako.inflate(compressedBytes);
-      
+
       // Convert back to string
       const decoder = new TextDecoder('utf-8');
       const jsonString = decoder.decode(decompressed);
-      
+
       // Parse JSON
       return JSON.parse(jsonString);
     } catch (error) {
       console.error('Cache decompression failed:', error);
       // Try parsing as regular JSON (fallback for corrupted data)
       try {
-        return JSON.parse(compressedData.startsWith('PAKO:') ? compressedData.substring(5) : compressedData);
+        return JSON.parse(
+          compressedData.startsWith('PAKO:') ? compressedData.substring(5) : compressedData
+        );
       } catch (fallbackError) {
         console.error('Cache fallback parsing also failed:', fallbackError);
         return null;
@@ -91,10 +95,10 @@ export class CacheService {
     try {
       const expiryTime = localStorage.getItem(cacheKey + '_expiry');
       if (!expiryTime) return false;
-      
+
       const now = new Date().getTime();
       const expiry = parseInt(expiryTime, 10);
-      
+
       return now < expiry;
     } catch (error) {
       console.error('Error checking cache validity:', error);
@@ -123,22 +127,22 @@ export class CacheService {
   static saveToCache(cacheKey, data, cacheControlHeader = null) {
     try {
       let maxAge = DEFAULT_SETTINGS.CACHE_DURATION;
-      
+
       if (cacheControlHeader) {
         const maxAgeMatch = cacheControlHeader.match(/max-age=(\d+)/);
         if (maxAgeMatch) {
           maxAge = parseInt(maxAgeMatch[1], 10);
         }
       }
-      
-      const expiryTime = new Date().getTime() + (maxAge * 1000);
-      
+
+      const expiryTime = new Date().getTime() + maxAge * 1000;
+
       // Compress data before storing
       const compressedData = this.compressData(data);
-      
+
       localStorage.setItem(cacheKey, compressedData);
       localStorage.setItem(cacheKey + '_expiry', expiryTime.toString());
-      
+
       return { success: true, expiryTime: maxAge };
     } catch (error) {
       console.error(`Error saving to cache (${cacheKey}):`, error);
@@ -151,14 +155,14 @@ export class CacheService {
    */
   static saveToCacheWithDuration(cacheKey, data, durationInSeconds) {
     try {
-      const expiryTime = new Date().getTime() + (durationInSeconds * 1000);
-      
+      const expiryTime = new Date().getTime() + durationInSeconds * 1000;
+
       // Compress data before storing
       const compressedData = this.compressData(data);
-      
+
       localStorage.setItem(cacheKey, compressedData);
       localStorage.setItem(cacheKey + '_expiry', expiryTime.toString());
-      
+
       return { success: true, expiryTime: durationInSeconds };
     } catch (error) {
       console.error(`Error saving to cache (${cacheKey}):`, error);
@@ -194,28 +198,29 @@ export class CacheService {
         const key = localStorage.key(i);
         if (key) {
           // Check if it's an OpenSubtitles cache key
-          const isOSCache = Object.values(CACHE_KEYS).some(cacheKey => key.startsWith(cacheKey)) ||
-                           key.includes('opensubtitles') ||
-                           key.includes('guessit') ||
-                           key.includes('movieguess') ||
-                           key.includes('language_detection') ||
-                           key.includes('features_') ||
-                           key.includes('checksub') ||
-                           key.endsWith('_expiry');
-          
+          const isOSCache =
+            Object.values(CACHE_KEYS).some(cacheKey => key.startsWith(cacheKey)) ||
+            key.includes('opensubtitles') ||
+            key.includes('guessit') ||
+            key.includes('movieguess') ||
+            key.includes('language_detection') ||
+            key.includes('features_') ||
+            key.includes('checksub') ||
+            key.endsWith('_expiry');
+
           if (isOSCache) {
             const value = localStorage.getItem(key);
             const itemSize = (key.length + (value?.length || 0)) * 2; // UTF-16 chars = 2 bytes each
             totalSize += itemSize;
             itemCount++;
-            
+
             if (!key.endsWith('_expiry')) {
               const isCompressed = value && value.startsWith('PAKO:');
               cacheItems.push({
                 key,
                 size: itemSize,
                 isExpired: !this.isCacheValid(key),
-                compressed: isCompressed
+                compressed: isCompressed,
               });
             }
           }
@@ -226,7 +231,7 @@ export class CacheService {
         totalSize,
         itemCount,
         cacheItems,
-        formattedSize: this.formatBytes(totalSize)
+        formattedSize: this.formatBytes(totalSize),
       };
     } catch (error) {
       console.error('Error calculating cache size:', error);
@@ -234,7 +239,7 @@ export class CacheService {
         totalSize: 0,
         itemCount: 0,
         cacheItems: [],
-        formattedSize: '0 B'
+        formattedSize: '0 B',
       };
     }
   }
@@ -259,22 +264,22 @@ export class CacheService {
         if (key.endsWith('_expiry')) return; // Skip expiry keys, they'll be cleared with main keys
         this.clearCache(key);
       });
-      
+
       // Clear all GuessIt cache entries (they have dynamic keys)
       this.clearGuessItCache();
-      
+
       // Clear all Movie Guess cache entries (they have dynamic keys)
       this.clearMovieGuessCache();
-      
+
       // Clear all Language Detection cache entries (they have dynamic keys)
       this.clearLanguageDetectionCache();
-      
+
       // Clear all Features cache entries (they have dynamic keys)
       this.clearFeaturesCache();
-      
+
       // Clear all CheckSubHash cache entries (they have dynamic keys)
       this.clearCheckSubHashCache();
-      
+
       return true;
     } catch (error) {
       console.error('Error clearing all cache:', error);
@@ -289,7 +294,7 @@ export class CacheService {
     try {
       const guessItPrefix = CACHE_KEYS.GUESSIT_CACHE;
       const keysToRemove = [];
-      
+
       // Find all localStorage keys that start with GuessIt cache prefix
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -297,13 +302,13 @@ export class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key + '_expiry');
       });
-      
+
       console.log(`Cleared ${keysToRemove.length} GuessIt cache entries`);
       return true;
     } catch (error) {
@@ -319,7 +324,7 @@ export class CacheService {
     try {
       const movieGuessPrefix = CACHE_KEYS.MOVIE_GUESS_CACHE;
       const keysToRemove = [];
-      
+
       // Find all localStorage keys that start with Movie Guess cache prefix
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -327,13 +332,13 @@ export class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key + '_expiry');
       });
-      
+
       console.log(`Cleared ${keysToRemove.length} Movie Guess cache entries`);
       return true;
     } catch (error) {
@@ -349,7 +354,7 @@ export class CacheService {
     try {
       const languageDetectionPrefix = CACHE_KEYS.LANGUAGE_DETECTION_CACHE;
       const keysToRemove = [];
-      
+
       // Find all localStorage keys that start with Language Detection cache prefix
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -357,13 +362,13 @@ export class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key + '_expiry');
       });
-      
+
       console.log(`Cleared ${keysToRemove.length} Language Detection cache entries`);
       return true;
     } catch (error) {
@@ -379,7 +384,7 @@ export class CacheService {
     try {
       const featuresPrefix = CACHE_KEYS.FEATURES_CACHE;
       const keysToRemove = [];
-      
+
       // Find all localStorage keys that start with Features cache prefix
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -387,13 +392,13 @@ export class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key + '_expiry');
       });
-      
+
       console.log(`Cleared ${keysToRemove.length} Features cache entries`);
       return true;
     } catch (error) {
@@ -409,7 +414,7 @@ export class CacheService {
     try {
       const checkSubPrefix = CACHE_KEYS.XMLRPC_CHECKSUB;
       const keysToRemove = [];
-      
+
       // Find all localStorage keys that start with CheckSubHash cache prefix
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -417,13 +422,13 @@ export class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key + '_expiry');
       });
-      
+
       console.log(`Cleared ${keysToRemove.length} CheckSubHash cache entries`);
       return true;
     } catch (error) {
@@ -445,14 +450,15 @@ export class CacheService {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key) {
-          const isOSCache = Object.values(CACHE_KEYS).some(cacheKey => key.startsWith(cacheKey)) ||
-                           key.includes('opensubtitles') ||
-                           key.includes('guessit') ||
-                           key.includes('movieguess') ||
-                           key.includes('language_detection') ||
-                           key.includes('features_') ||
-                           key.includes('checksub');
-          
+          const isOSCache =
+            Object.values(CACHE_KEYS).some(cacheKey => key.startsWith(cacheKey)) ||
+            key.includes('opensubtitles') ||
+            key.includes('guessit') ||
+            key.includes('movieguess') ||
+            key.includes('language_detection') ||
+            key.includes('features_') ||
+            key.includes('checksub');
+
           if (isOSCache && !key.endsWith('_expiry')) {
             const value = localStorage.getItem(key);
             if (value) {
@@ -475,8 +481,10 @@ export class CacheService {
         totalCompressed: this.formatBytes(totalCompressed * 2), // UTF-16
         totalUncompressed: this.formatBytes(totalUncompressed * 2), // UTF-16
         totalSize: this.formatBytes((totalCompressed + totalUncompressed) * 2),
-        compressionRatio: totalUncompressed > 0 ? 
-          ((totalCompressed / (totalCompressed + totalUncompressed)) * 100).toFixed(1) + '%' : 'N/A'
+        compressionRatio:
+          totalUncompressed > 0
+            ? ((totalCompressed / (totalCompressed + totalUncompressed)) * 100).toFixed(1) + '%'
+            : 'N/A',
       };
     } catch (error) {
       console.error('Error calculating compression stats:', error);
@@ -486,7 +494,7 @@ export class CacheService {
         totalCompressed: '0 B',
         totalUncompressed: '0 B',
         totalSize: '0 B',
-        compressionRatio: 'N/A'
+        compressionRatio: 'N/A',
       };
     }
   }
@@ -496,26 +504,26 @@ export class CacheService {
    */
   static getCacheInfo() {
     const info = {};
-    
+
     Object.entries(CACHE_KEYS).forEach(([name, key]) => {
       if (key.endsWith('_expiry')) return;
-      
+
       const hasData = localStorage.getItem(key) !== null;
       const isValid = this.isCacheValid(key);
       const expiryTime = localStorage.getItem(key + '_expiry');
-      
+
       info[name] = {
         hasData,
         isValid,
-        expiryTime: expiryTime ? new Date(parseInt(expiryTime, 10)).toISOString() : null
+        expiryTime: expiryTime ? new Date(parseInt(expiryTime, 10)).toISOString() : null,
       };
     });
-    
+
     // Add GuessIt cache stats
     const guessItPrefix = CACHE_KEYS.GUESSIT_CACHE;
     let guessItCount = 0;
     let validGuessItCount = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(guessItPrefix) && !key.endsWith('_expiry')) {
@@ -525,18 +533,18 @@ export class CacheService {
         }
       }
     }
-    
+
     info.GUESSIT_ENTRIES = {
       totalEntries: guessItCount,
       validEntries: validGuessItCount,
-      cacheDuration: '72 hours'
+      cacheDuration: '72 hours',
     };
-    
+
     // Add Movie Guess cache stats
     const movieGuessPrefix = CACHE_KEYS.MOVIE_GUESS_CACHE;
     let movieGuessCount = 0;
     let validMovieGuessCount = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(movieGuessPrefix) && !key.endsWith('_expiry')) {
@@ -546,18 +554,18 @@ export class CacheService {
         }
       }
     }
-    
+
     info.MOVIE_GUESS_ENTRIES = {
       totalEntries: movieGuessCount,
       validEntries: validMovieGuessCount,
-      cacheDuration: '72 hours'
+      cacheDuration: '72 hours',
     };
-    
+
     // Add Language Detection cache stats
     const languageDetectionPrefix = CACHE_KEYS.LANGUAGE_DETECTION_CACHE;
     let languageDetectionCount = 0;
     let validLanguageDetectionCount = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(languageDetectionPrefix) && !key.endsWith('_expiry')) {
@@ -567,18 +575,18 @@ export class CacheService {
         }
       }
     }
-    
+
     info.LANGUAGE_DETECTION_ENTRIES = {
       totalEntries: languageDetectionCount,
       validEntries: validLanguageDetectionCount,
-      cacheDuration: '72 hours'
+      cacheDuration: '72 hours',
     };
-    
+
     // Add Features cache stats
     const featuresPrefix = CACHE_KEYS.FEATURES_CACHE;
     let featuresCount = 0;
     let validFeaturesCount = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(featuresPrefix) && !key.endsWith('_expiry')) {
@@ -588,18 +596,18 @@ export class CacheService {
         }
       }
     }
-    
+
     info.FEATURES_ENTRIES = {
       totalEntries: featuresCount,
       validEntries: validFeaturesCount,
-      cacheDuration: '72 hours'
+      cacheDuration: '72 hours',
     };
-    
+
     // Add CheckSubHash cache stats
     const checkSubPrefix = CACHE_KEYS.XMLRPC_CHECKSUB;
     let checkSubCount = 0;
     let validCheckSubCount = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(checkSubPrefix) && !key.endsWith('_expiry')) {
@@ -609,14 +617,13 @@ export class CacheService {
         }
       }
     }
-    
+
     info.CHECKSUB_ENTRIES = {
       totalEntries: checkSubCount,
       validEntries: validCheckSubCount,
-      cacheDuration: '24 hours'
+      cacheDuration: '24 hours',
     };
-    
+
     return info;
   }
 }
-

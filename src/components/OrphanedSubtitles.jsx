@@ -37,7 +37,7 @@ export const OrphanedSubtitles = ({
   colors,
   isDark,
   orphanedSubtitlesFps,
-  onOrphanedSubtitlesFpsChange
+  onOrphanedSubtitlesFpsChange,
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -51,7 +51,7 @@ export const OrphanedSubtitles = ({
     linkHover: '#185DA0',
     success: '#9EC068',
     error: '#dc3545',
-    warning: '#ffc107'
+    warning: '#ffc107',
   };
 
   // FPS options for orphaned subtitles
@@ -69,7 +69,7 @@ export const OrphanedSubtitles = ({
     { value: '60', label: '60 fps - True High Frame Rate' },
     { value: '100', label: '100 fps - Double PAL High Frame Rate' },
     { value: '119.88', label: '119.88 fps - Double NTSC High Frame Rate' },
-    { value: '120', label: '120 fps - Ultra High Frame Rate (UHFR)' }
+    { value: '120', label: '120 fps - Ultra High Frame Rate (UHFR)' },
   ];
 
   if (!orphanedSubtitles || orphanedSubtitles.length === 0) {
@@ -81,29 +81,29 @@ export const OrphanedSubtitles = ({
     if (!orphanedSubtitles || orphanedSubtitles.length === 0) {
       return { checked: false, indeterminate: false };
     }
-    
+
     // Filter out orphaned subtitles that exist in database
     const uploadableSubtitles = orphanedSubtitles.filter(subtitle => {
       const hashResult = hashCheckResults?.[subtitle.fullPath];
-      const exists = hashResult && (
-        hashResult.exists === true ||
-        hashResult.found === true ||
-        hashResult.status === 'exists' ||
-        (hashResult.data && hashResult.data.length > 0) ||
-        hashResult === 'exists'
-      );
+      const exists =
+        hashResult &&
+        (hashResult.exists === true ||
+          hashResult.found === true ||
+          hashResult.status === 'exists' ||
+          (hashResult.data && hashResult.data.length > 0) ||
+          hashResult === 'exists');
       return !exists; // Only include subtitles that don't exist
     });
-    
+
     if (uploadableSubtitles.length === 0) {
       return { checked: false, indeterminate: false };
     }
-    
+
     const enabledCount = uploadableSubtitles.filter(subtitle => {
       // Access uploadStates directly instead of calling getUploadEnabled
       return uploadStates[subtitle.fullPath] !== false;
     }).length;
-    
+
     if (enabledCount === 0) {
       return { checked: false, indeterminate: false };
     } else if (enabledCount === uploadableSubtitles.length) {
@@ -116,18 +116,18 @@ export const OrphanedSubtitles = ({
   // Auto-disable upload for orphaned subtitles that exist in database
   React.useEffect(() => {
     if (!hashCheckResults) return;
-    
+
     Object.entries(hashCheckResults).forEach(([subtitlePath, hashResult]) => {
       // Check if this is an orphaned subtitle and it exists in database
       const isOrphaned = orphanedSubtitles.some(sub => sub.fullPath === subtitlePath);
-      const exists = hashResult && (
-        hashResult.exists === true ||
-        hashResult.found === true ||
-        hashResult.status === 'exists' ||
-        (hashResult.data && hashResult.data.length > 0) ||
-        hashResult === 'exists'
-      );
-      
+      const exists =
+        hashResult &&
+        (hashResult.exists === true ||
+          hashResult.found === true ||
+          hashResult.status === 'exists' ||
+          (hashResult.data && hashResult.data.length > 0) ||
+          hashResult === 'exists');
+
       if (isOrphaned && exists) {
         // Automatically disable upload for orphaned subtitles that exist
         const currentUploadState = uploadStates[subtitlePath];
@@ -140,23 +140,26 @@ export const OrphanedSubtitles = ({
   }, [hashCheckResults, orphanedSubtitles, uploadStates, onToggleUpload]);
 
   // Handle master checkbox toggle (only affect uploadable subtitles, not those that exist)
-  const handleMasterToggle = React.useCallback((enabled) => {
-    orphanedSubtitles.forEach(subtitle => {
-      const hashResult = hashCheckResults?.[subtitle.fullPath];
-      const exists = hashResult && (
-        hashResult.exists === true ||
-        hashResult.found === true ||
-        hashResult.status === 'exists' ||
-        (hashResult.data && hashResult.data.length > 0) ||
-        hashResult === 'exists'
-      );
-      
-      // Only toggle uploadable subtitles (those that don't exist in database)
-      if (!exists) {
-        onToggleUpload(subtitle.fullPath, enabled);
-      }
-    });
-  }, [orphanedSubtitles, onToggleUpload, hashCheckResults]);
+  const handleMasterToggle = React.useCallback(
+    enabled => {
+      orphanedSubtitles.forEach(subtitle => {
+        const hashResult = hashCheckResults?.[subtitle.fullPath];
+        const exists =
+          hashResult &&
+          (hashResult.exists === true ||
+            hashResult.found === true ||
+            hashResult.status === 'exists' ||
+            (hashResult.data && hashResult.data.length > 0) ||
+            hashResult === 'exists');
+
+        // Only toggle uploadable subtitles (those that don't exist in database)
+        if (!exists) {
+          onToggleUpload(subtitle.fullPath, enabled);
+        }
+      });
+    },
+    [orphanedSubtitles, onToggleUpload, hashCheckResults]
+  );
 
   const masterCheckboxState = getMasterCheckboxState;
 
@@ -177,45 +180,48 @@ export const OrphanedSubtitles = ({
   };
 
   // Handle opening movie search - SAME AS MATCHED PAIRS
-  const handleOpenMovieSearch = React.useCallback((subtitlePath) => {
-    setOpenMovieSearch(openMovieSearch === subtitlePath ? null : subtitlePath);
-  }, [openMovieSearch]);
+  const handleOpenMovieSearch = React.useCallback(
+    subtitlePath => {
+      setOpenMovieSearch(openMovieSearch === subtitlePath ? null : subtitlePath);
+    },
+    [openMovieSearch]
+  );
 
   // Handle movie search input
-  const handleMovieSearch = (query) => {
+  const handleMovieSearch = query => {
     setMovieSearchQuery(query);
   };
 
   // Utility function to extract IMDB ID from various input formats
-  const extractImdbId = (input) => {
+  const extractImdbId = input => {
     if (!input) return null;
-    
+
     // Remove whitespace
     const trimmed = input.trim();
-    
+
     // Match full IMDB URLs: https://www.imdb.com/title/tt1133589/
     const urlMatch = trimmed.match(/imdb\.com\/title\/(tt\d+)/i);
     if (urlMatch) {
       return urlMatch[1];
     }
-    
+
     // Match tt + number format: tt1133589
     const ttMatch = trimmed.match(/^(tt\d+)$/i);
     if (ttMatch) {
       return ttMatch[1];
     }
-    
+
     // Match just numbers (assuming IMDB ID without tt prefix): 1133589
     const numberMatch = trimmed.match(/^(\d{7,})$/);
     if (numberMatch) {
       return `tt${numberMatch[1]}`;
     }
-    
+
     return null;
   };
 
   // Check if input looks like an IMDB ID
-  const isImdbInput = (input) => {
+  const isImdbInput = input => {
     return extractImdbId(input) !== null;
   };
 
@@ -234,7 +240,7 @@ export const OrphanedSubtitles = ({
         title: movie.name,
         year: movie.year,
         kind: movie.kind,
-        reason: 'User selected'
+        reason: 'User selected',
       };
 
       // Call the parent component's movie change handler
@@ -250,7 +256,7 @@ export const OrphanedSubtitles = ({
       setMovieUpdateLoading(prev => ({ ...prev, [subtitlePath]: false }));
     }
   };
-  
+
   // Debounced movie search - RE-ENABLED
   React.useEffect(() => {
     if (!movieSearchQuery.trim()) {
@@ -262,15 +268,19 @@ export const OrphanedSubtitles = ({
       try {
         const query = movieSearchQuery.trim();
         const imdbId = extractImdbId(query);
-        
+
         // If it's an IMDB ID input, search using the IMDB ID directly
         if (imdbId) {
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`);
+          const response = await fetch(
+            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`
+          );
           const results = await response.json();
           setMovieSearchResults(results || []);
         } else {
           // Regular text search
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`);
+          const response = await fetch(
+            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`
+          );
           const results = await response.json();
           setMovieSearchResults(results || []);
         }
@@ -286,7 +296,7 @@ export const OrphanedSubtitles = ({
 
   // Click outside to close movie search
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (openMovieSearch && !event.target.closest('[data-movie-search]')) {
         closeMovieSearch();
       }
@@ -305,15 +315,15 @@ export const OrphanedSubtitles = ({
   const handleLocalStateChange = React.useCallback((subtitlePath, localStates) => {
     setLocalUploadStates(prev => ({
       ...prev,
-      [subtitlePath]: localStates
+      [subtitlePath]: localStates,
     }));
   }, []);
 
   // Handle upload options expansion toggle
-  const handleUploadOptionsToggle = React.useCallback((subtitlePath) => {
+  const handleUploadOptionsToggle = React.useCallback(subtitlePath => {
     setUploadOptionsExpanded(prev => ({
       ...prev,
-      [subtitlePath]: !prev[subtitlePath]
+      [subtitlePath]: !prev[subtitlePath],
     }));
   }, []);
 
@@ -323,110 +333,129 @@ export const OrphanedSubtitles = ({
   // }, [movieGuesses]);
 
   return (
-    <div className="rounded-lg p-4 mb-6 shadow-sm" 
-         style={{
-           backgroundColor: themeColors.cardBackground,
-           border: `1px solid ${themeColors.border}`
-         }}>
+    <div
+      className="rounded-lg p-4 mb-6 shadow-sm"
+      style={{
+        backgroundColor: themeColors.cardBackground,
+        border: `1px solid ${themeColors.border}`,
+      }}
+    >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2" style={{color: themeColors.text}}>
+        <h3 className="font-semibold flex items-center gap-2" style={{ color: themeColors.text }}>
           <span>📝</span>
           <span>Orphaned Subtitles ({orphanedSubtitles.length})</span>
-          <span className="text-xs px-2 py-1 rounded" 
-                style={{
-                  backgroundColor: themeColors.warning + '20',
-                  color: themeColors.warning
-                }}>
+          <span
+            className="text-xs px-2 py-1 rounded"
+            style={{
+              backgroundColor: themeColors.warning + '20',
+              color: themeColors.warning,
+            }}
+          >
             No matching video file
           </span>
         </h3>
-        
+
         {/* Master checkbox for all orphaned subtitles */}
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={masterCheckboxState.checked}
-            ref={(input) => {
+            ref={input => {
               if (input) input.indeterminate = masterCheckboxState.indeterminate;
             }}
-            onChange={(e) => handleMasterToggle(e.target.checked)}
+            onChange={e => handleMasterToggle(e.target.checked)}
             className="rounded"
             style={{
-              accentColor: themeColors.link
+              accentColor: themeColors.link,
             }}
           />
-          <span className="text-sm font-medium" style={{color: themeColors.text}}>
-            {masterCheckboxState.indeterminate ? 'Partial' : 
-             masterCheckboxState.checked ? 'All Selected' : 'None Selected'}
+          <span className="text-sm font-medium" style={{ color: themeColors.text }}>
+            {masterCheckboxState.indeterminate
+              ? 'Partial'
+              : masterCheckboxState.checked
+                ? 'All Selected'
+                : 'None Selected'}
           </span>
         </label>
       </div>
-      
+
       <div className="space-y-4">
-        {orphanedSubtitles.map((subtitle) => {
+        {orphanedSubtitles.map(subtitle => {
           const movieData = movieGuesses?.[subtitle.fullPath];
           const subtitleName = subtitle.name || subtitle.fullPath.split('/').pop();
           // DISABLED: Episode data to prevent setState issues
           // const guessItEpisodeData = guessItData?.[subtitle.fullPath];
-          
+
           // Get upload enabled status directly from uploadStates (no useMemo needed)
           const isUploadEnabled = uploadStates[subtitle.fullPath] !== false;
-          
+
           // DEBUG: Log checkbox state for this subtitle
           console.log(`🔍 OrphanedSubtitles checkbox state for ${subtitle.name}:`);
-          console.log(`   - uploadStates[${subtitle.fullPath}] = ${uploadStates[subtitle.fullPath]}`);
+          console.log(
+            `   - uploadStates[${subtitle.fullPath}] = ${uploadStates[subtitle.fullPath]}`
+          );
           console.log(`   - isUploadEnabled = ${isUploadEnabled}`);
-          
+
           // Debug logging causes setState during render - removed
-          
+
           return (
-            <div key={subtitle.fullPath} 
-                 className="rounded-lg p-4 shadow-sm"
-                 style={{
-                   backgroundColor: themeColors.cardBackground,
-                   border: `1px solid ${themeColors.border}`
-                 }}>
+            <div
+              key={subtitle.fullPath}
+              className="rounded-lg p-4 shadow-sm"
+              style={{
+                backgroundColor: themeColors.cardBackground,
+                border: `1px solid ${themeColors.border}`,
+              }}
+            >
               <div className="space-y-3">
-                
                 {/* "Video" File Section (showing subtitle file info) */}
                 <div>
-                  <div className="font-medium flex items-center gap-2" style={{color: themeColors.text}}>
+                  <div
+                    className="font-medium flex items-center gap-2"
+                    style={{ color: themeColors.text }}
+                  >
                     <span>{subtitleName}</span>
                     {subtitle.extractedFromMkv && (
-                      <span 
+                      <span
                         className="px-2 py-1 text-xs rounded font-medium"
                         style={{
                           backgroundColor: themeColors.success || '#9EC068',
-                          color: '#fff'
+                          color: '#fff',
                         }}
                         title={`Extracted from MKV: ${subtitle.originalMkvFile}`}
                       >
                         📹 MKV
                       </span>
                     )}
-                    <span className="text-xs px-2 py-1 rounded ml-2" 
+                    <span
+                      className="text-xs px-2 py-1 rounded ml-2"
                       style={{
                         backgroundColor: themeColors.warning + '20',
-                        color: themeColors.warning
-                      }}>
+                        color: themeColors.warning,
+                      }}
+                    >
                       Orphaned Subtitle
                     </span>
                   </div>
-                  <div className="text-sm" style={{color: themeColors.textSecondary}}>
+                  <div className="text-sm" style={{ color: themeColors.textSecondary }}>
                     {(() => {
                       const fullPath = subtitle.fullPath;
                       const pathParts = fullPath.split('/');
                       const directoryParts = pathParts.slice(0, -1);
-                      
+
                       // Remove duplicate adjacent directories
-                      if (directoryParts.length >= 2 && 
-                          directoryParts[directoryParts.length - 1] === directoryParts[directoryParts.length - 2]) {
+                      if (
+                        directoryParts.length >= 2 &&
+                        directoryParts[directoryParts.length - 1] ===
+                          directoryParts[directoryParts.length - 2]
+                      ) {
                         directoryParts.pop();
                       }
-                      
-                      const directoryPath = directoryParts.length > 0 ? '/' + directoryParts.join('/') : '';
+
+                      const directoryPath =
+                        directoryParts.length > 0 ? '/' + directoryParts.join('/') : '';
                       const hasDirectory = directoryPath.length > 0;
-                      
+
                       return (
                         <>
                           {hasDirectory && <span>{directoryPath} • </span>}
@@ -437,7 +466,7 @@ export const OrphanedSubtitles = ({
                     })()}
                   </div>
                 </div>
-                
+
                 {/* GuessIt Metadata Tags - Temporarily disabled for testing */}
                 {/*
                 <MetadataTags
@@ -449,7 +478,7 @@ export const OrphanedSubtitles = ({
                   isDark={isDark}
                 />
                 */}
-                
+
                 {/* Movie Display Component - BASIC version without episode detection */}
                 <MovieDisplay
                   videoPath={subtitle.fullPath}
@@ -470,7 +499,7 @@ export const OrphanedSubtitles = ({
                   orphanedSubtitlesFps={orphanedSubtitlesFps}
                   onOrphanedSubtitlesFpsChange={onOrphanedSubtitlesFpsChange}
                 />
-                
+
                 {/* Movie Search Component - Reusable */}
                 <MovieSearch
                   isOpen={openMovieSearch === subtitle.fullPath}
@@ -481,24 +510,36 @@ export const OrphanedSubtitles = ({
                   themeColors={themeColors}
                   isDark={isDark}
                 />
-                
+
                 {/* Subtitle Section - reusing same structure as MatchedPairs */}
                 <div className="ml-8 space-y-2">
-                  <div 
+                  <div
                     className={`rounded p-3 border transition-all cursor-pointer shadow-sm ${
-                      isUploadEnabled
-                        ? 'hover:shadow-md' 
-                        : 'opacity-75 hover:opacity-90'
+                      isUploadEnabled ? 'hover:shadow-md' : 'opacity-75 hover:opacity-90'
                     }`}
                     style={{
                       backgroundColor: themeColors.cardBackground,
-                      borderColor: isUploadEnabled ? (isDark ? '#4a6741' : '#d4edda') : themeColors.border,
-                      borderLeft: isUploadEnabled ? `3px solid ${themeColors.success}` : `3px solid ${themeColors.border}`
+                      borderColor: isUploadEnabled
+                        ? isDark
+                          ? '#4a6741'
+                          : '#d4edda'
+                        : themeColors.border,
+                      borderLeft: isUploadEnabled
+                        ? `3px solid ${themeColors.success}`
+                        : `3px solid ${themeColors.border}`,
                     }}
-                    onClick={(e) => {
+                    onClick={e => {
                       // Prevent toggle when clicking on interactive elements
-                      if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'A' || e.target.tagName === 'TEXTAREA' || 
-                          e.target.closest('button, a, select, input, textarea, [role="button"], [data-interactive]')) {
+                      if (
+                        e.target.tagName === 'INPUT' ||
+                        e.target.tagName === 'BUTTON' ||
+                        e.target.tagName === 'SELECT' ||
+                        e.target.tagName === 'A' ||
+                        e.target.tagName === 'TEXTAREA' ||
+                        e.target.closest(
+                          'button, a, select, input, textarea, [role="button"], [data-interactive]'
+                        )
+                      ) {
                         return;
                       }
                       onToggleUpload(subtitle.fullPath, !isUploadEnabled);
@@ -506,20 +547,20 @@ export const OrphanedSubtitles = ({
                   >
                     <div className="space-y-2">
                       {/* Line 1: Filename and upload checkbox */}
-                      <div className={`flex items-center justify-between gap-2 transition-colors`}
+                      <div
+                        className={`flex items-center justify-between gap-2 transition-colors`}
                         style={{
-                          color: isUploadEnabled ? themeColors.text : themeColors.textMuted
-                        }}>
+                          color: isUploadEnabled ? themeColors.text : themeColors.textMuted,
+                        }}
+                      >
                         <div className="flex items-center gap-2 flex-1">
-                          <span className="text-base font-medium">
-                            {subtitleName}
-                          </span>
+                          <span className="text-base font-medium">{subtitleName}</span>
                           {subtitle.extractedFromMkv && (
-                            <span 
+                            <span
                               className="px-2 py-1 text-xs rounded font-medium"
                               style={{
                                 backgroundColor: themeColors.success || '#9EC068',
-                                color: '#fff'
+                                color: '#fff',
                               }}
                               title={`Extracted from MKV: ${subtitle.originalMkvFile}`}
                             >
@@ -528,14 +569,57 @@ export const OrphanedSubtitles = ({
                           )}
                           {/* Upload option badges */}
                           <div className="flex gap-1">
-                            {(uploadOptions?.[subtitle.fullPath]?.hearingimpaired === '1' || localUploadStates?.[subtitle.fullPath]?.localHearingImpairedValue === '1') && 
-                              <span className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: themeColors.info + '20', color: themeColors.info }}>🦻 HI</span>}
-                            {(uploadOptions?.[subtitle.fullPath]?.highdefinition === '1' || localUploadStates?.[subtitle.fullPath]?.localHdValue === '1') && 
-                              <span className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: themeColors.success + '20', color: themeColors.success }}>📺 HD</span>}
-                            {(uploadOptions?.[subtitle.fullPath]?.automatictranslation === '1' || localUploadStates?.[subtitle.fullPath]?.localAutoTranslationValue === '1') && 
-                              <span className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: themeColors.warning + '20', color: themeColors.warning }}>🤖 Auto</span>}
-                            {(uploadOptions?.[subtitle.fullPath]?.foreignpartsonly === '1' || localUploadStates?.[subtitle.fullPath]?.localForeignPartsValue === '1') && 
-                              <span className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: themeColors.link + '20', color: themeColors.link }}>🎭 Foreign</span>}
+                            {(uploadOptions?.[subtitle.fullPath]?.hearingimpaired === '1' ||
+                              localUploadStates?.[subtitle.fullPath]?.localHearingImpairedValue ===
+                                '1') && (
+                              <span
+                                className="text-xs px-1 py-0.5 rounded"
+                                style={{
+                                  backgroundColor: themeColors.info + '20',
+                                  color: themeColors.info,
+                                }}
+                              >
+                                🦻 HI
+                              </span>
+                            )}
+                            {(uploadOptions?.[subtitle.fullPath]?.highdefinition === '1' ||
+                              localUploadStates?.[subtitle.fullPath]?.localHdValue === '1') && (
+                              <span
+                                className="text-xs px-1 py-0.5 rounded"
+                                style={{
+                                  backgroundColor: themeColors.success + '20',
+                                  color: themeColors.success,
+                                }}
+                              >
+                                📺 HD
+                              </span>
+                            )}
+                            {(uploadOptions?.[subtitle.fullPath]?.automatictranslation === '1' ||
+                              localUploadStates?.[subtitle.fullPath]?.localAutoTranslationValue ===
+                                '1') && (
+                              <span
+                                className="text-xs px-1 py-0.5 rounded"
+                                style={{
+                                  backgroundColor: themeColors.warning + '20',
+                                  color: themeColors.warning,
+                                }}
+                              >
+                                🤖 Auto
+                              </span>
+                            )}
+                            {(uploadOptions?.[subtitle.fullPath]?.foreignpartsonly === '1' ||
+                              localUploadStates?.[subtitle.fullPath]?.localForeignPartsValue ===
+                                '1') && (
+                              <span
+                                className="text-xs px-1 py-0.5 rounded"
+                                style={{
+                                  backgroundColor: themeColors.link + '20',
+                                  color: themeColors.link,
+                                }}
+                              >
+                                🎭 Foreign
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -543,20 +627,22 @@ export const OrphanedSubtitles = ({
                         <div className="flex items-center">
                           {(() => {
                             const hashResult = hashCheckResults?.[subtitle.fullPath];
-                            const subtitleExists = hashResult && (
-                              hashResult.exists === true ||
-                              hashResult.found === true ||
-                              hashResult.status === 'exists' ||
-                              (hashResult.data && hashResult.data.length > 0) ||
-                              hashResult === 'exists'
-                            );
-                            
+                            const subtitleExists =
+                              hashResult &&
+                              (hashResult.exists === true ||
+                                hashResult.found === true ||
+                                hashResult.status === 'exists' ||
+                                (hashResult.data && hashResult.data.length > 0) ||
+                                hashResult === 'exists');
+
                             return (
-                              <label className={`flex items-center group ${subtitleExists ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                              <label
+                                className={`flex items-center group ${subtitleExists ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
                                 <input
                                   type="checkbox"
                                   checked={isUploadEnabled}
-                                  onChange={(e) => {
+                                  onChange={e => {
                                     if (!subtitleExists) {
                                       onToggleUpload(subtitle.fullPath, e.target.checked);
                                     }
@@ -564,19 +650,26 @@ export const OrphanedSubtitles = ({
                                   disabled={subtitleExists}
                                   className="w-4 h-4 rounded focus:ring-2"
                                   style={{
-                                    accentColor: subtitleExists ? themeColors.textMuted : themeColors.success,
+                                    accentColor: subtitleExists
+                                      ? themeColors.textMuted
+                                      : themeColors.success,
                                     backgroundColor: themeColors.cardBackground,
                                     borderColor: themeColors.border,
-                                    opacity: subtitleExists ? 0.5 : 1
+                                    opacity: subtitleExists ? 0.5 : 1,
                                   }}
                                 />
-                                <span className={`ml-1 text-xs font-medium transition-colors`}
+                                <span
+                                  className={`ml-1 text-xs font-medium transition-colors`}
                                   style={{
-                                    color: subtitleExists ? themeColors.textMuted : 
-                                           (isUploadEnabled ? themeColors.success : themeColors.textMuted),
-                                    opacity: subtitleExists ? 0.5 : 1
-                                  }}>
-                                  {subtitleExists ? 'Exists' : (isUploadEnabled ? 'Upload' : 'Skip')}
+                                    color: subtitleExists
+                                      ? themeColors.textMuted
+                                      : isUploadEnabled
+                                        ? themeColors.success
+                                        : themeColors.textMuted,
+                                    opacity: subtitleExists ? 0.5 : 1,
+                                  }}
+                                >
+                                  {subtitleExists ? 'Exists' : isUploadEnabled ? 'Upload' : 'Skip'}
                                 </span>
                               </label>
                             );
@@ -598,7 +691,11 @@ export const OrphanedSubtitles = ({
                               subtitleFile={subtitle}
                               onLocalStateChange={handleLocalStateChange}
                               compactMode={true}
-                              isExpanded={uploadOptionsExpanded[subtitle.fullPath] ?? config?.uploadOptionsExpanded ?? false}
+                              isExpanded={
+                                uploadOptionsExpanded[subtitle.fullPath] ??
+                                config?.uploadOptionsExpanded ??
+                                false
+                              }
                               onToggleExpanded={() => handleUploadOptionsToggle(subtitle.fullPath)}
                               hashCheckResults={hashCheckResults}
                               config={config}
@@ -613,76 +710,104 @@ export const OrphanedSubtitles = ({
                               style={{
                                 backgroundColor: isDark ? '#3a3a3a' : '#f8f9fa',
                                 color: themeColors.text,
-                                border: `1px solid ${themeColors.border}`
+                                border: `1px solid ${themeColors.border}`,
                               }}
-                              onFocus={(e) => {
+                              onFocus={e => {
                                 e.target.style.boxShadow = `0 0 0 1px ${themeColors.success}`;
                               }}
-                              onBlur={(e) => {
+                              onBlur={e => {
                                 e.target.style.boxShadow = 'none';
                               }}
                             >
                               <span>
-                                {getSubtitleLanguage(subtitle) && combinedLanguages[getSubtitleLanguage(subtitle)] ? 
-                                  `${combinedLanguages[getSubtitleLanguage(subtitle)].flag} ${combinedLanguages[getSubtitleLanguage(subtitle)].displayName} (${combinedLanguages[getSubtitleLanguage(subtitle)].iso639?.toUpperCase()})` :
-                                  'Select upload language...'
-                                }
+                                {getSubtitleLanguage(subtitle) &&
+                                combinedLanguages[getSubtitleLanguage(subtitle)]
+                                  ? `${combinedLanguages[getSubtitleLanguage(subtitle)].flag} ${combinedLanguages[getSubtitleLanguage(subtitle)].displayName} (${combinedLanguages[getSubtitleLanguage(subtitle)].iso639?.toUpperCase()})`
+                                  : 'Select upload language...'}
                               </span>
                               <span className="ml-2">▼</span>
                             </button>
 
                             {openDropdowns[subtitle.fullPath] && (
-                              <div className="absolute top-full left-0 mt-1 rounded shadow-lg z-10 min-w-[250px] max-h-60 overflow-hidden"
-                                   style={{
-                                     backgroundColor: themeColors.cardBackground,
-                                     border: `1px solid ${themeColors.border}`
-                                   }}>
+                              <div
+                                className="absolute top-full left-0 mt-1 rounded shadow-lg z-10 min-w-[250px] max-h-60 overflow-hidden"
+                                style={{
+                                  backgroundColor: themeColors.cardBackground,
+                                  border: `1px solid ${themeColors.border}`,
+                                }}
+                              >
                                 {/* Search input */}
-                                <div className="p-2" style={{borderBottom: `1px solid ${themeColors.border}`}}>
+                                <div
+                                  className="p-2"
+                                  style={{ borderBottom: `1px solid ${themeColors.border}` }}
+                                >
                                   <input
                                     type="text"
                                     placeholder="Type to search languages..."
                                     value={dropdownSearch[subtitle.fullPath] || ''}
-                                    onChange={(e) => onDropdownSearch(subtitle.fullPath, e.target.value)}
+                                    onChange={e =>
+                                      onDropdownSearch(subtitle.fullPath, e.target.value)
+                                    }
                                     className="w-full text-xs px-2 py-1 rounded border focus:outline-none focus:ring-1"
                                     style={{
                                       backgroundColor: isDark ? '#3a3a3a' : '#f8f9fa',
                                       color: themeColors.text,
-                                      border: `1px solid ${themeColors.border}`
+                                      border: `1px solid ${themeColors.border}`,
                                     }}
-                                    onFocus={(e) => {
+                                    onFocus={e => {
                                       e.target.style.boxShadow = `0 0 0 1px ${themeColors.success}`;
                                     }}
-                                    onBlur={(e) => {
+                                    onBlur={e => {
                                       e.target.style.boxShadow = 'none';
                                     }}
                                     autoFocus
                                   />
                                 </div>
-                                
+
                                 {/* Language options */}
                                 <div className="max-h-48 overflow-y-auto">
                                   {getLanguageOptionsForSubtitle(subtitle)
                                     .filter(lang => {
                                       const searchTerm = dropdownSearch[subtitle.fullPath] || '';
                                       if (!searchTerm) return true;
-                                      return lang.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                             lang.iso639?.toLowerCase().includes(searchTerm.toLowerCase());
+                                      return (
+                                        lang.displayName
+                                          .toLowerCase()
+                                          .includes(searchTerm.toLowerCase()) ||
+                                        lang.iso639
+                                          ?.toLowerCase()
+                                          .includes(searchTerm.toLowerCase())
+                                      );
                                     })
-                                    .map((lang) => (
+                                    .map(lang => (
                                       <button
                                         key={lang.code}
-                                        onClick={() => onSubtitleLanguageChange(subtitle.fullPath, lang.code)}
+                                        onClick={() =>
+                                          onSubtitleLanguageChange(subtitle.fullPath, lang.code)
+                                        }
                                         className="w-full text-left px-3 py-2 text-xs flex items-center gap-2"
-                                        style={{backgroundColor: 'transparent'}}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = isDark ? '#444444' : '#f8f9fa'}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                        style={{ backgroundColor: 'transparent' }}
+                                        onMouseEnter={e =>
+                                          (e.target.style.backgroundColor = isDark
+                                            ? '#444444'
+                                            : '#f8f9fa')
+                                        }
+                                        onMouseLeave={e =>
+                                          (e.target.style.backgroundColor = 'transparent')
+                                        }
                                       >
                                         <span>{lang.flag}</span>
-                                        <span style={{color: themeColors.text}}>{lang.displayName}</span>
-                                        <span style={{color: themeColors.textSecondary}}>({lang.iso639?.toUpperCase()})</span>
+                                        <span style={{ color: themeColors.text }}>
+                                          {lang.displayName}
+                                        </span>
+                                        <span style={{ color: themeColors.textSecondary }}>
+                                          ({lang.iso639?.toUpperCase()})
+                                        </span>
                                         {lang.isDetected && (
-                                          <span className="ml-auto font-semibold" style={{color: themeColors.success}}>
+                                          <span
+                                            className="ml-auto font-semibold"
+                                            style={{ color: themeColors.success }}
+                                          >
                                             {(lang.confidence * 100).toFixed(1)}%
                                           </span>
                                         )}
@@ -693,23 +818,26 @@ export const OrphanedSubtitles = ({
                             )}
                           </div>
 
-
                           {/* File Info */}
-                          <div className={`flex items-center gap-2 text-sm transition-colors`}
+                          <div
+                            className={`flex items-center gap-2 text-sm transition-colors`}
                             style={{
-                              color: isUploadEnabled ? themeColors.textSecondary : themeColors.textMuted
-                            }}>
+                              color: isUploadEnabled
+                                ? themeColors.textSecondary
+                                : themeColors.textMuted,
+                            }}
+                          >
                             <span>{formatFileSize(subtitle.size)}</span>
                             <span>•</span>
                             <span>
-                              {subtitle.detectedLanguage && 
-                               typeof subtitle.detectedLanguage === 'object' && 
-                               subtitle.detectedLanguage.file_kind
+                              {subtitle.detectedLanguage &&
+                              typeof subtitle.detectedLanguage === 'object' &&
+                              subtitle.detectedLanguage.file_kind
                                 ? subtitle.detectedLanguage.file_kind
                                 : 'Subtitle File'}
                             </span>
                             <span>•</span>
-                            <span style={{color: themeColors.warning}}>No matching video</span>
+                            <span style={{ color: themeColors.warning }}>No matching video</span>
                           </div>
 
                           {/* Preview Button */}
@@ -717,13 +845,17 @@ export const OrphanedSubtitles = ({
                             onClick={() => onSubtitlePreview(subtitle)}
                             className="text-sm underline transition-colors px-2 py-1 rounded"
                             style={{
-                              color: isUploadEnabled ? themeColors.link : themeColors.textMuted
+                              color: isUploadEnabled ? themeColors.link : themeColors.textMuted,
                             }}
-                            onMouseEnter={(e) => {
-                              e.target.style.color = isUploadEnabled ? themeColors.linkHover : themeColors.textSecondary;
+                            onMouseEnter={e => {
+                              e.target.style.color = isUploadEnabled
+                                ? themeColors.linkHover
+                                : themeColors.textSecondary;
                             }}
-                            onMouseLeave={(e) => {
-                              e.target.style.color = isUploadEnabled ? themeColors.link : themeColors.textMuted;
+                            onMouseLeave={e => {
+                              e.target.style.color = isUploadEnabled
+                                ? themeColors.link
+                                : themeColors.textMuted;
                             }}
                           >
                             Preview
@@ -732,37 +864,39 @@ export const OrphanedSubtitles = ({
                       )}
 
                       {/* Upload Options Expanded Panel - Below the compact line */}
-                      {isUploadEnabled && (uploadOptionsExpanded[subtitle.fullPath] ?? config?.uploadOptionsExpanded ?? false) && (
-                        <SubtitleUploadOptionsPanel
-                          subtitlePath={subtitle.fullPath}
-                          uploadOptions={uploadOptions?.[subtitle.fullPath] || {}}
-                          onUpdateOptions={onUpdateUploadOptions}
-                          colors={themeColors}
-                          isDark={isDark}
-                          subtitleFile={subtitle}
-                          onLocalStateChange={handleLocalStateChange}
-                          hashCheckResults={hashCheckResults}
-                          config={config}
-                        />
-                      )}
+                      {isUploadEnabled &&
+                        (uploadOptionsExpanded[subtitle.fullPath] ??
+                          config?.uploadOptionsExpanded ??
+                          false) && (
+                          <SubtitleUploadOptionsPanel
+                            subtitlePath={subtitle.fullPath}
+                            uploadOptions={uploadOptions?.[subtitle.fullPath] || {}}
+                            onUpdateOptions={onUpdateUploadOptions}
+                            colors={themeColors}
+                            isDark={isDark}
+                            subtitleFile={subtitle}
+                            onLocalStateChange={handleLocalStateChange}
+                            hashCheckResults={hashCheckResults}
+                            config={config}
+                          />
+                        )}
 
                       {/* CheckSubHash note - Completely separate line */}
                       {(() => {
                         const hashResult = hashCheckResults?.[subtitle.fullPath];
-                        
-                        const shouldShow = hashResult && (
-                          hashResult.exists === true ||
-                          hashResult.found === true ||
-                          hashResult.status === 'exists' ||
-                          (hashResult.data && hashResult.data.length > 0) ||
-                          hashResult === 'exists'
-                        );
-                        
+
+                        const shouldShow =
+                          hashResult &&
+                          (hashResult.exists === true ||
+                            hashResult.found === true ||
+                            hashResult.status === 'exists' ||
+                            (hashResult.data && hashResult.data.length > 0) ||
+                            hashResult === 'exists');
+
                         if (shouldShow) {
-                          
                           // Extract subtitle URL from CheckSubHash result
                           let subtitleUrl = null;
-                          
+
                           if (hashResult.subtitleUrl) {
                             subtitleUrl = hashResult.subtitleUrl;
                           } else if (hashResult.url) {
@@ -772,7 +906,7 @@ export const OrphanedSubtitles = ({
                           } else if (hashResult.subtitleId) {
                             subtitleUrl = `https://www.opensubtitles.org/search/idsubtitlefile-${hashResult.subtitleId}`;
                           }
-                          
+
                           return (
                             <div className="mt-2 text-xs" style={{ color: themeColors.textMuted }}>
                               ✅ Subtitle already exists in database.{' '}
@@ -783,20 +917,26 @@ export const OrphanedSubtitles = ({
                                   rel="noopener noreferrer"
                                   className="underline"
                                   style={{ color: themeColors.link }}
-                                  onMouseEnter={(e) => {
+                                  onMouseEnter={e => {
                                     e.target.style.color = themeColors.linkHover;
                                   }}
-                                  onMouseLeave={(e) => {
+                                  onMouseLeave={e => {
                                     e.target.style.color = themeColors.link;
                                   }}
                                 >
                                   View existing subtitle
                                 </a>
                               ) : (
-                                <span style={{ color: themeColors.textMuted }}>(No direct link available)</span>
+                                <span style={{ color: themeColors.textMuted }}>
+                                  (No direct link available)
+                                </span>
                               )}
-                              <div className="mt-1" style={{ color: themeColors.textMuted, fontSize: '11px' }}>
-                                Upload automatically disabled - no additional metadata to contribute without video file.
+                              <div
+                                className="mt-1"
+                                style={{ color: themeColors.textMuted, fontSize: '11px' }}
+                              >
+                                Upload automatically disabled - no additional metadata to contribute
+                                without video file.
                               </div>
                             </div>
                           );
@@ -809,7 +949,7 @@ export const OrphanedSubtitles = ({
                         <div className="mt-1">
                           {(() => {
                             const result = uploadResults[subtitle.fullPath];
-                            
+
                             // Check for error responses first (anything that's not "200 OK")
                             if (result.status && result.status !== '200 OK') {
                               return (
@@ -821,20 +961,24 @@ export const OrphanedSubtitles = ({
                                 </div>
                               );
                             }
-                            
+
                             // Reusing same upload result logic as MatchedPairs
                             if (result.status === '200 OK' && result.data && !result.alreadyindb) {
-                              const isDirectUrl = typeof result.data === 'string' && result.data.includes('opensubtitles.org');
+                              const isDirectUrl =
+                                typeof result.data === 'string' &&
+                                result.data.includes('opensubtitles.org');
                               return (
                                 <div className="text-sm">
-                                  <span className="text-green-400">🎉 Successfully Uploaded as NEW!</span>
+                                  <span className="text-green-400">
+                                    🎉 Successfully Uploaded as NEW!
+                                  </span>
                                   {isDirectUrl && (
                                     <>
                                       <span className="text-gray-400"> - </span>
                                       <button
                                         className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                         title="View newly uploaded subtitle on OpenSubtitles.org"
-                                        onClick={(e) => {
+                                        onClick={e => {
                                           e.preventDefault();
                                           e.stopPropagation();
                                           window.open(result.data, '_blank', 'noopener,noreferrer');
@@ -849,15 +993,20 @@ export const OrphanedSubtitles = ({
                             } else if (result.alreadyindb === 1 || result.alreadyindb === '1') {
                               const subtitleData = result.data;
                               let subtitleId;
-                              
+
                               if (typeof subtitleData === 'string') {
                                 subtitleId = subtitleData;
-                              } else if (typeof subtitleData === 'object' && subtitleData?.IDSubtitle) {
+                              } else if (
+                                typeof subtitleData === 'object' &&
+                                subtitleData?.IDSubtitle
+                              ) {
                                 subtitleId = subtitleData.IDSubtitle;
                               }
-                              
-                              const subtitleUrl = subtitleId ? `https://www.opensubtitles.org/subtitles/${subtitleId}` : null;
-                              
+
+                              const subtitleUrl = subtitleId
+                                ? `https://www.opensubtitles.org/subtitles/${subtitleId}`
+                                : null;
+
                               return (
                                 <div className="text-sm">
                                   <span className="text-yellow-400">⚠️ Already in Database</span>
@@ -867,7 +1016,7 @@ export const OrphanedSubtitles = ({
                                       <button
                                         className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                         title={`View existing subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                        onClick={async (e) => {
+                                        onClick={async e => {
                                           e.preventDefault();
                                           e.stopPropagation();
                                           await openExternal(subtitleUrl);
@@ -880,8 +1029,13 @@ export const OrphanedSubtitles = ({
                                 </div>
                               );
                             } else if (result.status === '200 OK') {
-                              const subtitleId = typeof result.data === 'object' ? result.data?.IDSubtitle : result.data;
-                              const subtitleUrl = subtitleId ? `https://www.opensubtitles.org/subtitles/${subtitleId}` : null;
+                              const subtitleId =
+                                typeof result.data === 'object'
+                                  ? result.data?.IDSubtitle
+                                  : result.data;
+                              const subtitleUrl = subtitleId
+                                ? `https://www.opensubtitles.org/subtitles/${subtitleId}`
+                                : null;
                               return (
                                 <div className="text-sm">
                                   <span className="text-green-400">🎉 Upload completed</span>
@@ -891,7 +1045,7 @@ export const OrphanedSubtitles = ({
                                       <button
                                         className="text-blue-300 hover:text-blue-200 underline bg-transparent border-none cursor-pointer p-0 font-semibold inline"
                                         title={`View subtitle on OpenSubtitles.org (ID: ${subtitleId})`}
-                                        onClick={async (e) => {
+                                        onClick={async e => {
                                           e.preventDefault();
                                           e.stopPropagation();
                                           await openExternal(subtitleUrl);
@@ -917,14 +1071,13 @@ export const OrphanedSubtitles = ({
                       {/* Disabled state message */}
                       {!isUploadEnabled && !uploadResults[subtitle.fullPath] && (
                         <div className="text-xs">
-                          <div className="italic" style={{color: themeColors.textMuted}}>
+                          <div className="italic" style={{ color: themeColors.textMuted }}>
                             This subtitle will not be uploaded
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  
                 </div>
               </div>
             </div>

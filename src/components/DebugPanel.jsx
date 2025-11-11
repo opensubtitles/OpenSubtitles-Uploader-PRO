@@ -5,10 +5,10 @@ import SystemInfo from './SystemInfo.jsx';
 import { getSystemInfo } from '../utils/systemInfo.js';
 import '../styles/SystemInfo.css';
 
-export const DebugPanel = ({ 
-  debugMode, 
-  debugInfo, 
-  languagesLoading, 
+export const DebugPanel = ({
+  debugMode,
+  debugInfo,
+  languagesLoading,
   languagesError,
   movieGuesses,
   featuresByImdbId,
@@ -19,7 +19,7 @@ export const DebugPanel = ({
   toggleDebugMode,
   clearAllCache,
   colors,
-  isDark
+  isDark,
 }) => {
   const [cacheInfo, setCacheInfo] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
@@ -33,9 +33,9 @@ export const DebugPanel = ({
       setSessionInfo({
         hasSessionId: !!authService.getToken(),
         sessionId: authService.getToken() ? `${authService.getToken().substring(0, 8)}...` : null,
-        isValid: authService.isLoggedIn()
+        isValid: authService.isLoggedIn(),
       });
-      
+
       // Load system information
       try {
         const sysInfo = await getSystemInfo();
@@ -44,9 +44,9 @@ export const DebugPanel = ({
         console.error('Failed to load system info for debug panel:', error);
       }
     };
-    
+
     updateInfo();
-    
+
     // Update info every 5 seconds when debug panel is open
     const interval = setInterval(updateInfo, 5000);
     return () => clearInterval(interval);
@@ -56,11 +56,11 @@ export const DebugPanel = ({
   const copyToClipboard = async () => {
     try {
       let content = '=== DEBUG INFORMATION ===\n\n';
-      
+
       // Add verbose log status
       content += `Verbose log: ${debugMode ? 'ON' : 'OFF'}\n`;
       content += `Timestamp: ${new Date().toISOString()}\n\n`;
-      
+
       // Add session info
       if (sessionInfo) {
         content += `Session: ${sessionInfo.isValid ? 'Active' : 'None'}`;
@@ -69,7 +69,7 @@ export const DebugPanel = ({
         }
         content += '\n\n';
       }
-      
+
       // Add cache info
       if (cacheInfo) {
         content += `Cache: ${cacheInfo.formattedSize}`;
@@ -78,11 +78,11 @@ export const DebugPanel = ({
         }
         content += '\n\n';
       }
-      
+
       // Add debug log messages
       content += '=== DEBUG LOG MESSAGES ===\n';
       if (debugInfo.length === 0) {
-        content += debugMode 
+        content += debugMode
           ? 'No console messages yet. All browser console output will appear here.\n'
           : 'No debug info yet. Try dragging and dropping files.\n';
       } else {
@@ -90,8 +90,7 @@ export const DebugPanel = ({
           content += `${idx + 1}. ${info}\n`;
         });
       }
-      
-      
+
       await navigator.clipboard.writeText(content);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
@@ -124,30 +123,35 @@ export const DebugPanel = ({
     linkHover: '#185DA0',
     success: '#9EC068',
     error: '#dc3545',
-    info: '#17a2b8'
+    info: '#17a2b8',
   };
   return (
     <details className="mt-6">
-      <summary className="rounded-lg p-3 cursor-pointer text-sm flex items-center justify-between shadow-sm" 
-               style={{
-                 backgroundColor: themeColors.cardBackground,
-                 border: `1px solid ${themeColors.border}`,
-                 color: themeColors.textSecondary
-               }}>
+      <summary
+        className="rounded-lg p-3 cursor-pointer text-sm flex items-center justify-between shadow-sm"
+        style={{
+          backgroundColor: themeColors.cardBackground,
+          border: `1px solid ${themeColors.border}`,
+          color: themeColors.textSecondary,
+        }}
+      >
         <div className="flex items-center gap-2">
           <span style={{ color: themeColors.textMuted }}>🔧 Debug Information</span>
           {languagesLoading ? (
-            <div className="flex items-center gap-2" style={{color: themeColors.link}}>
-              <div className="w-3 h-3 rounded-full animate-spin" style={{
-                borderTop: `2px solid transparent`,
-                borderRight: `2px solid ${themeColors.link}`,
-                borderBottom: `2px solid ${themeColors.link}`,
-                borderLeft: `2px solid ${themeColors.link}`
-              }}></div>
+            <div className="flex items-center gap-2" style={{ color: themeColors.link }}>
+              <div
+                className="w-3 h-3 rounded-full animate-spin"
+                style={{
+                  borderTop: `2px solid transparent`,
+                  borderRight: `2px solid ${themeColors.link}`,
+                  borderBottom: `2px solid ${themeColors.link}`,
+                  borderLeft: `2px solid ${themeColors.link}`,
+                }}
+              ></div>
               <span>Loading...</span>
             </div>
           ) : languagesError ? (
-            <span style={{color: themeColors.error}}>❌ Error</span>
+            <span style={{ color: themeColors.error }}>❌ Error</span>
           ) : null}
           <button
             onClick={copyToClipboard}
@@ -157,66 +161,75 @@ export const DebugPanel = ({
               color: copySuccess ? 'white' : themeColors.textMuted,
               border: `1px solid ${copySuccess ? themeColors.success : themeColors.border}`,
               cursor: 'pointer',
-              opacity: copySuccess ? 1 : 0.6
+              opacity: copySuccess ? 1 : 0.6,
             }}
             title="Copy all debug information to clipboard"
           >
             {copySuccess ? '✅ Copied!' : '📋 Copy'}
           </button>
         </div>
-        <label 
+        <label
           className="flex items-center gap-2 text-sm cursor-pointer select-none"
-          style={{color: themeColors.textSecondary}}
-          onClick={(e) => e.stopPropagation()}
+          style={{ color: themeColors.textSecondary }}
+          onClick={e => e.stopPropagation()}
         >
           <input
             type="checkbox"
             checked={debugMode}
             onChange={toggleDebugMode}
             className="accent-blue-500"
-            style={{accentColor: themeColors.link}}
+            style={{ accentColor: themeColors.link }}
           />
           Verbose log
         </label>
       </summary>
-      
-      <div className="rounded-lg p-4 mt-2 shadow-sm" 
-           style={{
-             backgroundColor: themeColors.cardBackground,
-             border: `1px solid ${themeColors.border}`
-           }}>
-        <div className="rounded p-3 text-xs font-mono max-h-40 overflow-y-auto" 
-             style={{
-               backgroundColor: isDark ? '#1e1e1e' : '#f4f4f4',
-               border: `1px solid ${themeColors.border}`
-             }}>
-          <div className="mb-2" style={{color: themeColors.textSecondary}}>
-            Verbose log: <span style={{color: debugMode ? themeColors.success : themeColors.link, fontWeight: 'bold'}}>
-              {debugMode ? "ON" : "OFF"}
+
+      <div
+        className="rounded-lg p-4 mt-2 shadow-sm"
+        style={{
+          backgroundColor: themeColors.cardBackground,
+          border: `1px solid ${themeColors.border}`,
+        }}
+      >
+        <div
+          className="rounded p-3 text-xs font-mono max-h-40 overflow-y-auto"
+          style={{
+            backgroundColor: isDark ? '#1e1e1e' : '#f4f4f4',
+            border: `1px solid ${themeColors.border}`,
+          }}
+        >
+          <div className="mb-2" style={{ color: themeColors.textSecondary }}>
+            Verbose log:{' '}
+            <span
+              style={{
+                color: debugMode ? themeColors.success : themeColors.link,
+                fontWeight: 'bold',
+              }}
+            >
+              {debugMode ? 'ON' : 'OFF'}
             </span>
-            <div className="text-xs mt-1" style={{color: themeColors.textMuted}}>
-              {debugMode 
-                ? "📋 Showing ALL console messages (for users without dev tools access)"
-                : "🔧 Showing basic file processing messages"
-              }
+            <div className="text-xs mt-1" style={{ color: themeColors.textMuted }}>
+              {debugMode
+                ? '📋 Showing ALL console messages (for users without dev tools access)'
+                : '🔧 Showing basic file processing messages'}
             </div>
           </div>
-          
+
           {/* System Information - Always Visible as regular debug message */}
           {systemInfo && (
-            <div className="text-xs" style={{color: themeColors.textSecondary}}>
+            <div className="text-xs" style={{ color: themeColors.textSecondary }}>
               {(() => {
                 const formatSystemInfo = () => {
                   const parts = [];
-                  
+
                   // App name and version
                   parts.push(`🚀 ${systemInfo.app.name} v${systemInfo.app.version}`);
-                  
+
                   // Environment
                   if (systemInfo.app.environment && systemInfo.app.environment !== 'N/A') {
                     parts.push(systemInfo.app.environment);
                   }
-                  
+
                   // OS info
                   const osInfo = [];
                   if (systemInfo.os.name && systemInfo.os.name !== 'N/A') {
@@ -232,7 +245,7 @@ export const DebugPanel = ({
                     }
                     parts.push(osString);
                   }
-                  
+
                   // Browser info
                   const browserInfo = [];
                   if (systemInfo.browser.name && systemInfo.browser.name !== 'N/A') {
@@ -244,15 +257,15 @@ export const DebugPanel = ({
                   if (browserInfo.length > 0) {
                     parts.push(browserInfo.join(' '));
                   }
-                  
+
                   return parts.join(' | ');
                 };
-                
+
                 return `${new Date().toLocaleTimeString()}: ${formatSystemInfo()}`;
               })()}
             </div>
           )}
-          
+
           {/* Debug data display - hidden from user */}
           {/* 
           {(Object.keys(movieGuesses).length > 0 || Object.keys(featuresByImdbId).length > 0) && (
@@ -276,34 +289,37 @@ export const DebugPanel = ({
             </div>
           )}
           */}
-          
+
           {/* Debug log messages */}
           {debugInfo.length === 0 ? (
-            <div style={{color: themeColors.textMuted}}>
-              {debugMode 
-                ? "No console messages yet. All browser console output will appear here."
-                : "No debug info yet. Try dragging and dropping files."
-              }
+            <div style={{ color: themeColors.textMuted }}>
+              {debugMode
+                ? 'No console messages yet. All browser console output will appear here.'
+                : 'No debug info yet. Try dragging and dropping files.'}
             </div>
           ) : (
             debugInfo.map((info, idx) => (
-              <div key={idx} style={{color: themeColors.textSecondary, lineHeight: '1.3'}}>{info}</div>
+              <div key={idx} style={{ color: themeColors.textSecondary, lineHeight: '1.3' }}>
+                {info}
+              </div>
             ))
           )}
         </div>
-        
+
         {/* Cache Info and Session Info */}
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-sm" style={{ color: themeColors.textSecondary }}>
               {cacheInfo && (
                 <span>
-                  📦 Cache: <span style={{ color: themeColors.link, fontWeight: 'bold' }}>
+                  📦 Cache:{' '}
+                  <span style={{ color: themeColors.link, fontWeight: 'bold' }}>
                     {cacheInfo.formattedSize}
                   </span>
                   {cacheInfo.itemCount > 0 && (
                     <span style={{ color: themeColors.textMuted }}>
-                      {' '}({cacheInfo.itemCount} items)
+                      {' '}
+                      ({cacheInfo.itemCount} items)
                     </span>
                   )}
                 </span>
@@ -317,12 +333,12 @@ export const DebugPanel = ({
               }}
               className="text-white px-4 py-2 rounded-lg transition-colors text-sm"
               style={{
-                backgroundColor: themeColors.link
+                backgroundColor: themeColors.link,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.target.style.backgroundColor = themeColors.linkHover;
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.target.style.backgroundColor = themeColors.link;
               }}
               title="Delete all stored language and XML-RPC cache"
@@ -330,27 +346,28 @@ export const DebugPanel = ({
               🗑️ Clear Cache
             </button>
           </div>
-          
+
           {/* Session Info */}
           <div className="text-sm" style={{ color: themeColors.textSecondary }}>
             {sessionInfo && (
               <span>
-                🔐 Session: <span style={{ 
-                  color: sessionInfo.isValid ? themeColors.success : themeColors.textMuted, 
-                  fontWeight: 'bold' 
-                }}>
+                🔐 Session:{' '}
+                <span
+                  style={{
+                    color: sessionInfo.isValid ? themeColors.success : themeColors.textMuted,
+                    fontWeight: 'bold',
+                  }}
+                >
                   {sessionInfo.isValid ? 'Active' : 'None'}
                 </span>
                 {sessionInfo.isValid && sessionInfo.sessionId && (
-                  <span style={{ color: themeColors.textMuted }}>
-                    {' '}({sessionInfo.sessionId})
-                  </span>
+                  <span style={{ color: themeColors.textMuted }}> ({sessionInfo.sessionId})</span>
                 )}
               </span>
             )}
           </div>
         </div>
-        
+
         {/* System Information */}
         <div className="mt-4">
           <SystemInfo compact={true} />

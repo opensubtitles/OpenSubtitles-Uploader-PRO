@@ -27,21 +27,19 @@ class AuthService {
       console.log('🔐 Password:', password ? '[HIDDEN]' : '(no password)');
       console.log('🔐 Language:', language);
       console.log('🔐 User Agent:', this.userAgent);
-      
-      // Prepare parameters for XML-RPC call
-      const params = [
-        username || '',
-        password || '',
-        language || 'en',
-        this.userAgent
-      ];
 
-      console.log('🔐 XML-RPC params prepared:', params.map((p, i) => i === 1 && p ? '[HIDDEN]' : p));
+      // Prepare parameters for XML-RPC call
+      const params = [username || '', password || '', language || 'en', this.userAgent];
+
+      console.log(
+        '🔐 XML-RPC params prepared:',
+        params.map((p, i) => (i === 1 && p ? '[HIDDEN]' : p))
+      );
 
       // Make XML-RPC call to LogIn method
       console.log('🔐 Making XML-RPC call to LogIn...');
       const response = await xmlrpcCall('LogIn', params);
-      
+
       console.log('🔐 Login response received:', response);
       console.log('🔐 Response type:', typeof response);
       console.log('🔐 Response keys:', response ? Object.keys(response) : 'null');
@@ -49,7 +47,7 @@ class AuthService {
       // Check if login was successful
       if (response && response.status && response.status.includes('200')) {
         console.log('✅ Login response status is 200 OK');
-        
+
         // Store authentication data
         this.token = response.token;
         this.userData = response.data || {};
@@ -73,28 +71,33 @@ class AuthService {
           console.log('📋 Fetching additional user info via getUserInfo...');
           const { UserService } = await import('./userService.js');
           const detailedUserInfo = await UserService.getUserInfo(this.token);
-          
+
           if (detailedUserInfo) {
             // Prioritize getUserInfo data over login data - use getUserInfo as primary source
             this.userData = { ...detailedUserInfo, ...this.userData };
-            
+
             // Validate user rank permissions
             const uploadPermission = UserService.canUserUpload(this.userData);
             console.log('🎖️ Upload permission check:', uploadPermission);
-            
+
             // Store rank validation result
             this.userData._rankValidation = uploadPermission.rankValidation;
             this.userData._canUpload = uploadPermission.canUpload;
             this.userData._uploadRestrictionReason = uploadPermission.reason;
-            
+
             // Update localStorage with enhanced user data (getUserInfo priority)
             localStorage.setItem('opensubtitles_user_data', JSON.stringify(this.userData));
-            
-            console.log('✅ Enhanced user info retrieved via getUserInfo (using as primary data source)');
+
+            console.log(
+              '✅ Enhanced user info retrieved via getUserInfo (using as primary data source)'
+            );
             console.log('📋 Enhanced user data:', this.userData);
-            
+
             if (!uploadPermission.canUpload) {
-              console.log('⚠️ User login successful but upload access restricted:', uploadPermission.reason);
+              console.log(
+                '⚠️ User login successful but upload access restricted:',
+                uploadPermission.reason
+              );
             }
           } else {
             console.log('⚠️ getUserInfo failed or returned no data, using login data only');
@@ -109,7 +112,7 @@ class AuthService {
           token: this.token,
           userData: this.userData,
           isAnonymous: !username,
-          message: `Login successful as ${this.userData.UserNickName || 'Anonymous'}`
+          message: `Login successful as ${this.userData.UserNickName || 'Anonymous'}`,
         };
       } else {
         console.error('❌ Login failed - invalid response status:', response?.status);
@@ -121,14 +124,14 @@ class AuthService {
       console.error('❌ Error type:', error.constructor.name);
       console.error('❌ Error message:', error.message);
       console.error('❌ Error stack:', error.stack);
-      
+
       // Clear any existing authentication data
       await this.clearAuthData();
-      
+
       return {
         success: false,
         error: error.message,
-        message: `Login failed: ${error.message}`
+        message: `Login failed: ${error.message}`,
       };
     }
   }
@@ -144,7 +147,7 @@ class AuthService {
     // Import crypto-js for MD5 hashing
     const CryptoJS = await import('crypto-js');
     const hashedPassword = CryptoJS.MD5(password).toString();
-    
+
     return this.login(username, hashedPassword, language);
   }
 
@@ -168,18 +171,18 @@ class AuthService {
       console.log('✅ Logout successful');
       return {
         success: true,
-        message: 'Logout successful'
+        message: 'Logout successful',
       };
     } catch (error) {
       console.error('❌ Logout failed:', error);
-      
+
       // Clear auth data even if logout API call failed
       await this.clearAuthData();
-      
+
       return {
         success: false,
         error: error.message,
-        message: 'Logout completed (with errors)'
+        message: 'Logout completed (with errors)',
       };
     }
   }
@@ -192,24 +195,24 @@ class AuthService {
   async checkAuthStatus(sessionId = null) {
     try {
       console.log('🔐 Checking authentication status with GetUserInfo...');
-      
+
       // Use provided sessionId or stored token
       const tokenToUse = sessionId || this.token || '';
       logSensitiveData('🔐 Using token', tokenToUse, 'token');
-      
+
       // Use UserService caching for GetUserInfo calls
       const { UserService } = await import('./userService.js');
       const userData = await UserService.getUserInfo(tokenToUse);
-      
+
       if (userData) {
         console.log('✅ User is authenticated via session ID');
         console.log('✅ User data:', userData);
-        
+
         // Store the valid session data
         this.token = tokenToUse;
         this.isAuthenticated = true;
         this.userData = userData;
-        
+
         return userData;
       } else {
         console.log('❌ User is not authenticated');
@@ -313,7 +316,7 @@ class AuthService {
     localStorage.removeItem('opensubtitles_token');
     localStorage.removeItem('opensubtitles_user_data');
     localStorage.removeItem('opensubtitles_login_time');
-    
+
     // Clear UserService cache when auth data is cleared (avoid circular import)
     try {
       const { UserService } = await import('./userService.js');
@@ -330,7 +333,7 @@ class AuthService {
   getAuthHeaders() {
     return {
       'User-Agent': this.userAgent,
-      'Accept-Language': this.userData?.UserWebLanguage || 'en'
+      'Accept-Language': this.userData?.UserWebLanguage || 'en',
     };
   }
 }

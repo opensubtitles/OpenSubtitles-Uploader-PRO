@@ -6,12 +6,12 @@ import { getThemeStyles } from '../utils/themeUtils.js';
  * Component to display video metadata (FPS, duration, file size, etc.)
  * Shows in a clean, compact format with loading and error states
  */
-export const VideoMetadataDisplay = ({ 
-  filePath, 
-  metadata, 
-  isLoading, 
+export const VideoMetadataDisplay = ({
+  filePath,
+  metadata,
+  isLoading,
   error,
-  showDetailed = false 
+  showDetailed = false,
 }) => {
   const { colors, isDark } = useTheme();
   const styles = getThemeStyles(colors);
@@ -47,11 +47,11 @@ export const VideoMetadataDisplay = ({
     videoCodec,
     audioCodec,
     bitrate,
-    filesize
+    filesize,
   } = metadata;
 
   // Format file size
-  const formatFileSize = (bytes) => {
+  const formatFileSize = bytes => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -60,7 +60,7 @@ export const VideoMetadataDisplay = ({
   };
 
   // Format bitrate
-  const formatBitrate = (bps) => {
+  const formatBitrate = bps => {
     if (!bps) return 'unknown';
     const kbps = Math.round(bps / 1000);
     return `${kbps} kbps`;
@@ -73,15 +73,13 @@ export const VideoMetadataDisplay = ({
         {durationFormatted && durationFormatted !== 'unknown' && (
           <span title={`Duration: ${durationFormatted}`}>⏱️{durationFormatted}</span>
         )}
-        
-        {fps && (
-          <span title={`Frame Rate: ${fps} FPS`}>📽️{fps} FPS</span>
-        )}
-        
+
+        {fps && <span title={`Frame Rate: ${fps} FPS`}>📽️{fps} FPS</span>}
+
         {resolution && resolution !== 'unknown' && (
           <span title={`Resolution: ${resolution}`}>📺{resolution}</span>
         )}
-        
+
         {filesize && (
           <span title={`File Size: ${formatFileSize(filesize)}`}>📁{formatFileSize(filesize)}</span>
         )}
@@ -89,25 +87,31 @@ export const VideoMetadataDisplay = ({
 
       {/* Detailed metadata - shown when expanded */}
       {showDetailed && (
-        <div className="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg" 
-             style={{ 
-               backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa',
-               border: `1px solid ${colors.border}`
-             }}>
+        <div
+          className="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg"
+          style={{
+            backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa',
+            border: `1px solid ${colors.border}`,
+          }}
+        >
           <div className="space-y-1">
-            <div className="font-semibold" style={{ color: colors.text }}>Video Info</div>
+            <div className="font-semibold" style={{ color: colors.text }}>
+              Video Info
+            </div>
             <div style={{ color: colors.textSecondary }}>
               <div>Codec: {videoCodec}</div>
-              <div>Resolution: {width}x{height}</div>
+              <div>
+                Resolution: {width}x{height}
+              </div>
               <div>FPS: {fps}</div>
-              {bitrate && (
-                <div>Bitrate: {formatBitrate(bitrate)}</div>
-              )}
+              {bitrate && <div>Bitrate: {formatBitrate(bitrate)}</div>}
             </div>
           </div>
-          
+
           <div className="space-y-1">
-            <div className="font-semibold" style={{ color: colors.text }}>Audio Info</div>
+            <div className="font-semibold" style={{ color: colors.text }}>
+              Audio Info
+            </div>
             <div style={{ color: colors.textSecondary }}>
               <div>Codec: {audioCodec}</div>
               <div>Sample Rate: {metadata.sampleRate} Hz</div>

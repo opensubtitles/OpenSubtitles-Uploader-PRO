@@ -1,5 +1,10 @@
 import { extract } from 'archive-wasm';
-import { VIDEO_EXTENSIONS, SUBTITLE_EXTENSIONS, ARCHIVE_EXTENSIONS, ARCHIVE_MIME_TYPES } from '../utils/constants.js';
+import {
+  VIDEO_EXTENSIONS,
+  SUBTITLE_EXTENSIONS,
+  ARCHIVE_EXTENSIONS,
+  ARCHIVE_MIME_TYPES,
+} from '../utils/constants.js';
 
 /**
  * Archive Processing Service
@@ -7,10 +12,9 @@ import { VIDEO_EXTENSIONS, SUBTITLE_EXTENSIONS, ARCHIVE_EXTENSIONS, ARCHIVE_MIME
  * Supports: ZIP, 7z, TAR, RAR, LHA, CAB, ISO, CPIO, and compressed files
  */
 export class ArchiveProcessingService {
-  
   // Maximum archive file size in bytes (100 MB)
   static MAX_ARCHIVE_SIZE = 100 * 1024 * 1024;
-  
+
   /**
    * Check if a file is an archive file
    * @param {File} file - The file to check
@@ -19,13 +23,13 @@ export class ArchiveProcessingService {
   static isArchiveFile(file) {
     const fileName = file.name.toLowerCase();
     const fileType = file.type;
-    
+
     // Check by extension
     const isArchiveByExtension = ARCHIVE_EXTENSIONS.some(ext => fileName.endsWith(ext));
-    
+
     // Check by MIME type
     const isArchiveByMimeType = ARCHIVE_MIME_TYPES.includes(fileType);
-    
+
     return isArchiveByExtension || isArchiveByMimeType;
   }
 
@@ -40,7 +44,7 @@ export class ArchiveProcessingService {
       const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
       return {
         isValid: false,
-        error: `Archive file "${file.name}" is too large (${fileSizeMB} MB). Maximum allowed size is ${maxSizeMB} MB.`
+        error: `Archive file "${file.name}" is too large (${fileSizeMB} MB). Maximum allowed size is ${maxSizeMB} MB.`,
       };
     }
     return { isValid: true, error: null };
@@ -53,19 +57,23 @@ export class ArchiveProcessingService {
    */
   static isValidMediaFile(filename) {
     const lowerName = filename.toLowerCase();
-    
+
     // Skip system files and hidden files
-    if (filename.startsWith('.') || filename.includes('__MACOSX') || filename.includes('.DS_Store')) {
+    if (
+      filename.startsWith('.') ||
+      filename.includes('__MACOSX') ||
+      filename.includes('.DS_Store')
+    ) {
       return { isVideo: false, isSubtitle: false, isValid: false };
     }
-    
+
     const isVideo = VIDEO_EXTENSIONS.some(ext => lowerName.endsWith(ext.toLowerCase()));
     const isSubtitle = SUBTITLE_EXTENSIONS.some(ext => lowerName.endsWith(ext.toLowerCase()));
-    
+
     return {
       isVideo,
       isSubtitle,
-      isValid: isVideo || isSubtitle
+      isValid: isVideo || isSubtitle,
     };
   }
 
@@ -86,47 +94,47 @@ export class ArchiveProcessingService {
       // Convert File to ArrayBuffer for archive-wasm
       const arrayBuffer = await archiveFile.arrayBuffer();
       const archiveData = new Uint8Array(arrayBuffer);
-      
+
       const processedFiles = [];
       const allEntries = [];
-      
+
       // First pass: collect all entries to calculate total count
       for (const entry of extract(archiveData)) {
         if (entry.type === 'FILE') {
           allEntries.push(entry);
         }
       }
-      
+
       const totalFiles = allEntries.length;
       let processedCount = 0;
-      
+
       // Process each file in the archive
       for (const entry of allEntries) {
         processedCount++;
-        
+
         // Update progress if callback provided
         if (progressCallback) {
           progressCallback({
             current: processedCount,
             total: totalFiles,
             filename: entry.path,
-            stage: 'extracting'
+            stage: 'extracting',
           });
         }
-        
+
         // Check if it's a valid media file
         const fileType = this.isValidMediaFile(entry.path);
         if (!fileType.isValid) {
           continue;
         }
-        
+
         try {
           // Create a File object from the extracted data
           const extractedFile = new File([entry.data], entry.path, {
             type: this.getMimeType(entry.path),
-            lastModified: Date.now()
+            lastModified: Date.now(),
           });
-          
+
           // Create processed file object matching the expected structure
           const processedFile = {
             file: extractedFile,
@@ -137,28 +145,26 @@ export class ArchiveProcessingService {
             lastModified: extractedFile.lastModified,
             isVideo: fileType.isVideo,
             isSubtitle: fileType.isSubtitle,
-            extractedFrom: archiveFile.name // Track which archive this came from
+            extractedFrom: archiveFile.name, // Track which archive this came from
           };
-          
+
           processedFiles.push(processedFile);
-          
         } catch (fileError) {
           console.warn(`Error extracting file ${entry.path} from archive:`, fileError);
           continue;
         }
       }
-      
+
       if (progressCallback) {
         progressCallback({
           current: totalFiles,
           total: totalFiles,
           filename: '',
-          stage: 'complete'
+          stage: 'complete',
         });
       }
-      
+
       return processedFiles;
-      
     } catch (error) {
       console.error('Error processing archive file:', error);
       throw new Error(`Failed to process archive file ${archiveFile.name}: ${error.message}`);
@@ -173,30 +179,29 @@ export class ArchiveProcessingService {
    */
   static async processMultipleArchiveFiles(archiveFiles, progressCallback = null) {
     const allProcessedFiles = [];
-    
+
     for (let i = 0; i < archiveFiles.length; i++) {
       const archiveFile = archiveFiles[i];
-      
+
       try {
-        const processedFiles = await this.processArchiveFile(archiveFile, (fileProgress) => {
+        const processedFiles = await this.processArchiveFile(archiveFile, fileProgress => {
           if (progressCallback) {
             progressCallback({
               archiveIndex: i,
               totalArchives: archiveFiles.length,
               archiveName: archiveFile.name,
-              fileProgress: fileProgress
+              fileProgress: fileProgress,
             });
           }
         });
-        
+
         allProcessedFiles.push(...processedFiles);
-        
       } catch (error) {
         console.error(`Error processing archive file ${archiveFile.name}:`, error);
         // Continue processing other archive files even if one fails
       }
     }
-    
+
     return allProcessedFiles;
   }
 
@@ -207,7 +212,7 @@ export class ArchiveProcessingService {
    */
   static getMimeType(filename) {
     const lowerName = filename.toLowerCase();
-    
+
     // Video MIME types
     if (lowerName.endsWith('.mp4')) return 'video/mp4';
     if (lowerName.endsWith('.mkv')) return 'video/x-matroska';
@@ -217,14 +222,14 @@ export class ArchiveProcessingService {
     if (lowerName.endsWith('.flv')) return 'video/x-flv';
     if (lowerName.endsWith('.wmv')) return 'video/x-ms-wmv';
     if (lowerName.endsWith('.mpeg') || lowerName.endsWith('.mpg')) return 'video/mpeg';
-    
+
     // Subtitle MIME types
     if (lowerName.endsWith('.srt')) return 'text/srt';
     if (lowerName.endsWith('.vtt')) return 'text/vtt';
     if (lowerName.endsWith('.ass') || lowerName.endsWith('.ssa')) return 'text/x-ass';
     if (lowerName.endsWith('.sub')) return 'text/x-subtitle';
     if (lowerName.endsWith('.txt')) return 'text/plain';
-    
+
     // Default
     return 'application/octet-stream';
   }
@@ -240,27 +245,27 @@ export class ArchiveProcessingService {
       videoFiles: 0,
       subtitleFiles: 0,
       archiveSources: new Set(),
-      filesByArchive: {}
+      filesByArchive: {},
     };
-    
+
     processedFiles.forEach(file => {
       if (file.isVideo) stats.videoFiles++;
       if (file.isSubtitle) stats.subtitleFiles++;
-      
+
       if (file.extractedFrom) {
         stats.archiveSources.add(file.extractedFrom);
-        
+
         if (!stats.filesByArchive[file.extractedFrom]) {
           stats.filesByArchive[file.extractedFrom] = { videos: 0, subtitles: 0 };
         }
-        
+
         if (file.isVideo) stats.filesByArchive[file.extractedFrom].videos++;
         if (file.isSubtitle) stats.filesByArchive[file.extractedFrom].subtitles++;
       }
     });
-    
+
     stats.archiveSources = Array.from(stats.archiveSources);
-    
+
     return stats;
   }
 

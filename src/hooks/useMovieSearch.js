@@ -4,7 +4,7 @@ import React from 'react';
  * Shared movie search hook for both MatchedPairs and OrphanedSubtitles
  * Provides consistent movie search functionality across components
  */
-export const useMovieSearch = (onMovieChange) => {
+export const useMovieSearch = onMovieChange => {
   const [openMovieSearch, setOpenMovieSearch] = React.useState(null);
   const [movieSearchQuery, setMovieSearchQuery] = React.useState('');
   const [movieSearchResults, setMovieSearchResults] = React.useState([]);
@@ -19,45 +19,45 @@ export const useMovieSearch = (onMovieChange) => {
   };
 
   // Utility function to extract IMDB ID from various input formats
-  const extractImdbId = (input) => {
+  const extractImdbId = input => {
     if (!input) return null;
-    
+
     // Remove whitespace
     const trimmed = input.trim();
-    
+
     // Match full IMDB URLs: https://www.imdb.com/title/tt1133589/
     const urlMatch = trimmed.match(/imdb\.com\/title\/(tt\d+)/i);
     if (urlMatch) {
       return urlMatch[1];
     }
-    
+
     // Match tt + number format: tt1133589
     const ttMatch = trimmed.match(/^(tt\d+)$/i);
     if (ttMatch) {
       return ttMatch[1];
     }
-    
+
     // Match just numbers (assume it needs tt prefix): 1133589 or 749451
     const numberMatch = trimmed.match(/^\d+$/);
     if (numberMatch) {
       const number = parseInt(numberMatch[0], 10);
-      
+
       // For numbers >= 3000, pad to 7 digits with leading zeros
       // This handles cases like 749451 -> tt0749451
       if (number >= 3000) {
         const paddedNumber = number.toString().padStart(7, '0');
         return `tt${paddedNumber}`;
       }
-      
+
       // For smaller numbers, use as-is (legacy behavior)
       return `tt${numberMatch[0]}`;
     }
-    
+
     return null;
   };
 
   // Check if input looks like an IMDB ID
-  const isImdbInput = (input) => {
+  const isImdbInput = input => {
     return extractImdbId(input) !== null;
   };
 
@@ -73,15 +73,19 @@ export const useMovieSearch = (onMovieChange) => {
       try {
         const query = movieSearchQuery.trim();
         const imdbId = extractImdbId(query);
-        
+
         // If it's an IMDB ID input, search using the IMDB ID directly
         if (imdbId) {
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`);
+          const response = await fetch(
+            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`
+          );
           const results = await response.json();
           setMovieSearchResults(results || []);
         } else {
           // Regular text search
-          const response = await fetch(`https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`);
+          const response = await fetch(
+            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`
+          );
           const results = await response.json();
           setMovieSearchResults(results || []);
         }
@@ -98,7 +102,7 @@ export const useMovieSearch = (onMovieChange) => {
 
   // Click outside to close movie search
   React.useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (openMovieSearch && !event.target.closest('[data-movie-search]')) {
         closeMovieSearch();
       }
@@ -114,12 +118,15 @@ export const useMovieSearch = (onMovieChange) => {
   }, [openMovieSearch]);
 
   // Handle opening movie search
-  const handleOpenMovieSearch = React.useCallback((itemPath) => {
-    setOpenMovieSearch(openMovieSearch === itemPath ? null : itemPath);
-  }, [openMovieSearch]);
+  const handleOpenMovieSearch = React.useCallback(
+    itemPath => {
+      setOpenMovieSearch(openMovieSearch === itemPath ? null : itemPath);
+    },
+    [openMovieSearch]
+  );
 
   // Handle movie search input
-  const handleMovieSearch = (query) => {
+  const handleMovieSearch = query => {
     setMovieSearchQuery(query);
   };
 
@@ -138,7 +145,7 @@ export const useMovieSearch = (onMovieChange) => {
         title: movie.name,
         year: movie.year,
         kind: movie.kind,
-        reason: 'User selected'
+        reason: 'User selected',
       };
 
       // Call the parent component's movie change handler
@@ -162,15 +169,15 @@ export const useMovieSearch = (onMovieChange) => {
     movieSearchResults,
     movieSearchLoading,
     movieUpdateLoading,
-    
+
     // Actions
     handleOpenMovieSearch,
     handleMovieSearch,
     handleMovieSelect,
     closeMovieSearch,
-    
+
     // Utilities
     extractImdbId,
-    isImdbInput
+    isImdbInput,
   };
 };

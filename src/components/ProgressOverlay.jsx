@@ -1,13 +1,6 @@
 import React from 'react';
 
-const ProgressOverlay = ({ 
-  isVisible, 
-  onCancel, 
-  progress, 
-  colors, 
-  isDark,
-  startTime 
-}) => {
+const ProgressOverlay = ({ isVisible, onCancel, progress, colors, isDark, startTime }) => {
   if (!isVisible) return null;
 
   const timeElapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
@@ -27,7 +20,7 @@ const ProgressOverlay = ({
       progress: progress.fileDiscovery || 0,
       total: progress.fileDiscoveryTotal || 0,
       color: colors.success,
-      description: `${progress.totalFiles || 0} files from ${progress.directoriesProcessed || 0} directories`
+      description: `${progress.totalFiles || 0} files from ${progress.directoriesProcessed || 0} directories`,
     },
     {
       name: 'Video Processing',
@@ -35,7 +28,7 @@ const ProgressOverlay = ({
       progress: progress.videoProcessing || 0,
       total: progress.videoProcessingTotal || 0,
       color: colors.link,
-      description: `${progress.videoProcessing || 0} / ${progress.videoProcessingTotal || 0} videos`
+      description: `${progress.videoProcessing || 0} / ${progress.videoProcessingTotal || 0} videos`,
     },
     {
       name: 'Subtitle Processing',
@@ -43,7 +36,7 @@ const ProgressOverlay = ({
       progress: progress.subtitleProcessing || 0,
       total: progress.subtitleProcessingTotal || 0,
       color: colors.warning,
-      description: `${progress.subtitleProcessing || 0} / ${progress.subtitleProcessingTotal || 0} subtitles`
+      description: `${progress.subtitleProcessing || 0} / ${progress.subtitleProcessingTotal || 0} subtitles`,
     },
     {
       name: 'Language Detection',
@@ -51,25 +44,25 @@ const ProgressOverlay = ({
       progress: progress.languageDetection || 0,
       total: progress.languageDetectionTotal || 0,
       color: colors.info || colors.link,
-      description: `${progress.languageDetection || 0} / ${progress.languageDetectionTotal || 0} detections`
-    }
+      description: `${progress.languageDetection || 0} / ${progress.languageDetectionTotal || 0} detections`,
+    },
   ];
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
         background: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(4px)'
+        backdropFilter: 'blur(4px)',
       }}
     >
-      <div 
+      <div
         className="w-full max-w-4xl rounded-lg p-6 shadow-2xl"
         style={{
           backgroundColor: colors.cardBackground,
           border: `1px solid ${colors.border}`,
           maxHeight: '80vh',
-          animation: 'slideUp 0.3s ease-out'
+          animation: 'slideUp 0.3s ease-out',
         }}
       >
         <style>{`
@@ -100,13 +93,13 @@ const ProgressOverlay = ({
               backgroundColor: colors.error,
               color: 'white',
               border: 'none',
-              fontWeight: '500'
+              fontWeight: '500',
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.target.style.backgroundColor = colors.errorHover || colors.error;
               e.target.style.transform = 'scale(1.05)';
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.target.style.backgroundColor = colors.error;
               e.target.style.transform = 'scale(1)';
             }}
@@ -125,16 +118,16 @@ const ProgressOverlay = ({
               {overallProgress}%
             </span>
           </div>
-          <div 
+          <div
             className="w-full h-3 rounded-full overflow-hidden"
             style={{ backgroundColor: colors.border }}
           >
-            <div 
+            <div
               className="h-full transition-all duration-300 ease-out"
               style={{
                 width: `${overallProgress}%`,
                 backgroundColor: colors.link,
-                background: `linear-gradient(90deg, ${colors.link}, ${colors.linkHover})`
+                background: `linear-gradient(90deg, ${colors.link}, ${colors.linkHover})`,
               }}
             />
           </div>
@@ -151,39 +144,36 @@ const ProgressOverlay = ({
         {/* Individual Stage Progress */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {stages.map((stage, index) => {
-            const stageProgress = stage.total > 0 ? Math.round((stage.progress / stage.total) * 100) : 0;
+            const stageProgress =
+              stage.total > 0 ? Math.round((stage.progress / stage.total) * 100) : 0;
             const isActive = stage.progress > 0 && stage.progress < stage.total;
             const isComplete = stage.progress >= stage.total && stage.total > 0;
-            
+
             return (
               <div key={index} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{stage.icon}</span>
-                    <span 
-                      className="font-medium"
-                      style={{ color: colors.text }}
-                    >
+                    <span className="font-medium" style={{ color: colors.text }}>
                       {stage.name}
                     </span>
                   </div>
-                  <span 
-                    className="text-sm font-bold"
-                    style={{ color: stage.color }}
-                  >
+                  <span className="text-sm font-bold" style={{ color: stage.color }}>
                     {stageProgress}%
                   </span>
                 </div>
-                <div 
+                <div
                   className="w-full h-2 rounded-full overflow-hidden"
                   style={{ backgroundColor: colors.border }}
                 >
-                  <div 
+                  <div
                     className="h-full transition-all duration-300 ease-out"
                     style={{
                       width: `${stageProgress}%`,
                       backgroundColor: stage.color,
-                      background: isActive ? `linear-gradient(90deg, ${stage.color}, ${stage.color}AA)` : stage.color
+                      background: isActive
+                        ? `linear-gradient(90deg, ${stage.color}, ${stage.color}AA)`
+                        : stage.color,
                     }}
                   />
                 </div>
@@ -209,17 +199,16 @@ const ProgressOverlay = ({
 
         {/* Error/Skip Summary */}
         {(progress.errors > 0 || progress.skipped > 0) && (
-          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: colors.background, border: `1px solid ${colors.border}` }}>
+          <div
+            className="mt-4 p-3 rounded-lg"
+            style={{ backgroundColor: colors.background, border: `1px solid ${colors.border}` }}
+          >
             <div className="flex items-center gap-4 text-sm">
               {progress.errors > 0 && (
-                <span style={{ color: colors.error }}>
-                  ❌ {progress.errors} errors
-                </span>
+                <span style={{ color: colors.error }}>❌ {progress.errors} errors</span>
               )}
               {progress.skipped > 0 && (
-                <span style={{ color: colors.warning }}>
-                  ⏭️ {progress.skipped} skipped
-                </span>
+                <span style={{ color: colors.warning }}>⏭️ {progress.skipped} skipped</span>
               )}
             </div>
           </div>

@@ -161,28 +161,28 @@ export const DEFAULT_VALUES = {
     isSubtitle: false,
     movieHash: null,
     detectedLanguage: null,
-    recognized: false
+    recognized: false,
   },
-  
+
   LANGUAGE_INFO: {
     flag: '🏳️',
     name: 'Unknown',
-    displayName: 'Unknown'
+    displayName: 'Unknown',
   },
-  
+
   MOVIE_GUESS: {
     imdbid: '',
     title: '',
     year: '',
-    kind: ''
+    kind: '',
   },
-  
+
   BROWSER_CAPABILITIES: {
     browser: 'Unknown',
     hasFileSystemAPI: false,
     hasWebkitGetAsEntry: false,
-    supportsDirectories: false
-  }
+    supportsDirectories: false,
+  },
 };
 
 // Validation functions (optional)
@@ -192,13 +192,15 @@ export const Validators = {
    * @param {any} obj - Object to validate
    * @returns {boolean} - Whether object is valid FileObject
    */
-  isValidFileObject: (obj) => {
-    return obj && 
-           typeof obj.name === 'string' &&
-           typeof obj.fullPath === 'string' &&
-           typeof obj.size === 'number' &&
-           typeof obj.isVideo === 'boolean' &&
-           typeof obj.isSubtitle === 'boolean';
+  isValidFileObject: obj => {
+    return (
+      obj &&
+      typeof obj.name === 'string' &&
+      typeof obj.fullPath === 'string' &&
+      typeof obj.size === 'number' &&
+      typeof obj.isVideo === 'boolean' &&
+      typeof obj.isSubtitle === 'boolean'
+    );
   },
 
   /**
@@ -206,10 +208,8 @@ export const Validators = {
    * @param {any} obj - Object to validate
    * @returns {boolean} - Whether object is valid LanguageInfo
    */
-  isValidLanguageInfo: (obj) => {
-    return obj && 
-           typeof obj.flag === 'string' &&
-           typeof obj.name === 'string';
+  isValidLanguageInfo: obj => {
+    return obj && typeof obj.flag === 'string' && typeof obj.name === 'string';
   },
 
   /**
@@ -217,9 +217,7 @@ export const Validators = {
    * @param {any} obj - Object to validate
    * @returns {boolean} - Whether object is valid MovieGuessResult
    */
-  isValidMovieGuess: (obj) => {
-    return obj && 
-           typeof obj.title === 'string' &&
-           typeof obj.year === 'string';
-  }
+  isValidMovieGuess: obj => {
+    return obj && typeof obj.title === 'string' && typeof obj.year === 'string';
+  },
 };

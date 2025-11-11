@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
  * Custom hook for managing user session
  * Now uses AuthContext data to avoid duplicate GetUserInfo calls
  */
-export const useUserSession = (addDebugInfo) => {
+export const useUserSession = addDebugInfo => {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,11 +26,13 @@ export const useUserSession = (addDebugInfo) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Use authentication data from AuthContext instead of making new API calls
       if (isAuthenticated && authUser) {
         if (addDebugInfo) {
-          addDebugInfo('👤 Using authentication data from AuthContext (avoiding duplicate GetUserInfo call)');
+          addDebugInfo(
+            '👤 Using authentication data from AuthContext (avoiding duplicate GetUserInfo call)'
+          );
         }
         setUserInfo(authUser);
       } else {
@@ -39,7 +41,6 @@ export const useUserSession = (addDebugInfo) => {
         }
         setUserInfo(null);
       }
-      
     } catch (err) {
       setError(err.message);
       setUserInfo(null);
@@ -91,6 +92,6 @@ export const useUserSession = (addDebugInfo) => {
     isLoggedIn,
     getUserRank,
     getPreferredLanguages,
-    refreshUserInfo
+    refreshUserInfo,
   };
 };

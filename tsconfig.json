@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    // Type checking
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    // Module resolution
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
+
+    // JavaScript support
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+
+    // Strictness (relaxed for JavaScript)
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+
+    // Compatibility
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    // Path mapping
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "build", "src-tauri/target", "tests/**/*"]
+}

@@ -11,31 +11,36 @@ import { DEFAULT_SETTINGS } from './constants.js';
  * @param {Function} onAttempt - Callback for each attempt
  * @returns {Promise} - Result of the function or throws after all attempts fail
  */
-export const retryAsync = async (fn, maxAttempts = 3, baseDelay = DEFAULT_SETTINGS.RETRY_BASE_DELAY, onAttempt = null) => {
+export const retryAsync = async (
+  fn,
+  maxAttempts = 3,
+  baseDelay = DEFAULT_SETTINGS.RETRY_BASE_DELAY,
+  onAttempt = null
+) => {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       if (onAttempt) {
         onAttempt(attempt, maxAttempts);
       }
-      
+
       const result = await fn();
       return result;
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxAttempts) {
         // Last attempt failed, throw the error
         throw new Error(`Failed after ${maxAttempts} attempts. Last error: ${error.message}`);
       }
-      
+
       // Wait before retrying with exponential backoff
       const delay = baseDelay * Math.pow(2, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError;
 };
 
@@ -51,22 +56,17 @@ export const createRetryWrapper = (fn, options = {}) => {
     baseDelay = DEFAULT_SETTINGS.RETRY_BASE_DELAY,
     onAttempt = null,
     onSuccess = null,
-    onFailure = null
+    onFailure = null,
   } = options;
-  
+
   return async (...args) => {
     try {
-      const result = await retryAsync(
-        () => fn(...args),
-        maxAttempts,
-        baseDelay,
-        onAttempt
-      );
-      
+      const result = await retryAsync(() => fn(...args), maxAttempts, baseDelay, onAttempt);
+
       if (onSuccess) {
         onSuccess(result);
       }
-      
+
       return result;
     } catch (error) {
       if (onFailure) {
@@ -84,5 +84,5 @@ export const RETRY_STATES = {
   IDLE: 'idle',
   ATTEMPTING: 'attempting',
   SUCCESS: 'success',
-  FAILED: 'failed'
+  FAILED: 'failed',
 };

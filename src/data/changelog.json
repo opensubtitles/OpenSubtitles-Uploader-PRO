@@ -1,8 +1,43 @@
 {
-  "generated_at": "2025-10-17T20:34:49.183Z",
+  "generated_at": "2025-11-11T20:43:57.440Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.1",
+      "name": "v1.8.1 - Automatic Release Name Cleaning",
+      "published_at": "2025-10-17T20:36:59Z",
+      "body": "Version 1.8.1 - Automatic Release Name Cleaning\n\nNEW FEATURE: Smart Release Name Cleaning\n\nThis release adds automatic cleaning of release names during subtitle uploads, removing language codes and other markers to ensure clean, professional release names on OpenSubtitles.org.\n\nKey Features:\n- Automatically removes language codes (eng, spa, por, fra, etc.)\n- Removes regional language variants (pt-PT, pt-BR, en-US, es-ES, etc.)\n- Removes full language names (English, Spanish, Portuguese, French, etc.)\n- Removes CD markers (CD1, CD I)\n- Removes SDH/HI suffixes\n- Removes addic7ed.com and other custom patterns\n- Maintains quality information (1080p, BluRay, WEB-DL, etc.)\n\nExamples:\n- Before: \"Prisoner.of.War.2025.1080p.AMZN.WEB-DL.DDP5.1.H.264.v2.pt-PT\"\n  After:  \"Prisoner.of.War.2025.1080p.AMZN.WEB-DL.DDP5.1.H.264.v2\"\n\n- Before: \"Movie.Name.2024.1080p.BluRay.x264.eng.sdh\"\n  After:  \"Movie.Name.2024.1080p.BluRay.x264\"\n\n- Before: \"Series.S01E01.CD1.Spanish\"\n  After:  \"Series.S01E01\"\n\nTechnical Details:\n- New utility module: src/utils/releaseNameUtils.js\n- Integrated into subtitle upload service for both paired and orphaned subtitles\n- Uses combined language data from REST API and XML-RPC\n- Comprehensive test coverage: 18 new tests (all passing)\n- Debug logging shows before/after comparison\n\nTest Results: 159 tests passing (100% pass rate)\n- 18 new tests for release name cleaning\n- All existing tests continue to pass\n- Full integration with upload workflow\n\nThis improvement ensures that release names uploaded to OpenSubtitles.org are clean, professional, and free of language-specific markers that belong in other metadata fields.",
+      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.8.1",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.8.1/latest.json",
+          "size": 2804
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.1_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_amd64.AppImage",
+          "size": 91759808
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.1_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_amd64.deb",
+          "size": 7282710
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.1_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_universal.dmg",
+          "size": 14092447
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.1_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_x64-setup.exe",
+          "size": 4717284
+        }
+      ]
+    },
     {
       "version": "v1.8.0",
       "name": "v1.8.0 - Build 192",
@@ -505,41 +540,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.6.13_universal.dmg",
           "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.6.14/OpenSubtitles.Uploader.PRO_1.6.13_universal.dmg",
           "size": 14111966
-        }
-      ]
-    },
-    {
-      "version": "v1.1.2-build179",
-      "name": "OpenSubtitles Uploader PRO v1.1.2-build179",
-      "published_at": "2025-08-11T23:20:44Z",
-      "body": "## [1.7.1] - 2025-08-11\n### Fixed\n- 🚀 RELEASE: Version 1.7.1 - Fixed GitHub Actions Workflow\n\n## OpenSubtitles Uploader PRO Desktop Apps\n\nNative desktop applications for Windows, macOS, and Linux.\n\n### Download the appropriate version for your platform:\n\n**Windows:**\n- `OpenSubtitles Uploader PRO_x.x.x_x64-setup.exe` - Windows installer\n\n**macOS:**\n- `OpenSubtitles Uploader PRO_macos.tar.gz` - Universal (Intel & Apple Silicon)\n\n**Linux:**\n- `opensubtitles-uploader-pro_x.x.x_amd64.AppImage` - Universal Linux binary\n\n### Installation Instructions:\n\n**Windows:** Download and run the `.exe` setup file\n**macOS:** Download the `.tar.gz` file, extract it, and run the app\n**Linux:** Download the `.AppImage`, make it executable (`chmod +x *.AppImage`), then run\n\n### Features:\n- Native file system access\n- Drag & drop support\n- All web app features\n- System notifications\n- Offline capability\n\nBuilt with Tauri framework for native performance and security.\n",
-      "html_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v1.1.2-build179",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "bundle_dmg.sh",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build179/bundle_dmg.sh",
-          "size": 19300
-        },
-        {
-          "name": "eula-resources-template.xml",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build179/eula-resources-template.xml",
-          "size": 2376
-        },
-        {
-          "name": "icon.icns",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build179/icon.icns",
-          "size": 24079
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.1_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build179/OpenSubtitles.Uploader.PRO_1.7.1_universal.dmg",
-          "size": 14098405
-        },
-        {
-          "name": "template.applescript",
-          "download_url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v1.1.2-build179/template.applescript",
-          "size": 1828
         }
       ]
     }

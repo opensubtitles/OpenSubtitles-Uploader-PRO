@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getSystemInfo, getSystemInfoFormatted, formatBytes, formatWithoutNA, formatSystemInfoLine } from '../utils/systemInfo.js';
+import {
+  getSystemInfo,
+  getSystemInfoFormatted,
+  formatBytes,
+  formatWithoutNA,
+  formatSystemInfoLine,
+} from '../utils/systemInfo.js';
 
 /**
  * System Information Display Component
@@ -14,10 +20,7 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
   useEffect(() => {
     const loadSystemInfo = async () => {
       try {
-        const [info, formatted] = await Promise.all([
-          getSystemInfo(),
-          getSystemInfoFormatted()
-        ]);
+        const [info, formatted] = await Promise.all([getSystemInfo(), getSystemInfoFormatted()]);
         setSystemInfo(info);
         setFormattedInfo(formatted);
       } catch (error) {
@@ -35,37 +38,45 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
 
     // Build comprehensive system information text
     const sections = [];
-    
+
     // Application Information
     sections.push('=== APPLICATION ===');
     sections.push(`Name: ${systemInfo.app.name}`);
     sections.push(`Version: ${systemInfo.app.version}`);
     sections.push(`Environment: ${systemInfo.app.environment}`);
-    if (systemInfo.tauri.isTauri && systemInfo.tauri.tauriVersion && systemInfo.tauri.tauriVersion !== 'N/A') {
+    if (
+      systemInfo.tauri.isTauri &&
+      systemInfo.tauri.tauriVersion &&
+      systemInfo.tauri.tauriVersion !== 'N/A'
+    ) {
       sections.push(`Tauri Version: ${systemInfo.tauri.tauriVersion}`);
     }
-    
+
     // Browser/Runtime Information
     sections.push('\n=== BROWSER/RUNTIME ===');
-    sections.push(`Browser: ${formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}`);
+    sections.push(
+      `Browser: ${formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}`
+    );
     sections.push(`Language: ${systemInfo.browser.language}`);
     sections.push(`Platform: ${systemInfo.browser.platform}`);
     sections.push(`Online: ${systemInfo.browser.onLine ? 'Yes' : 'No'}`);
-    
+
     // Operating System
     sections.push('\n=== OPERATING SYSTEM ===');
     sections.push(`OS: ${formatWithoutNA(systemInfo.os.name, systemInfo.os.version)}`);
     sections.push(`Architecture: ${systemInfo.os.architecture}`);
     sections.push(`CPU Cores: ${systemInfo.browser.hardwareConcurrency}`);
     sections.push(`Timezone: ${systemInfo.timezone}`);
-    
+
     // Display Information
     sections.push('\n=== DISPLAY ===');
     sections.push(`Screen: ${systemInfo.display.screenWidth}×${systemInfo.display.screenHeight}`);
-    sections.push(`Viewport: ${systemInfo.display.viewportWidth}×${systemInfo.display.viewportHeight}`);
+    sections.push(
+      `Viewport: ${systemInfo.display.viewportWidth}×${systemInfo.display.viewportHeight}`
+    );
     sections.push(`Pixel Ratio: ${systemInfo.display.pixelRatio}x`);
     sections.push(`Color Depth: ${systemInfo.display.colorDepth}-bit`);
-    
+
     // Memory Information (if available)
     if (systemInfo.performance.usedJSHeapSize !== 'N/A') {
       sections.push('\n=== MEMORY ===');
@@ -73,7 +84,7 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
       sections.push(`Total: ${formatBytes(systemInfo.performance.totalJSHeapSize)}`);
       sections.push(`Limit: ${formatBytes(systemInfo.performance.jsHeapSizeLimit)}`);
     }
-    
+
     // Network Information (if available)
     if (systemInfo.performance.connection !== 'N/A') {
       sections.push('\n=== CONNECTION ===');
@@ -81,37 +92,46 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
       sections.push(`Downlink: ${systemInfo.performance.connection.downlink} Mbps`);
       sections.push(`RTT: ${systemInfo.performance.connection.rtt}ms`);
     }
-    
+
     // Libraries Information
     if (systemInfo.libraries && Object.keys(systemInfo.libraries).length > 0) {
       sections.push('\n=== LIBRARIES ===');
       Object.entries(systemInfo.libraries).forEach(([lib, version]) => {
-        const libName = lib.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+        const libName = lib
+          .replace(/([A-Z])/g, ' $1')
+          .toLowerCase()
+          .replace(/^./, str => str.toUpperCase());
         sections.push(`${libName}: ${version}`);
       });
     }
-    
+
     // Security Information
     if (systemInfo.security) {
       sections.push('\n=== SECURITY ===');
       Object.entries(systemInfo.security).forEach(([feature, enabled]) => {
-        const featureName = feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+        const featureName = feature
+          .replace(/([A-Z])/g, ' $1')
+          .toLowerCase()
+          .replace(/^./, str => str.toUpperCase());
         sections.push(`${featureName}: ${enabled ? '✓ Yes' : '✗ No'}`);
       });
     }
-    
+
     // Feature Support
     sections.push('\n=== FEATURE SUPPORT ===');
     Object.entries(systemInfo.features).forEach(([feature, supported]) => {
-      const featureName = feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+      const featureName = feature
+        .replace(/([A-Z])/g, ' $1')
+        .toLowerCase()
+        .replace(/^./, str => str.toUpperCase());
       sections.push(`${featureName}: ${supported ? '✓ Yes' : '✗ No'}`);
     });
-    
+
     // Generation timestamp
     sections.push(`\n=== GENERATED ===`);
     sections.push(`Timestamp: ${new Date(systemInfo.timestamp).toLocaleString()}`);
     sections.push(`Timezone: ${systemInfo.timezone}`);
-    
+
     const text = sections.join('\n');
 
     try {
@@ -157,12 +177,16 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           </div>
           <div className="info-line secondary">
             {formatSystemInfoLine([
-              formatWithoutNA(systemInfo.os.name, systemInfo.os.version, `(${systemInfo.os.architecture})`),
-              systemInfo.app.environment
+              formatWithoutNA(
+                systemInfo.os.name,
+                systemInfo.os.version,
+                `(${systemInfo.os.architecture})`
+              ),
+              systemInfo.app.environment,
             ])}
           </div>
         </div>
-        <button 
+        <button
           onClick={() => setIsExpanded(true)}
           className="expand-button"
           title="Show detailed system information"
@@ -183,8 +207,8 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
               📋 Copy
             </button>
             {compact && (
-              <button 
-                onClick={() => setIsExpanded(false)} 
+              <button
+                onClick={() => setIsExpanded(false)}
                 className="collapse-button"
                 title="Show compact view"
               >
@@ -224,7 +248,9 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           <h5>Browser/Runtime</h5>
           <div className="info-item">
             <span className="label">Browser:</span>
-            <span className="value">{formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}</span>
+            <span className="value">
+              {formatWithoutNA(systemInfo.browser.name, systemInfo.browser.version)}
+            </span>
           </div>
           <div className="info-item">
             <span className="label">Language:</span>
@@ -245,7 +271,9 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           <h5>Operating System</h5>
           <div className="info-item">
             <span className="label">OS:</span>
-            <span className="value">{formatWithoutNA(systemInfo.os.name, systemInfo.os.version)}</span>
+            <span className="value">
+              {formatWithoutNA(systemInfo.os.name, systemInfo.os.version)}
+            </span>
           </div>
           <div className="info-item">
             <span className="label">Architecture:</span>
@@ -266,11 +294,15 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
           <h5>Display</h5>
           <div className="info-item">
             <span className="label">Screen:</span>
-            <span className="value">{systemInfo.display.screenWidth}×{systemInfo.display.screenHeight}</span>
+            <span className="value">
+              {systemInfo.display.screenWidth}×{systemInfo.display.screenHeight}
+            </span>
           </div>
           <div className="info-item">
             <span className="label">Viewport:</span>
-            <span className="value">{systemInfo.display.viewportWidth}×{systemInfo.display.viewportHeight}</span>
+            <span className="value">
+              {systemInfo.display.viewportWidth}×{systemInfo.display.viewportHeight}
+            </span>
           </div>
           <div className="info-item">
             <span className="label">Pixel Ratio:</span>
@@ -326,7 +358,13 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
             <h5>Libraries</h5>
             {Object.entries(systemInfo.libraries).map(([lib, version]) => (
               <div key={lib} className="info-item">
-                <span className="label">{lib.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase())}:</span>
+                <span className="label">
+                  {lib
+                    .replace(/([A-Z])/g, ' $1')
+                    .toLowerCase()
+                    .replace(/^./, str => str.toUpperCase())}
+                  :
+                </span>
                 <span className="value">{version}</span>
               </div>
             ))}
@@ -339,7 +377,13 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
             <h5>Security</h5>
             {Object.entries(systemInfo.security).map(([feature, enabled]) => (
               <div key={feature} className="info-item">
-                <span className="label">{feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase())}:</span>
+                <span className="label">
+                  {feature
+                    .replace(/([A-Z])/g, ' $1')
+                    .toLowerCase()
+                    .replace(/^./, str => str.toUpperCase())}
+                  :
+                </span>
                 <span className={`value ${enabled ? 'supported' : 'not-supported'}`}>
                   {enabled ? '✓ Yes' : '✗ No'}
                 </span>
@@ -355,7 +399,9 @@ export const SystemInfo = ({ compact = false, showTitle = true }) => {
         <div className="features-grid">
           {Object.entries(systemInfo.features).map(([feature, supported]) => (
             <div key={feature} className={`feature ${supported ? 'supported' : 'not-supported'}`}>
-              <span className="feature-name">{feature.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
+              <span className="feature-name">
+                {feature.replace(/([A-Z])/g, ' $1').toLowerCase()}
+              </span>
               <span className="feature-status">{supported ? '✓' : '✗'}</span>
             </div>
           ))}

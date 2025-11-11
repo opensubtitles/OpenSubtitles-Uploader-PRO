@@ -12,7 +12,7 @@ export class WasmInitializationService {
     ffmpeg: { loaded: false, error: null },
     guessit: { loaded: false, error: null },
     progress: 0,
-    total: 2
+    total: 2,
   };
 
   /**
@@ -35,17 +35,17 @@ export class WasmInitializationService {
 
   static async _performInitialization(onProgressUpdate) {
     console.log('🚀 Initializing all WASM components in parallel...');
-    
+
     const updateProgress = () => {
-      const completed = Object.values(this.loadingProgress).filter(item => 
-        typeof item === 'object' && item.loaded
+      const completed = Object.values(this.loadingProgress).filter(
+        item => typeof item === 'object' && item.loaded
       ).length;
       this.loadingProgress.progress = completed;
-      
+
       if (onProgressUpdate) {
         onProgressUpdate({
           ...this.loadingProgress,
-          percentage: Math.round((completed / this.loadingProgress.total) * 100)
+          percentage: Math.round((completed / this.loadingProgress.total) * 100),
         });
       }
     };
@@ -82,7 +82,7 @@ export class WasmInitializationService {
           this.loadingProgress.guessit.error = error.message;
         }
         updateProgress();
-      })()
+      })(),
     ];
 
     // Wait for all components to load (or fail)
@@ -90,16 +90,16 @@ export class WasmInitializationService {
 
     // Check if all critical components loaded
     const allLoaded = this.loadingProgress.ffmpeg.loaded && this.loadingProgress.guessit.loaded;
-    
+
     if (allLoaded) {
       this.isInitialized = true;
       console.log('🎉 All WASM components initialized successfully');
     } else {
       console.warn('⚠️ Some WASM components failed to load:', {
         ffmpeg: this.loadingProgress.ffmpeg,
-        guessit: this.loadingProgress.guessit
+        guessit: this.loadingProgress.guessit,
       });
-      
+
       // Allow app to start even if some components failed (fallback modes available)
       this.isInitialized = true;
     }
@@ -118,7 +118,7 @@ export class WasmInitializationService {
     return {
       ...this.loadingProgress,
       isInitialized: this.isInitialized,
-      percentage: Math.round((this.loadingProgress.progress / this.loadingProgress.total) * 100)
+      percentage: Math.round((this.loadingProgress.progress / this.loadingProgress.total) * 100),
     };
   }
 
@@ -150,7 +150,7 @@ export class WasmInitializationService {
       ffmpeg: { loaded: false, error: null },
       guessit: { loaded: false, error: null },
       progress: 0,
-      total: 2
+      total: 2,
     };
   }
 }

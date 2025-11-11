@@ -1,4 +1,10 @@
-import { OPENSUBTITLES_COM_API_KEY, API_ENDPOINTS, DEFAULT_SETTINGS, getApiHeaders, USER_AGENT } from '../../utils/constants.js';
+import {
+  OPENSUBTITLES_COM_API_KEY,
+  API_ENDPOINTS,
+  DEFAULT_SETTINGS,
+  getApiHeaders,
+  USER_AGENT,
+} from '../../utils/constants.js';
 import { CacheService } from '../cache.js';
 import { CACHE_KEYS } from '../../utils/constants.js';
 import { retryAsync } from '../../utils/retryUtils.js';
@@ -11,14 +17,14 @@ import CryptoJS from 'crypto-js';
 export class OpenSubtitlesApiService {
   // Request deduplication - prevent multiple simultaneous identical requests
   static activeRequests = new Map();
-  
+
   // Rate limiting - track request timestamps
   static requestTimes = new Map();
-  
+
   // Request monitoring - track all API calls for debugging
   static requestCount = 0;
   static requestLog = [];
-  
+
   /**
    * Log API request for debugging
    */
@@ -28,22 +34,24 @@ export class OpenSubtitlesApiService {
       count: this.requestCount,
       timestamp: new Date().toISOString(),
       endpoint,
-      method
+      method,
     };
-    
+
     this.requestLog.push(logEntry);
-    
+
     // Keep only last 100 requests
     if (this.requestLog.length > 100) {
       this.requestLog = this.requestLog.slice(-100);
     }
-    
+
     console.log(`API Request #${this.requestCount}: ${method} ${endpoint}`);
-    
+
     // Warning if too many requests
     if (this.requestCount > 50) {
-      console.warn(`⚠️ High API usage detected! ${this.requestCount} requests made. Recent requests:`, 
-        this.requestLog.slice(-10));
+      console.warn(
+        `⚠️ High API usage detected! ${this.requestCount} requests made. Recent requests:`,
+        this.requestLog.slice(-10)
+      );
     }
   }
   /**
@@ -52,14 +60,16 @@ export class OpenSubtitlesApiService {
   static checkRateLimit(endpoint, minDelay = 1000) {
     const now = Date.now();
     const lastRequest = this.requestTimes.get(endpoint);
-    
-    if (lastRequest && (now - lastRequest) < minDelay) {
-      throw new Error(`Rate limit: Too many requests to ${endpoint}. Please wait ${minDelay}ms between requests.`);
+
+    if (lastRequest && now - lastRequest < minDelay) {
+      throw new Error(
+        `Rate limit: Too many requests to ${endpoint}. Please wait ${minDelay}ms between requests.`
+      );
     }
-    
+
     this.requestTimes.set(endpoint, now);
   }
-  
+
   /**
    * Request deduplication helper
    */
@@ -69,11 +79,11 @@ export class OpenSubtitlesApiService {
       console.log(`Deduplicating request: ${key}`);
       return await this.activeRequests.get(key);
     }
-    
+
     // Start new request and store promise
     const promise = requestFn();
     this.activeRequests.set(key, promise);
-    
+
     try {
       const result = await promise;
       this.activeRequests.delete(key);
@@ -89,7 +99,7 @@ export class OpenSubtitlesApiService {
    */
   static async getSupportedLanguages() {
     const requestKey = 'getSupportedLanguages';
-    
+
     return this.deduplicateRequest(requestKey, async () => {
       try {
         // Check cache first
@@ -100,14 +110,14 @@ export class OpenSubtitlesApiService {
 
         // Rate limiting
         this.checkRateLimit(API_ENDPOINTS.SUPPORTED_LANGUAGES, 5000); // 5 seconds between calls
-        
+
         // Log request
         this.logRequest(API_ENDPOINTS.SUPPORTED_LANGUAGES, 'GET');
 
         const response = await delayedFetch(API_ENDPOINTS.SUPPORTED_LANGUAGES, {
           method: 'GET',
           headers: getApiHeaders('application/json', {
-            'Api-Key': OPENSUBTITLES_COM_API_KEY
+            'Api-Key': OPENSUBTITLES_COM_API_KEY,
           }),
         });
 
@@ -116,9 +126,9 @@ export class OpenSubtitlesApiService {
         }
 
         const data = await response.json();
-        
+
         const languageMap = {
-          'default': { flag: '🌐', name: 'Default' }
+          default: { flag: '🌐', name: 'Default' },
         };
 
         if (data.languages && Array.isArray(data.languages)) {
@@ -126,15 +136,16 @@ export class OpenSubtitlesApiService {
             const code = lang.language_code || lang.iso639_1 || lang.code;
             const name = lang.language_name || lang.name;
             const flag = lang.flag || lang.emoji_flag || '';
-            const originalName = lang.language_name_original || lang.original_name || lang.name_original || '';
+            const originalName =
+              lang.language_name_original || lang.original_name || lang.name_original || '';
             const iso639_3 = lang.iso639_3 || lang.iso6393 || '';
-            
+
             if (code && name && flag) {
               languageMap[code.toLowerCase()] = {
                 flag,
                 name,
                 originalName,
-                iso639_3
+                iso639_3,
               };
             }
           });
@@ -197,7 +208,11 @@ export class OpenSubtitlesApiService {
    */
   static saveLanguageDetectionToCache(fileHash, data) {
     const cacheKey = this.generateLanguageDetectionCacheKey(fileHash);
-    return CacheService.saveToCacheWithDuration(cacheKey, data, DEFAULT_SETTINGS.LANGUAGE_DETECTION_CACHE_DURATION);
+    return CacheService.saveToCacheWithDuration(
+      cacheKey,
+      data,
+      DEFAULT_SETTINGS.LANGUAGE_DETECTION_CACHE_DURATION
+    );
   }
 
   /**
@@ -219,30 +234,34 @@ export class OpenSubtitlesApiService {
       const formData = new FormData();
       formData.append('text_file', textBlob, subtitleFile.name);
 
-      const response = await delayedFetch(API_ENDPOINTS.LANGUAGE_DETECTION, {
-        method: 'POST',
-        headers: {
-          'Api-Key': OPENSUBTITLES_COM_API_KEY,
-          'User-Agent': USER_AGENT,
-          'X-User-Agent': USER_AGENT,
+      const response = await delayedFetch(
+        API_ENDPOINTS.LANGUAGE_DETECTION,
+        {
+          method: 'POST',
+          headers: {
+            'Api-Key': OPENSUBTITLES_COM_API_KEY,
+            'User-Agent': USER_AGENT,
+            'X-User-Agent': USER_AGENT,
+          },
+          body: formData,
         },
-        body: formData,
-      }, DEFAULT_SETTINGS.LANGUAGE_DETECTION_DELAY);
+        DEFAULT_SETTINGS.LANGUAGE_DETECTION_DELAY
+      );
 
       if (!response.ok) {
         throw new Error(`Language detection failed: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
-      
+
       if (result.data && result.data.languages && result.data.languages.length > 0) {
         // Sort by confidence and filter languages above threshold
         const allLanguages = result.data.languages
           .sort((a, b) => b.confidence - a.confidence)
           .filter(lang => lang.confidence > 0.05);
-        
+
         const topLanguage = allLanguages[0];
-        
+
         return {
           language_code: topLanguage.language_code,
           language_name: topLanguage.language_name,
@@ -251,10 +270,10 @@ export class OpenSubtitlesApiService {
           file_type: result.data.file_type,
           file_kind: result.data.file_kind,
           filename: result.data.filename,
-          text_sample: text.substring(0, 100) + (text.length > 100 ? '...' : '')
+          text_sample: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
         };
       }
-      
+
       return null;
     } catch (error) {
       console.error(`Language detection failed for ${subtitleFile.name}:`, error);
@@ -273,18 +292,20 @@ export class OpenSubtitlesApiService {
       // Calculate MD5 hash of the file content
       const fileHash = await this.calculateFileHash(subtitleFile.file);
       const requestKey = `detectLanguage_${fileHash}`;
-      
+
       return this.deduplicateRequest(requestKey, async () => {
         if (addDebugInfo) {
           addDebugInfo(`🔍 Language detection for ${subtitleFile.name}`);
         }
-        
+
         // Check cache first
         const cachedData = this.loadLanguageDetectionFromCache(fileHash);
         if (cachedData) {
           console.log(`Language Detection cache hit for: ${subtitleFile.name}`);
           if (addDebugInfo) {
-            addDebugInfo(`🎯 Language Detection cache HIT for ${subtitleFile.name} (no API call needed)`);
+            addDebugInfo(
+              `🎯 Language Detection cache HIT for ${subtitleFile.name} (no API call needed)`
+            );
           }
           return cachedData;
         }
@@ -292,23 +313,25 @@ export class OpenSubtitlesApiService {
         // Cache miss, make API call with rate limiting
         console.log(`Language Detection cache miss for: ${subtitleFile.name}, making API call`);
         if (addDebugInfo) {
-          addDebugInfo(`❗ Language Detection cache MISS for ${subtitleFile.name}, making API call`);
+          addDebugInfo(
+            `❗ Language Detection cache MISS for ${subtitleFile.name}, making API call`
+          );
         }
-        
+
         // Rate limiting - prevent multiple language detection calls happening too quickly
         this.checkRateLimit(`language_detection_${fileHash}`, 1000); // 1 second between calls for same file hash
-        
+
         // Log request
         this.logRequest(API_ENDPOINTS.LANGUAGE_DETECTION, 'POST');
-        
+
         const data = await this.detectLanguageUncached(subtitleFile);
-        
+
         // Save to cache (including null results to avoid repeated failed lookups)
         this.saveLanguageDetectionToCache(fileHash, data);
         if (addDebugInfo) {
           addDebugInfo(`💾 Language Detection result cached for ${subtitleFile.name} (72 hours)`);
         }
-        
+
         return data;
       });
     } catch (error) {
@@ -344,7 +367,11 @@ export class OpenSubtitlesApiService {
    */
   static saveFeaturesToCache(imdbId, data) {
     const cacheKey = this.generateFeaturesCacheKey(imdbId);
-    return CacheService.saveToCacheWithDuration(cacheKey, data, DEFAULT_SETTINGS.FEATURES_CACHE_DURATION);
+    return CacheService.saveToCacheWithDuration(
+      cacheKey,
+      data,
+      DEFAULT_SETTINGS.FEATURES_CACHE_DURATION
+    );
   }
 
   /**
@@ -356,7 +383,7 @@ export class OpenSubtitlesApiService {
         `${API_ENDPOINTS.FEATURES}?imdb_id=${imdbId}`,
         {
           headers: getApiHeaders('application/json', {
-            'Api-Key': OPENSUBTITLES_COM_API_KEY
+            'Api-Key': OPENSUBTITLES_COM_API_KEY,
           }),
         },
         DEFAULT_SETTINGS.FEATURES_FETCH_DELAY
@@ -382,13 +409,13 @@ export class OpenSubtitlesApiService {
    */
   static async getFeaturesByImdbId(imdbId, addDebugInfo = null) {
     const requestKey = `getFeatures_${imdbId}`;
-    
+
     return this.deduplicateRequest(requestKey, async () => {
       try {
         if (addDebugInfo) {
           addDebugInfo(`🔍 Features lookup for IMDb ID: ${imdbId}`);
         }
-        
+
         // Check cache first
         const cachedData = this.loadFeaturesFromCache(imdbId);
         if (cachedData) {
@@ -404,18 +431,18 @@ export class OpenSubtitlesApiService {
         if (addDebugInfo) {
           addDebugInfo(`❗ Features cache MISS for IMDb ID ${imdbId}, making API call`);
         }
-        
+
         // Rate limiting
         this.checkRateLimit(`features_${imdbId}`, 2000); // 2 seconds between calls for same movie
-        
+
         const data = await this.getFeaturesUncached(imdbId);
-        
+
         // Save to cache (including null results to avoid repeated failed lookups)
         this.saveFeaturesToCache(imdbId, data);
         if (addDebugInfo) {
           addDebugInfo(`💾 Features result cached for IMDb ID ${imdbId} (72 hours)`);
         }
-        
+
         return data;
       } catch (error) {
         console.error(`Features fetch with caching failed for IMDb ID ${imdbId}:`, error);
@@ -441,13 +468,13 @@ export class OpenSubtitlesApiService {
    */
   static async searchFeatures(query, addDebugInfo = null) {
     const requestKey = `searchFeatures_${query}`;
-    
+
     return this.deduplicateRequest(requestKey, async () => {
       try {
         if (addDebugInfo) {
           addDebugInfo(`🔍 Features search for query: "${query}"`);
         }
-        
+
         // Check cache first
         const cacheKey = this.generateFeaturesSearchCacheKey(query);
         const cachedData = CacheService.loadFromCache(cacheKey);
@@ -457,18 +484,18 @@ export class OpenSubtitlesApiService {
           }
           return cachedData;
         }
-        
+
         // Rate limiting - more conservative for search features
         this.checkRateLimit(`search_features_${query}`, 2000); // 2 seconds between identical search calls
-        
+
         // Log request
         this.logRequest(`${API_ENDPOINTS.FEATURES}?query=${encodeURIComponent(query)}`, 'GET');
-        
+
         const response = await delayedFetch(
           `${API_ENDPOINTS.FEATURES}?query=${encodeURIComponent(query)}`,
           {
             headers: getApiHeaders('application/json', {
-              'Api-Key': OPENSUBTITLES_COM_API_KEY
+              'Api-Key': OPENSUBTITLES_COM_API_KEY,
             }),
           },
           DEFAULT_SETTINGS.FEATURES_FETCH_DELAY
@@ -479,15 +506,17 @@ export class OpenSubtitlesApiService {
         }
 
         const data = await response.json();
-        
+
         // Cache the search results for 24 hours
         CacheService.saveToCacheWithDuration(cacheKey, data, 24 * 60 * 60); // 24 hours
-        
+
         if (addDebugInfo) {
           const resultCount = data?.data?.length || 0;
-          addDebugInfo(`✅ Features search returned ${resultCount} results for "${query}" (cached for 24h)`);
+          addDebugInfo(
+            `✅ Features search returned ${resultCount} results for "${query}" (cached for 24h)`
+          );
         }
-        
+
         return data;
       } catch (error) {
         console.error(`Features search failed for query "${query}":`, error);
@@ -510,40 +539,47 @@ export class OpenSubtitlesApiService {
     const MAX_ATTEMPTS = 3;
     const RETRY_DELAY = 500; // 0.5 seconds as requested
     let lastError;
-    
+
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
         if (attempt > 1 && addDebugInfo) {
           addDebugInfo(`🔄 Language detection retry ${attempt}/${MAX_ATTEMPTS} for ${filename}`);
         }
-        
+
         const result = await fn();
-        
+
         if (attempt > 1 && addDebugInfo) {
-          addDebugInfo(`✅ Language detection succeeded on attempt ${attempt}/${MAX_ATTEMPTS} for ${filename}`);
+          addDebugInfo(
+            `✅ Language detection succeeded on attempt ${attempt}/${MAX_ATTEMPTS} for ${filename}`
+          );
         }
-        
+
         return result;
       } catch (error) {
         lastError = error;
-        
+
         // Check if this is a 500 error that should be retried
-        const is500Error = error.message.includes('500') || 
-                          error.status === 500 || 
-                          error.statusCode === 500;
-        
+        const is500Error =
+          error.message.includes('500') || error.status === 500 || error.statusCode === 500;
+
         if (attempt === MAX_ATTEMPTS) {
           // Last attempt failed
           if (addDebugInfo) {
-            addDebugInfo(`❌ Language detection failed after ${MAX_ATTEMPTS} attempts for ${filename}: ${error.message}`);
+            addDebugInfo(
+              `❌ Language detection failed after ${MAX_ATTEMPTS} attempts for ${filename}: ${error.message}`
+            );
           }
-          throw new Error(`Language detection failed after ${MAX_ATTEMPTS} attempts: ${error.message}`);
+          throw new Error(
+            `Language detection failed after ${MAX_ATTEMPTS} attempts: ${error.message}`
+          );
         }
-        
+
         if (is500Error) {
           // Wait 0.5 seconds before retrying for 500 errors
           if (addDebugInfo) {
-            addDebugInfo(`⚠️ Server error (500) for ${filename}, retrying in 0.5 seconds (attempt ${attempt}/${MAX_ATTEMPTS})`);
+            addDebugInfo(
+              `⚠️ Server error (500) for ${filename}, retrying in 0.5 seconds (attempt ${attempt}/${MAX_ATTEMPTS})`
+            );
           }
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         } else {
@@ -555,7 +591,7 @@ export class OpenSubtitlesApiService {
         }
       }
     }
-    
+
     throw lastError;
   }
 
@@ -567,25 +603,29 @@ export class OpenSubtitlesApiService {
       // Calculate MD5 hash of the file content for cache check
       const fileHash = await this.calculateFileHash(subtitleFile.file);
       const requestKey = `detectLanguageRetry_${fileHash}`;
-      
+
       return this.deduplicateRequest(requestKey, async () => {
         // Check cache first
         const cachedData = this.loadLanguageDetectionFromCache(fileHash);
         if (cachedData) {
           if (addDebugInfo) {
-            addDebugInfo(`🎯 Language Detection cache HIT for ${subtitleFile.name} (no API call needed)`);
+            addDebugInfo(
+              `🎯 Language Detection cache HIT for ${subtitleFile.name} (no API call needed)`
+            );
           }
           return cachedData;
         }
 
         // Cache miss, use retry logic
         if (addDebugInfo) {
-          addDebugInfo(`❗ Language Detection cache MISS for ${subtitleFile.name}, making API call with retry`);
+          addDebugInfo(
+            `❗ Language Detection cache MISS for ${subtitleFile.name}, making API call with retry`
+          );
         }
 
         // Rate limiting
         this.checkRateLimit(`language_detection_retry_${fileHash}`, 1000);
-        
+
         // Log request
         this.logRequest(API_ENDPOINTS.LANGUAGE_DETECTION, 'POST');
 

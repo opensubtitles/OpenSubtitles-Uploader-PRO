@@ -60,13 +60,13 @@ const OfflineIndicator = () => {
   };
 
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
+    <div
+      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}
+    >
       <span className="text-base">{getStatusIcon()}</span>
       <span>{getStatusText()}</span>
       <div className="group relative">
-        <button className="text-xs opacity-60 hover:opacity-100 ml-1">
-          ?
-        </button>
+        <button className="text-xs opacity-60 hover:opacity-100 ml-1">?</button>
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg shadow-lg w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
           {getDescription()}
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 -translate-y-1 border-4 border-transparent border-t-gray-300"></div>

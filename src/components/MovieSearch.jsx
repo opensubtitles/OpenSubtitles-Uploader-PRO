@@ -1,14 +1,14 @@
 import React from 'react';
 import { useMovieSearch } from '../hooks/useMovieSearch.js';
 
-export const MovieSearch = ({ 
-  isOpen, 
-  onMovieChange, 
-  onClose, 
-  itemPath, 
+export const MovieSearch = ({
+  isOpen,
+  onMovieChange,
+  onClose,
+  itemPath,
   movieUpdateLoading,
-  themeColors, 
-  isDark 
+  themeColors,
+  isDark,
 }) => {
   const {
     movieSearchQuery,
@@ -17,13 +17,20 @@ export const MovieSearch = ({
     handleMovieSearch,
     handleMovieSelect,
     extractImdbId,
-    isImdbInput
+    isImdbInput,
   } = useMovieSearch(onMovieChange);
 
   if (!isOpen) return null;
 
   return (
-    <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: themeColors.cardBackground, border: `1px solid ${themeColors.border}` }} data-movie-search>
+    <div
+      className="mt-3 p-3 rounded-lg"
+      style={{
+        backgroundColor: themeColors.cardBackground,
+        border: `1px solid ${themeColors.border}`,
+      }}
+      data-movie-search
+    >
       <div className="text-sm mb-2" style={{ color: themeColors.text }}>
         Search by movie title, IMDB ID, or IMDB URL:
       </div>
@@ -31,32 +38,35 @@ export const MovieSearch = ({
         type="text"
         placeholder="Movie title, IMDB ID (tt0133093), or IMDB URL..."
         value={movieSearchQuery}
-        onChange={(e) => handleMovieSearch(e.target.value)}
+        onChange={e => handleMovieSearch(e.target.value)}
         className="w-full px-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 transition-colors"
         style={{
           backgroundColor: themeColors.background,
           borderColor: themeColors.border,
           color: themeColors.text,
-          focusRingColor: themeColors.primary
+          focusRingColor: themeColors.primary,
         }}
-        onFocus={(e) => {
+        onFocus={e => {
           e.target.style.borderColor = themeColors.primary;
           e.target.style.boxShadow = `0 0 0 2px ${themeColors.primary}20`;
         }}
-        onBlur={(e) => {
+        onBlur={e => {
           e.target.style.borderColor = themeColors.border;
           e.target.style.boxShadow = 'none';
         }}
         autoFocus
       />
-      
+
       {movieSearchLoading && (
-        <div className="mt-2 text-sm flex items-center gap-2" style={{ color: themeColors.textMuted }}>
+        <div
+          className="mt-2 text-sm flex items-center gap-2"
+          style={{ color: themeColors.textMuted }}
+        >
           <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
           Searching...
         </div>
       )}
-      
+
       {movieSearchResults.length > 0 && (
         <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
           {movieSearchResults.map((movie, index) => (
@@ -68,14 +78,14 @@ export const MovieSearch = ({
               style={{
                 backgroundColor: themeColors.background,
                 borderColor: themeColors.border,
-                color: themeColors.text
+                color: themeColors.text,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 if (!movieUpdateLoading?.[itemPath]) {
                   e.target.style.backgroundColor = isDark ? '#444444' : '#f8f9fa';
                 }
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.target.style.backgroundColor = themeColors.background;
               }}
             >
@@ -89,8 +99,8 @@ export const MovieSearch = ({
                         src={movie.pic}
                         alt={movie.name || movie.title || 'Movie poster'}
                         className="w-8 h-12 object-cover rounded"
-                        style={{border: `1px solid ${themeColors.border}`}}
-                        onError={(e) => e.target.style.display = 'none'}
+                        style={{ border: `1px solid ${themeColors.border}` }}
+                        onError={e => (e.target.style.display = 'none')}
                       />
                     ) : (
                       <span>🎬</span>
@@ -102,16 +112,23 @@ export const MovieSearch = ({
                     {/* Enhanced display for episodes with parent series information */}
                     {movie.kind === 'episode' && (movie.parent_title || movie.series_title) ? (
                       <>
-                        <span style={{color: themeColors.primary || themeColors.link}}>{movie.parent_title || movie.series_title}</span>
+                        <span style={{ color: themeColors.primary || themeColors.link }}>
+                          {movie.parent_title || movie.series_title}
+                        </span>
                         {(movie.season_number || movie.episode_number) && (
-                          <span style={{color: themeColors.textSecondary}}>
+                          <span style={{ color: themeColors.textSecondary }}>
                             {' - '}
-                            {movie.season_number && `S${movie.season_number.toString().padStart(2, '0')}`}
-                            {movie.episode_number && `E${movie.episode_number.toString().padStart(2, '0')}`}
+                            {movie.season_number &&
+                              `S${movie.season_number.toString().padStart(2, '0')}`}
+                            {movie.episode_number &&
+                              `E${movie.episode_number.toString().padStart(2, '0')}`}
                           </span>
                         )}
                         {(movie.name || movie.title) && (
-                          <span style={{color: themeColors.text}}> - {movie.name || movie.title}</span>
+                          <span style={{ color: themeColors.text }}>
+                            {' '}
+                            - {movie.name || movie.title}
+                          </span>
                         )}
                         {movie.year && ` (${movie.year})`}
                       </>
@@ -132,15 +149,16 @@ export const MovieSearch = ({
           ))}
         </div>
       )}
-      
+
       {movieSearchQuery && !movieSearchLoading && movieSearchResults.length === 0 && (
         <div className="mt-2 text-sm text-center py-4" style={{ color: themeColors.textMuted }}>
           No movies found. Try a different search term.
         </div>
       )}
-      
+
       <div className="mt-2 text-xs" style={{ color: themeColors.textSecondary }}>
-        Examples: "The Matrix", "133093", "0133093", "tt0133093", "https://www.imdb.com/title/tt0133093/"
+        Examples: "The Matrix", "133093", "0133093", "tt0133093",
+        "https://www.imdb.com/title/tt0133093/"
       </div>
     </div>
   );

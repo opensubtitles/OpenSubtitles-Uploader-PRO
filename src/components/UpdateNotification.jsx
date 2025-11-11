@@ -26,7 +26,7 @@ const UpdateNotification = () => {
     downloadUpdate,
     openDownloadedFile,
     revealDownloadedFile,
-    error
+    error,
   } = useAppUpdate();
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -60,21 +60,22 @@ const UpdateNotification = () => {
     }
 
     const directUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/v${version}/${fileName}`;
-    
+
     return {
       url: directUrl,
       fileName,
       platformType,
-      fileExtension
+      fileExtension,
     };
   };
 
   const downloadInfo = getPlatformDownloadUrl();
 
   // Get changelog summary for what's new
-  const changelogSummary = updateInfo?.currentVersion && updateInfo?.latestVersion 
-    ? getChangelogSummary(updateInfo.currentVersion, updateInfo.latestVersion)
-    : null;
+  const changelogSummary =
+    updateInfo?.currentVersion && updateInfo?.latestVersion
+      ? getChangelogSummary(updateInfo.currentVersion, updateInfo.latestVersion)
+      : null;
 
   // Don't show if no update available or dismissed
   if (!updateAvailable || isDismissed) {
@@ -92,7 +93,7 @@ const UpdateNotification = () => {
     if (downloadedFilePath) {
       // Check if it's a DMG file for special handling
       const isDmgFile = downloadedFileName && downloadedFileName.toLowerCase().includes('.dmg');
-      
+
       if (isDmgFile) {
         // For DMG files, use the install function which will mount and open the DMG
         console.log('📦 DMG file detected, using installation method');
@@ -110,7 +111,7 @@ const UpdateNotification = () => {
     }
   };
 
-  const formatFileSize = (bytes) => {
+  const formatFileSize = bytes => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -125,39 +126,56 @@ const UpdateNotification = () => {
   const handleMoreInfo = () => {
     // Open GitHub release page in browser
     const releaseUrl = `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`;
-    
+
     if (typeof window !== 'undefined') {
       // For both standalone and web apps, open in external browser
       if (window.__TAURI__) {
         // Tauri app - open in external browser using Tauri v2 plugin
-        import('@tauri-apps/plugin-shell').then(({ open }) => {
-          open(releaseUrl);
-        }).catch((error) => {
-          console.warn('Failed to open external browser via Tauri shell, falling back to window.open:', error);
-          window.open(releaseUrl, '_blank', 'noopener,noreferrer');
-        });
+        import('@tauri-apps/plugin-shell')
+          .then(({ open }) => {
+            open(releaseUrl);
+          })
+          .catch(error => {
+            console.warn(
+              'Failed to open external browser via Tauri shell, falling back to window.open:',
+              error
+            );
+            window.open(releaseUrl, '_blank', 'noopener,noreferrer');
+          });
       } else {
         // Web app - open in new tab
         window.open(releaseUrl, '_blank', 'noopener,noreferrer');
       }
     }
-    
+
     // Also expand the notification to show details
     setIsExpanded(true);
   };
 
   return (
-    <div className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg border ${
-      isDark 
-        ? 'bg-gray-900/95 border-gray-700 text-white shadow-xl' 
-        : 'bg-blue-50 border-blue-200 text-blue-900'
-    }`}>
+    <div
+      className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg border ${
+        isDark
+          ? 'bg-gray-900/95 border-gray-700 text-white shadow-xl'
+          : 'bg-blue-50 border-blue-200 text-blue-900'
+      }`}
+    >
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              <svg
+                className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                />
               </svg>
             </div>
             <div className="ml-3 flex-1">
@@ -169,43 +187,66 @@ const UpdateNotification = () => {
                 <p className="text-xs mt-1">You're currently using v{updateInfo?.currentVersion}</p>
                 {changelogSummary?.hasChanges && (
                   <p className="text-xs mt-1 text-green-400">
-                    ✨ {changelogSummary.releaseCount} new release{changelogSummary.releaseCount > 1 ? 's' : ''} with updates
+                    ✨ {changelogSummary.releaseCount} new release
+                    {changelogSummary.releaseCount > 1 ? 's' : ''} with updates
                   </p>
                 )}
                 {typeof window !== 'undefined' && window.__TEST_UPGRADE_MODE__ && (
-                  <p className="text-xs mt-1 font-semibold text-yellow-500">🧪 TEST MODE - Update forced for testing</p>
+                  <p className="text-xs mt-1 font-semibold text-yellow-500">
+                    🧪 TEST MODE - Update forced for testing
+                  </p>
                 )}
                 {isExpanded && downloadInfo && (
                   <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
                     <p className="text-xs font-medium mb-1">Download Info:</p>
                     <p className="text-xs">
-                      <span className="font-medium">Platform:</span> {downloadInfo.platformType}<br/>
-                      <span className="font-medium">File:</span> {downloadInfo.fileName}<br/>
-                      <span className="font-medium">Type:</span> {downloadInfo.fileExtension === '.dmg' ? 'DMG Installer' : 
-                        downloadInfo.fileExtension === '.exe' ? 'Windows Installer' : 
-                        downloadInfo.fileExtension === '.AppImage' ? 'Linux AppImage' : 'Installer'}
+                      <span className="font-medium">Platform:</span> {downloadInfo.platformType}
+                      <br />
+                      <span className="font-medium">File:</span> {downloadInfo.fileName}
+                      <br />
+                      <span className="font-medium">Type:</span>{' '}
+                      {downloadInfo.fileExtension === '.dmg'
+                        ? 'DMG Installer'
+                        : downloadInfo.fileExtension === '.exe'
+                          ? 'Windows Installer'
+                          : downloadInfo.fileExtension === '.AppImage'
+                            ? 'Linux AppImage'
+                            : 'Installer'}
                     </p>
                   </div>
                 )}
                 {isExpanded && changelogSummary?.hasChanges && (
-                  <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
+                  <div
+                    className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}
+                  >
                     <p className="text-xs font-medium mb-2">
-                      ✨ What's New {changelogSummary.releaseCount > 1 ? `(${changelogSummary.releaseCount} releases)` : ''}:
+                      ✨ What's New{' '}
+                      {changelogSummary.releaseCount > 1
+                        ? `(${changelogSummary.releaseCount} releases)`
+                        : ''}
+                      :
                     </p>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {changelogSummary.releases.map((release, index) => (
-                        <div key={release.version} className={`${index > 0 ? 'pt-2 border-t border-gray-600' : ''}`}>
+                        <div
+                          key={release.version}
+                          className={`${index > 0 ? 'pt-2 border-t border-gray-600' : ''}`}
+                        >
                           <p className="text-xs font-medium text-blue-400 mb-1">
                             {release.version}
                           </p>
                           <div className="text-xs text-gray-300 leading-relaxed">
-                            {release.body.split('\n').slice(0, 4).map((line, lineIndex) => (
-                              line.trim() && (
-                                <p key={lineIndex} className="mb-1">
-                                  {line.trim()}
-                                </p>
-                              )
-                            ))}
+                            {release.body
+                              .split('\n')
+                              .slice(0, 4)
+                              .map(
+                                (line, lineIndex) =>
+                                  line.trim() && (
+                                    <p key={lineIndex} className="mb-1">
+                                      {line.trim()}
+                                    </p>
+                                  )
+                              )}
                             {release.body.split('\n').length > 4 && (
                               <p className="text-gray-500 italic">...</p>
                             )}
@@ -215,15 +256,17 @@ const UpdateNotification = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {isExpanded && updateInfo?.releaseNotes && !changelogSummary?.hasChanges && (
-                  <div className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}>
+                  <div
+                    className={`mt-2 p-2 rounded ${isDark ? 'bg-gray-800' : 'bg-black bg-opacity-20'}`}
+                  >
                     <p className="text-xs font-medium mb-1">Release Notes:</p>
                     <p className="text-xs whitespace-pre-wrap">{updateInfo.releaseNotes}</p>
                   </div>
                 )}
               </div>
-              
+
               {error && (
                 <div className={`mt-2 text-xs ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                   Error: {error}
@@ -231,17 +274,20 @@ const UpdateNotification = () => {
               )}
             </div>
           </div>
-          
+
           <button
             onClick={handleDismiss}
             className={`ml-4 inline-flex text-sm ${
-              isDark 
-                ? 'text-gray-400 hover:text-gray-200' 
-                : 'text-blue-500 hover:text-blue-700'
+              isDark ? 'text-gray-400 hover:text-gray-200' : 'text-blue-500 hover:text-blue-700'
             }`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -266,7 +312,7 @@ const UpdateNotification = () => {
                     📥 Download Update
                   </button>
               */}
-              
+
               {/* CURRENT: Direct download link for user's OS to avoid quarantine issues */}
               {downloadInfo ? (
                 <a
@@ -284,7 +330,10 @@ const UpdateNotification = () => {
                 </a>
               ) : (
                 <a
-                  href={updateInfo?.releaseUrl || `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`}
+                  href={
+                    updateInfo?.releaseUrl ||
+                    `https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/tag/v${updateInfo?.latestVersion}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
@@ -296,7 +345,7 @@ const UpdateNotification = () => {
                   📥 Download Update
                 </a>
               )}
-                  
+
               <button
                 onClick={handleMoreInfo}
                 className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
@@ -308,7 +357,7 @@ const UpdateNotification = () => {
               >
                 More Info
               </button>
-              
+
               {/* FUTURE: Restore download progress UI when auto-download is re-enabled
               {isDownloading && (
                 <div className="w-full">
@@ -340,7 +389,7 @@ const UpdateNotification = () => {
                   📥 Download Update
                 </a>
               )}
-              
+
               <button
                 onClick={handleMoreInfo}
                 className={`text-xs px-3 py-1 rounded font-medium transition-colors ${

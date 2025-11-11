@@ -1,0 +1,26 @@
+# Build outputs
+dist
+build
+.tauri
+src-tauri/target
+src-tauri/gen
+
+# Dependencies
+node_modules
+
+# Logs
+*.log
+npm-debug.log*
+
+# Generated files
+CHANGELOG.md
+src/data/changelog.json
+
+# Config files
+package-lock.json
+*.lock
+
+# Cache
+.cache
+.vite
+.turbo

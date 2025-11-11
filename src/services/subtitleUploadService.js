@@ -7,7 +7,6 @@ import { cleanReleaseName } from '../utils/releaseNameUtils.js';
  * Service for uploading subtitles to OpenSubtitles
  */
 export class SubtitleUploadService {
-  
   /**
    * Process upload for all selected subtitles
    * @param {Object} validationResult - Validation result from UploadButton
@@ -36,7 +35,7 @@ export class SubtitleUploadService {
     onProgress,
     getVideoMetadata, // Add video metadata getter
     orphanedSubtitlesFps = {}, // Add FPS settings for orphaned subtitles
-    config = {} // Add config object for settings
+    config = {}, // Add config object for settings
   }) {
     const results = {
       success: [],
@@ -46,7 +45,7 @@ export class SubtitleUploadService {
       successful: 0,
       alreadyExists: 0,
       failed: 0,
-      detailedResults: []
+      detailedResults: [],
     };
 
     addDebugInfo('🚀 Starting subtitle upload process...');
@@ -56,34 +55,42 @@ export class SubtitleUploadService {
       const videoGroups = new Map();
       pairedFiles.forEach(pair => {
         if (pair.video && pair.subtitles.length > 0) {
-          const enabledSubtitles = pair.subtitles.filter(subtitle => getUploadEnabled(subtitle.fullPath));
+          const enabledSubtitles = pair.subtitles.filter(subtitle =>
+            getUploadEnabled(subtitle.fullPath)
+          );
           if (enabledSubtitles.length > 0) {
             videoGroups.set(pair.video.fullPath, {
               video: pair.video,
               subtitles: enabledSubtitles,
-              movieData: movieGuesses[pair.video.fullPath]
+              movieData: movieGuesses[pair.video.fullPath],
             });
           }
         }
       });
 
       // Handle orphaned subtitles
-      const enabledOrphanedSubtitles = orphanedSubtitles.filter(subtitle => getUploadEnabled(subtitle.fullPath));
-      
-      results.totalSubtitles = Array.from(videoGroups.values()).reduce((sum, group) => sum + group.subtitles.length, 0) + enabledOrphanedSubtitles.length;
-      addDebugInfo(`📊 Found ${results.totalSubtitles} subtitles to upload across ${videoGroups.size} video files + ${enabledOrphanedSubtitles.length} orphaned subtitles`);
+      const enabledOrphanedSubtitles = orphanedSubtitles.filter(subtitle =>
+        getUploadEnabled(subtitle.fullPath)
+      );
+
+      results.totalSubtitles =
+        Array.from(videoGroups.values()).reduce((sum, group) => sum + group.subtitles.length, 0) +
+        enabledOrphanedSubtitles.length;
+      addDebugInfo(
+        `📊 Found ${results.totalSubtitles} subtitles to upload across ${videoGroups.size} video files + ${enabledOrphanedSubtitles.length} orphaned subtitles`
+      );
 
       // Process each video group
       for (const [videoPath, { video, subtitles, movieData }] of videoGroups) {
         addDebugInfo(`🎬 Processing video: ${video.name}`);
-        
+
         try {
           // Process each subtitle individually (using cd1 for each)
           const subtitleResults = [];
-          
+
           for (const subtitle of subtitles) {
             addDebugInfo(`📤 Attempting upload for subtitle: ${subtitle.name}`);
-            
+
             const uploadData = await this.prepareUploadDataForSingleSubtitle({
               video,
               subtitle,
@@ -94,34 +101,40 @@ export class SubtitleUploadService {
               uploadOptions,
               combinedLanguages,
               addDebugInfo,
-              getVideoMetadata
+              getVideoMetadata,
             });
 
             const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(uploadData);
-            
+
             addDebugInfo(`✅ TryUpload response received for ${subtitle.name}:`);
             addDebugInfo(JSON.stringify(tryUploadResponse, null, 2));
-            
+
             let finalResponse = tryUploadResponse;
             let actualUploadData = null;
             let actualUploadResponse = null;
-            
+
             // If alreadyindb=0, need to do actual upload with UploadSubtitles
             if (tryUploadResponse.alreadyindb === 0 || tryUploadResponse.alreadyindb === '0') {
               // Check if uploadMovieHashOnly is enabled
               if (config.uploadMovieHashOnly === true) {
-                addDebugInfo(`⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for ${subtitle.name}`);
-                addDebugInfo(`✅ Movie hash updated for ${subtitle.name}, subtitle file not uploaded`);
+                addDebugInfo(
+                  `⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for ${subtitle.name}`
+                );
+                addDebugInfo(
+                  `✅ Movie hash updated for ${subtitle.name}, subtitle file not uploaded`
+                );
                 // Use TryUpload response but mark as hash-only success
                 finalResponse = {
                   ...tryUploadResponse,
                   status: '200 OK',
                   data: 'Movie hash updated (subtitle not uploaded)',
-                  hashOnlyMode: true
+                  hashOnlyMode: true,
                 };
               } else {
-                addDebugInfo(`📤 Subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
-                
+                addDebugInfo(
+                  `📤 Subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`
+                );
+
                 actualUploadData = await this.prepareActualUploadData({
                   video,
                   subtitle,
@@ -132,36 +145,38 @@ export class SubtitleUploadService {
                   uploadOptions,
                   combinedLanguages,
                   addDebugInfo,
-                  getVideoMetadata
+                  getVideoMetadata,
                 });
-                
+
                 actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
-                
+
                 addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
                 addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
-                
+
                 finalResponse = actualUploadResponse;
               }
             } else {
-              addDebugInfo(`✅ Subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`);
+              addDebugInfo(
+                `✅ Subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`
+              );
             }
-            
+
             subtitleResults.push({
               subtitle: subtitle.name,
               subtitlePath: subtitle.fullPath,
               response: finalResponse,
               // Include the exact subcontent that was sent for debugging (only if actual upload happened)
-              subcontent: actualUploadData ? actualUploadData.subcontent : null
+              subcontent: actualUploadData ? actualUploadData.subcontent : null,
             });
-            
+
             results.processedSubtitles++;
-            
+
             // Analyze result and update counters
             const response = finalResponse;
             let status = 'unknown';
             let message = 'Upload completed';
             let url = null;
-            
+
             if (response.status && response.status !== '200 OK') {
               status = 'failed';
               message = `Upload failed - ${response.status}`;
@@ -170,27 +185,33 @@ export class SubtitleUploadService {
               status = 'exists';
               message = 'Already in database';
               results.alreadyExists++;
-              url = typeof response.data === 'string' && response.data.startsWith('http') ? response.data : null;
+              url =
+                typeof response.data === 'string' && response.data.startsWith('http')
+                  ? response.data
+                  : null;
             } else if (response.status === '200 OK' && response.data && !response.alreadyindb) {
               status = 'success';
               message = 'Successfully uploaded as new subtitle';
               results.successful++;
-              url = typeof response.data === 'string' && response.data.startsWith('http') ? response.data : null;
+              url =
+                typeof response.data === 'string' && response.data.startsWith('http')
+                  ? response.data
+                  : null;
             } else {
               // Handle other cases
               results.successful++;
               status = 'success';
               message = 'Upload completed';
             }
-            
+
             // Add to detailed results
             results.detailedResults.push({
               filename: subtitle.name,
               status,
               message,
-              url
+              url,
             });
-            
+
             // Update progress with detailed information
             if (onProgress) {
               onProgress(results.processedSubtitles, results.totalSubtitles, {
@@ -198,17 +219,16 @@ export class SubtitleUploadService {
                 successful: results.successful,
                 alreadyExists: results.alreadyExists,
                 failed: results.failed,
-                results: results.detailedResults
+                results: results.detailedResults,
               });
             }
           }
-          
+
           results.success.push({
             video: video.name,
             subtitles: subtitles.length,
-            results: subtitleResults
+            results: subtitleResults,
           });
-          
         } catch (error) {
           // Enhanced error logging for NetworkError
           if (error.name === 'TypeError' && error.message.includes('fetch')) {
@@ -218,33 +238,34 @@ export class SubtitleUploadService {
           } else {
             addDebugInfo(`❌ Upload failed for ${video.name}: ${error.message}`);
           }
-          
+
           results.errors.push({
             video: video.name,
             subtitles: subtitles.length,
             error: error.message,
             stack: error.stack,
             errorType: error.name,
-            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch')
+            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch'),
           });
-          
+
           // Update progress for each failed subtitle in this video
           subtitles.forEach(subtitle => {
             results.processedSubtitles++;
             results.failed++;
-            
+
             // Add to detailed results
             results.detailedResults.push({
               filename: subtitle.name,
               status: 'failed',
-              message: error.name === 'TypeError' && error.message.includes('fetch') 
-                ? `NetworkError: ${error.message} (Upload may have succeeded despite this error)`
-                : `Upload failed: ${error.message}`,
+              message:
+                error.name === 'TypeError' && error.message.includes('fetch')
+                  ? `NetworkError: ${error.message} (Upload may have succeeded despite this error)`
+                  : `Upload failed: ${error.message}`,
               url: null,
               errorType: error.name,
-              isNetworkError: error.name === 'TypeError' && error.message.includes('fetch')
+              isNetworkError: error.name === 'TypeError' && error.message.includes('fetch'),
             });
-            
+
             // Update progress with detailed information
             if (onProgress) {
               onProgress(results.processedSubtitles, results.totalSubtitles, {
@@ -252,7 +273,7 @@ export class SubtitleUploadService {
                 successful: results.successful,
                 alreadyExists: results.alreadyExists,
                 failed: results.failed,
-                results: results.detailedResults
+                results: results.detailedResults,
               });
             }
           });
@@ -262,16 +283,23 @@ export class SubtitleUploadService {
       // Process orphaned subtitles
       for (const subtitle of enabledOrphanedSubtitles) {
         addDebugInfo(`📝 Processing orphaned subtitle: ${subtitle.name}`);
-        
+
         try {
           const movieData = movieGuesses[subtitle.fullPath];
-          
-          if (!movieData || movieData === 'guessing' || movieData === 'error' || movieData === 'no-match') {
-            throw new Error(`Subtitle movie not identified for orphaned subtitle: ${subtitle.name}`);
+
+          if (
+            !movieData ||
+            movieData === 'guessing' ||
+            movieData === 'error' ||
+            movieData === 'no-match'
+          ) {
+            throw new Error(
+              `Subtitle movie not identified for orphaned subtitle: ${subtitle.name}`
+            );
           }
 
           addDebugInfo(`📤 Attempting upload for orphaned subtitle: ${subtitle.name}`);
-          
+
           const uploadData = await this.prepareUploadDataForOrphanedSubtitle({
             subtitle,
             movieData,
@@ -281,34 +309,40 @@ export class SubtitleUploadService {
             uploadOptions,
             combinedLanguages,
             addDebugInfo,
-            orphanedSubtitlesFps
+            orphanedSubtitlesFps,
           });
 
           const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(uploadData);
-          
+
           addDebugInfo(`✅ TryUpload response received for ${subtitle.name}:`);
           addDebugInfo(JSON.stringify(tryUploadResponse, null, 2));
-          
+
           let finalResponse = tryUploadResponse;
           let actualUploadData = null;
           let actualUploadResponse = null;
-          
+
           // If alreadyindb=0, need to do actual upload with UploadSubtitles
           if (tryUploadResponse.alreadyindb === 0 || tryUploadResponse.alreadyindb === '0') {
             // Check if uploadMovieHashOnly is enabled
             if (config.uploadMovieHashOnly === true) {
-              addDebugInfo(`⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for orphaned ${subtitle.name}`);
-              addDebugInfo(`✅ Movie hash updated for orphaned ${subtitle.name}, subtitle file not uploaded`);
+              addDebugInfo(
+                `⚙️ Upload MovieHash Only mode enabled - skipping UploadSubtitles for orphaned ${subtitle.name}`
+              );
+              addDebugInfo(
+                `✅ Movie hash updated for orphaned ${subtitle.name}, subtitle file not uploaded`
+              );
               // Use TryUpload response but mark as hash-only success
               finalResponse = {
                 ...tryUploadResponse,
                 status: '200 OK',
                 data: 'Movie hash updated (subtitle not uploaded)',
-                hashOnlyMode: true
+                hashOnlyMode: true,
               };
             } else {
-              addDebugInfo(`📤 Orphaned subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`);
-              
+              addDebugInfo(
+                `📤 Orphaned subtitle not in database, proceeding with UploadSubtitles for ${subtitle.name}`
+              );
+
               actualUploadData = await this.prepareActualUploadDataForOrphanedSubtitle({
                 subtitle,
                 movieData,
@@ -318,39 +352,43 @@ export class SubtitleUploadService {
                 uploadOptions,
                 combinedLanguages,
                 addDebugInfo,
-                orphanedSubtitlesFps
+                orphanedSubtitlesFps,
               });
-              
+
               actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
-              
+
               addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
               addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
-              
+
               finalResponse = actualUploadResponse;
             }
           } else {
-            addDebugInfo(`✅ Orphaned subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`);
+            addDebugInfo(
+              `✅ Orphaned subtitle already in database for ${subtitle.name} (alreadyindb=${tryUploadResponse.alreadyindb})`
+            );
           }
-          
+
           results.success.push({
             video: `Orphaned: ${subtitle.name}`,
             subtitles: 1,
-            results: [{
-              subtitle: subtitle.name,
-              subtitlePath: subtitle.fullPath,
-              response: finalResponse,
-              subcontent: actualUploadData ? actualUploadData.subcontent : null
-            }]
+            results: [
+              {
+                subtitle: subtitle.name,
+                subtitlePath: subtitle.fullPath,
+                response: finalResponse,
+                subcontent: actualUploadData ? actualUploadData.subcontent : null,
+              },
+            ],
           });
-          
+
           results.processedSubtitles++;
-          
+
           // Analyze result and update counters
           const response = finalResponse;
           let status = 'unknown';
           let message = 'Upload completed';
           let url = null;
-          
+
           if (response.status && response.status !== '200 OK') {
             status = 'failed';
             message = `Upload failed - ${response.status}`;
@@ -359,27 +397,33 @@ export class SubtitleUploadService {
             status = 'exists';
             message = 'Already in database';
             results.alreadyExists++;
-            url = typeof response.data === 'string' && response.data.startsWith('http') ? response.data : null;
+            url =
+              typeof response.data === 'string' && response.data.startsWith('http')
+                ? response.data
+                : null;
           } else if (response.status === '200 OK' && response.data && !response.alreadyindb) {
             status = 'success';
             message = 'Successfully uploaded as new subtitle';
             results.successful++;
-            url = typeof response.data === 'string' && response.data.startsWith('http') ? response.data : null;
+            url =
+              typeof response.data === 'string' && response.data.startsWith('http')
+                ? response.data
+                : null;
           } else {
             // Handle other cases
             results.successful++;
             status = 'success';
             message = 'Upload completed';
           }
-          
+
           // Add to detailed results
           results.detailedResults.push({
             filename: subtitle.name,
             status,
             message,
-            url
+            url,
           });
-          
+
           // Update progress with detailed information
           if (onProgress) {
             onProgress(results.processedSubtitles, results.totalSubtitles, {
@@ -387,44 +431,48 @@ export class SubtitleUploadService {
               successful: results.successful,
               alreadyExists: results.alreadyExists,
               failed: results.failed,
-              results: results.detailedResults
+              results: results.detailedResults,
             });
           }
-          
         } catch (error) {
           // Enhanced error logging for NetworkError
           if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            addDebugInfo(`❌ NetworkError during upload for orphaned subtitle ${subtitle.name}: ${error.message}`);
+            addDebugInfo(
+              `❌ NetworkError during upload for orphaned subtitle ${subtitle.name}: ${error.message}`
+            );
             addDebugInfo(`❌ This is likely a network connectivity issue, not an API error`);
             addDebugInfo(`❌ The upload may have actually succeeded - check the results`);
           } else {
-            addDebugInfo(`❌ Upload failed for orphaned subtitle ${subtitle.name}: ${error.message}`);
+            addDebugInfo(
+              `❌ Upload failed for orphaned subtitle ${subtitle.name}: ${error.message}`
+            );
           }
-          
+
           results.errors.push({
             video: `Orphaned: ${subtitle.name}`,
             subtitles: 1,
             error: error.message,
             stack: error.stack,
             errorType: error.name,
-            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch')
+            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch'),
           });
-          
+
           results.processedSubtitles++;
           results.failed++;
-          
+
           // Add to detailed results
           results.detailedResults.push({
             filename: subtitle.name,
             status: 'failed',
-            message: error.name === 'TypeError' && error.message.includes('fetch') 
-              ? `NetworkError: ${error.message} (Upload may have succeeded despite this error)`
-              : `Upload failed: ${error.message}`,
+            message:
+              error.name === 'TypeError' && error.message.includes('fetch')
+                ? `NetworkError: ${error.message} (Upload may have succeeded despite this error)`
+                : `Upload failed: ${error.message}`,
             url: null,
             errorType: error.name,
-            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch')
+            isNetworkError: error.name === 'TypeError' && error.message.includes('fetch'),
           });
-          
+
           // Update progress with detailed information
           if (onProgress) {
             onProgress(results.processedSubtitles, results.totalSubtitles, {
@@ -432,23 +480,27 @@ export class SubtitleUploadService {
               successful: results.successful,
               alreadyExists: results.alreadyExists,
               failed: results.failed,
-              results: results.detailedResults
+              results: results.detailedResults,
             });
           }
         }
       }
 
-      const successRate = results.totalSubtitles > 0 ? (results.processedSubtitles / results.totalSubtitles * 100).toFixed(1) : 0;
-      addDebugInfo(`🎯 Upload completed: ${results.processedSubtitles}/${results.totalSubtitles} subtitles (${successRate}% success rate)`);
-      
+      const successRate =
+        results.totalSubtitles > 0
+          ? ((results.processedSubtitles / results.totalSubtitles) * 100).toFixed(1)
+          : 0;
+      addDebugInfo(
+        `🎯 Upload completed: ${results.processedSubtitles}/${results.totalSubtitles} subtitles (${successRate}% success rate)`
+      );
+
       return results;
-      
     } catch (error) {
       addDebugInfo(`💥 Upload process failed: ${error.message}`);
       results.errors.push({
         error: 'Upload process failed',
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
       return results;
     }
@@ -469,21 +521,29 @@ export class SubtitleUploadService {
     uploadOptions,
     combinedLanguages,
     addDebugInfo,
-    getVideoMetadata
+    getVideoMetadata,
   }) {
     // Get the best movie data (episode-specific if available)
-    const bestMovieData = this.getBestMovieData(video.fullPath, movieData, featuresByImdbId, guessItData);
-    const uploadImdbId = bestMovieData?.kind === 'episode' && bestMovieData.imdbid 
-      ? bestMovieData.imdbid 
-      : movieData.imdbid;
+    const bestMovieData = this.getBestMovieData(
+      video.fullPath,
+      movieData,
+      featuresByImdbId,
+      guessItData
+    );
+    const uploadImdbId =
+      bestMovieData?.kind === 'episode' && bestMovieData.imdbid
+        ? bestMovieData.imdbid
+        : movieData.imdbid;
 
-    addDebugInfo(`🎭 Using IMDb ID for upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`);
+    addDebugInfo(
+      `🎭 Using IMDb ID for upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`
+    );
     addDebugInfo(`📝 Processing subtitle: ${subtitle.name}`);
-    
+
     try {
       // Calculate MD5 hash of subtitle file
       const subtitleInfo = await SubtitleHashService.readAndHashSubtitleFile(subtitle.file);
-      
+
       // Validate required fields
       if (!video.movieHash || video.movieHash === 'error') {
         throw new Error(`Movie hash not available for video: ${video.name}`);
@@ -491,36 +551,37 @@ export class SubtitleUploadService {
 
       // Get video metadata for upload parameters
       const videoMetadata = getVideoMetadata ? getVideoMetadata(video.fullPath) : null;
-      
+
       const subtitleEntry = {
-        subhash: subtitleInfo.hash,           // MD5 hash of subtitle file content
+        subhash: subtitleInfo.hash, // MD5 hash of subtitle file content
         subfilename: subtitle.name,
-        moviehash: video.movieHash,           // Movie hash from video file
+        moviehash: video.movieHash, // Movie hash from video file
         moviebytesize: video.size.toString(),
         moviefilename: video.name,
         idmovieimdb: uploadImdbId,
-        
+
         // Add video metadata parameters for TryUploadSubtitles
         ...(videoMetadata && {
           movietimems: videoMetadata.movietimems?.toString(),
           moviefps: videoMetadata.moviefps?.toString(),
-          movieframes: videoMetadata.movieframes?.toString()
-        })
+          movieframes: videoMetadata.movieframes?.toString(),
+        }),
       };
-      
+
       addDebugInfo(`✅ Prepared subtitle data for: ${subtitle.name}`);
       addDebugInfo(`   - Movie hash: ${video.movieHash}`);
       addDebugInfo(`   - IMDb ID: ${uploadImdbId}`);
       if (videoMetadata) {
-        addDebugInfo(`   - Video metadata: FPS=${videoMetadata.moviefps}, Duration=${videoMetadata.movietimems}ms, Frames=${videoMetadata.movieframes}`);
+        addDebugInfo(
+          `   - Video metadata: FPS=${videoMetadata.moviefps}, Duration=${videoMetadata.movietimems}ms, Frames=${videoMetadata.movieframes}`
+        );
       } else {
         addDebugInfo(`   - Video metadata: Not available`);
       }
-      
+
       return {
-        subtitles: [subtitleEntry] // Always single subtitle in cd1
+        subtitles: [subtitleEntry], // Always single subtitle in cd1
       };
-      
     } catch (error) {
       addDebugInfo(`❌ Failed to prepare subtitle ${subtitle.name}: ${error.message}`);
       throw error;
@@ -542,29 +603,37 @@ export class SubtitleUploadService {
     uploadOptions,
     combinedLanguages,
     addDebugInfo,
-    getVideoMetadata
+    getVideoMetadata,
   }) {
     // Get the best movie data (episode-specific if available)
-    const bestMovieData = this.getBestMovieData(video.fullPath, movieData, featuresByImdbId, guessItData);
-    const uploadImdbId = bestMovieData?.kind === 'episode' && bestMovieData.imdbid 
-      ? bestMovieData.imdbid 
-      : movieData.imdbid;
+    const bestMovieData = this.getBestMovieData(
+      video.fullPath,
+      movieData,
+      featuresByImdbId,
+      guessItData
+    );
+    const uploadImdbId =
+      bestMovieData?.kind === 'episode' && bestMovieData.imdbid
+        ? bestMovieData.imdbid
+        : movieData.imdbid;
 
-    addDebugInfo(`🎭 Using IMDb ID for actual upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`);
+    addDebugInfo(
+      `🎭 Using IMDb ID for actual upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`
+    );
     addDebugInfo(`📝 Processing subtitle for actual upload: ${subtitle.name}`);
-    
+
     try {
       // Read subtitle file with content for UploadSubtitles
       const subtitleInfo = await SubtitleHashService.readAndHashSubtitleFile(subtitle.file, true);
-      
+
       // Get language ID
       const languageCode = getSubtitleLanguage(subtitle);
       const languageId = SubtitleHashService.getLanguageId(languageCode, combinedLanguages);
-      
+
       if (!languageId) {
         throw new Error(`No valid language ID found for subtitle: ${subtitle.name}`);
       }
-      
+
       // Validate required fields
       if (!video.movieHash || video.movieHash === 'error') {
         throw new Error(`Movie hash not available for video: ${video.name}`);
@@ -572,32 +641,56 @@ export class SubtitleUploadService {
 
       // Get subtitle-specific upload options
       const subtitleOptions = uploadOptions?.[subtitle.fullPath] || {};
-      
+
       // Auto-detect features from video and subtitle paths
       const videoFeatures = this.detectFeaturesFromPath(video.fullPath, addDebugInfo);
       const subtitleFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
-      
+
       // Combine auto-detected features (video path has higher priority for HD)
       const autoDetectedFeatures = {
-        hearingimpaired: subtitleFeatures.hearingimpaired === '1' || videoFeatures.hearingimpaired === '1' ? '1' : '0',
-        highdefinition: videoFeatures.highdefinition === '1' || subtitleFeatures.highdefinition === '1' ? '1' : '0',
-        foreignpartsonly: subtitleFeatures.foreignpartsonly === '1' || videoFeatures.foreignpartsonly === '1' ? '1' : '0'
+        hearingimpaired:
+          subtitleFeatures.hearingimpaired === '1' || videoFeatures.hearingimpaired === '1'
+            ? '1'
+            : '0',
+        highdefinition:
+          videoFeatures.highdefinition === '1' || subtitleFeatures.highdefinition === '1'
+            ? '1'
+            : '0',
+        foreignpartsonly:
+          subtitleFeatures.foreignpartsonly === '1' || videoFeatures.foreignpartsonly === '1'
+            ? '1'
+            : '0',
       };
-      
+
       // CRITICAL FIX: User's explicit UI choice should ALWAYS override auto-detection
       // This ensures users upload exactly what they see on screen (paired subtitles)
-      const finalHigdefinition = subtitleOptions.highdefinition !== undefined ? subtitleOptions.highdefinition : (autoDetectedFeatures.highdefinition || '0');
-      const finalHearingimpaired = subtitleOptions.hearingimpaired !== undefined ? subtitleOptions.hearingimpaired : (autoDetectedFeatures.hearingimpaired || '0');
-      const finalForeignpartsonly = subtitleOptions.foreignpartsonly !== undefined ? subtitleOptions.foreignpartsonly : (autoDetectedFeatures.foreignpartsonly || '0');
-      
+      const finalHigdefinition =
+        subtitleOptions.highdefinition !== undefined
+          ? subtitleOptions.highdefinition
+          : autoDetectedFeatures.highdefinition || '0';
+      const finalHearingimpaired =
+        subtitleOptions.hearingimpaired !== undefined
+          ? subtitleOptions.hearingimpaired
+          : autoDetectedFeatures.hearingimpaired || '0';
+      const finalForeignpartsonly =
+        subtitleOptions.foreignpartsonly !== undefined
+          ? subtitleOptions.foreignpartsonly
+          : autoDetectedFeatures.foreignpartsonly || '0';
+
       // Debug logging for feature selection
       if (addDebugInfo) {
         addDebugInfo(`🔍 Feature Decision (Paired):`);
-        addDebugInfo(`   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`);
-        addDebugInfo(`   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`);
-        addDebugInfo(`   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`);
+        addDebugInfo(
+          `   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`
+        );
+        addDebugInfo(
+          `   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`
+        );
+        addDebugInfo(
+          `   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`
+        );
       }
-      
+
       // Prepare baseinfo section
       // Clean the release name by removing language codes and extra markers
       const rawReleaseName = video.name.replace(/\.(mkv|mp4|avi|mov|wmv|flv|webm)$/i, '');
@@ -619,12 +712,12 @@ export class SubtitleUploadService {
         highdefinition: finalHigdefinition,
         automatictranslation: subtitleOptions.automatictranslation || '0',
         subtranslator: subtitleOptions.subtranslator || '',
-        foreignpartsonly: finalForeignpartsonly
+        foreignpartsonly: finalForeignpartsonly,
       };
 
       // Get video metadata for upload parameters
       const videoMetadata = getVideoMetadata ? getVideoMetadata(video.fullPath) : null;
-      
+
       // Prepare cd1 section
       const cd1 = {
         subhash: subtitleInfo.hash, // Use same hash as TryUploadSubtitles (MD5 of original content)
@@ -633,35 +726,42 @@ export class SubtitleUploadService {
         moviebytesize: video.size.toString(),
         moviefilename: video.name,
         subcontent: subtitleInfo.contentGzipBase64,
-        
+
         // Add video metadata parameters for OpenSubtitles API
         ...(videoMetadata && {
           movietimems: videoMetadata.movietimems?.toString(),
           moviefps: videoMetadata.moviefps?.toString(),
-          movieframes: videoMetadata.movieframes?.toString()
-        })
+          movieframes: videoMetadata.movieframes?.toString(),
+        }),
       };
-      
+
       addDebugInfo(`✅ Prepared actual upload data for: ${subtitle.name}`);
       addDebugInfo(`   - Language: ${languageId}`);
       addDebugInfo(`   - Movie hash: ${video.movieHash}`);
       addDebugInfo(`   - IMDb ID: ${uploadImdbId}`);
       addDebugInfo(`   - Content length: ${subtitleInfo.content.length} chars`);
-      addDebugInfo(`   - Compressed content length: ${subtitleInfo.contentGzipBase64.length} chars (base64)`);
-      
+      addDebugInfo(
+        `   - Compressed content length: ${subtitleInfo.contentGzipBase64.length} chars (base64)`
+      );
+
       // Log video metadata if available
       if (videoMetadata) {
         addDebugInfo(`   - Video metadata:`);
         addDebugInfo(`     * FPS: ${videoMetadata.moviefps}`);
-        addDebugInfo(`     * Duration: ${videoMetadata.durationFormatted} (${videoMetadata.movietimems}ms)`);
+        addDebugInfo(
+          `     * Duration: ${videoMetadata.durationFormatted} (${videoMetadata.movietimems}ms)`
+        );
         addDebugInfo(`     * Frames: ${videoMetadata.movieframes}`);
       } else {
         addDebugInfo(`   - Video metadata: not available`);
       }
-      
+
       // DEBUG: Verify compression round-trip for this specific upload
       try {
-        const debugResult = SubtitleHashService.debugCompressedContent(subtitleInfo.contentGzipBase64, subtitleInfo.content);
+        const debugResult = SubtitleHashService.debugCompressedContent(
+          subtitleInfo.contentGzipBase64,
+          subtitleInfo.content
+        );
         addDebugInfo(`   - DEBUG Round-trip verification:`);
         addDebugInfo(`     * Content match: ${debugResult.contentMatch}`);
         addDebugInfo(`     * Hash match: ${debugResult.hashMatch}`);
@@ -673,25 +773,32 @@ export class SubtitleUploadService {
       } catch (debugError) {
         addDebugInfo(`   - DEBUG verification failed: ${debugError.message}`);
       }
-      
+
       // Final debug logging of the complete upload object right before XML-RPC call
       const uploadObject = {
         baseinfo,
         cd1,
         // Return the exact subcontent data for debugging/download purposes
-        subcontent: subtitleInfo.contentGzipBase64
+        subcontent: subtitleInfo.contentGzipBase64,
       };
-      
+
       addDebugInfo(`🔍 FINAL UPLOAD OBJECT FOR XML-RPC (${subtitle.name}):`);
       addDebugInfo(`   - Complete upload object: ${JSON.stringify(uploadObject, null, 2)}`);
-      addDebugInfo(`   - uploadObject.baseinfo.highdefinition: "${uploadObject.baseinfo.highdefinition}"`);
-      addDebugInfo(`   - uploadObject.baseinfo.hearingimpaired: "${uploadObject.baseinfo.hearingimpaired}"`);
-      addDebugInfo(`   - uploadObject.baseinfo.foreignpartsonly: "${uploadObject.baseinfo.foreignpartsonly}"`);
-      
+      addDebugInfo(
+        `   - uploadObject.baseinfo.highdefinition: "${uploadObject.baseinfo.highdefinition}"`
+      );
+      addDebugInfo(
+        `   - uploadObject.baseinfo.hearingimpaired: "${uploadObject.baseinfo.hearingimpaired}"`
+      );
+      addDebugInfo(
+        `   - uploadObject.baseinfo.foreignpartsonly: "${uploadObject.baseinfo.foreignpartsonly}"`
+      );
+
       return uploadObject;
-      
     } catch (error) {
-      addDebugInfo(`❌ Failed to prepare actual upload data for ${subtitle.name}: ${error.message}`);
+      addDebugInfo(
+        `❌ Failed to prepare actual upload data for ${subtitle.name}: ${error.message}`
+      );
       throw error;
     }
   }
@@ -710,31 +817,39 @@ export class SubtitleUploadService {
     uploadOptions,
     combinedLanguages,
     addDebugInfo,
-    orphanedSubtitlesFps = {}
+    orphanedSubtitlesFps = {},
   }) {
     // Get the best movie data (episode-specific if available)
-    const bestMovieData = this.getBestMovieData(subtitle.fullPath, movieData, featuresByImdbId, guessItData);
-    const uploadImdbId = bestMovieData?.kind === 'episode' && bestMovieData.imdbid 
-      ? bestMovieData.imdbid 
-      : movieData.imdbid;
+    const bestMovieData = this.getBestMovieData(
+      subtitle.fullPath,
+      movieData,
+      featuresByImdbId,
+      guessItData
+    );
+    const uploadImdbId =
+      bestMovieData?.kind === 'episode' && bestMovieData.imdbid
+        ? bestMovieData.imdbid
+        : movieData.imdbid;
 
-    addDebugInfo(`🎭 Using IMDb ID for orphaned subtitle upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`);
+    addDebugInfo(
+      `🎭 Using IMDb ID for orphaned subtitle upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`
+    );
     addDebugInfo(`📝 Processing orphaned subtitle: ${subtitle.name}`);
-    
+
     try {
       // Calculate MD5 hash of subtitle file
       const subtitleInfo = await SubtitleHashService.readAndHashSubtitleFile(subtitle.file);
-      
+
       const subtitleEntry = {
-        subhash: subtitleInfo.hash,           // MD5 hash of subtitle file content
-        subfilename: subtitle.name
+        subhash: subtitleInfo.hash, // MD5 hash of subtitle file content
+        subfilename: subtitle.name,
         // For orphaned subtitles, we don't include movie fields or idmovieimdb in TryUploadSubtitles
         // moviehash, moviebytesize, moviefilename, and idmovieimdb are not sent
       };
-      
+
       // Get FPS setting for this subtitle
       const subtitleFps = orphanedSubtitlesFps[subtitle.fullPath];
-      
+
       // Add FPS if specified (only if not empty)
       if (subtitleFps && subtitleFps !== '') {
         subtitleEntry.moviefps = subtitleFps;
@@ -742,15 +857,14 @@ export class SubtitleUploadService {
       } else {
         addDebugInfo(`   - FPS: Not specified`);
       }
-      
+
       addDebugInfo(`✅ Prepared orphaned subtitle data for: ${subtitle.name}`);
       addDebugInfo(`   - No movie fields included (orphaned subtitle for TryUploadSubtitles)`);
       addDebugInfo(`   - IMDb ID will be used later in UploadSubtitles: ${uploadImdbId}`);
-      
+
       return {
-        subtitles: [subtitleEntry] // Always single subtitle
+        subtitles: [subtitleEntry], // Always single subtitle
       };
-      
     } catch (error) {
       addDebugInfo(`❌ Failed to prepare orphaned subtitle ${subtitle.name}: ${error.message}`);
       throw error;
@@ -771,50 +885,72 @@ export class SubtitleUploadService {
     uploadOptions,
     combinedLanguages,
     addDebugInfo,
-    orphanedSubtitlesFps = {}
+    orphanedSubtitlesFps = {},
   }) {
     // Get the best movie data (episode-specific if available)
-    const bestMovieData = this.getBestMovieData(subtitle.fullPath, movieData, featuresByImdbId, guessItData);
-    const uploadImdbId = bestMovieData?.kind === 'episode' && bestMovieData.imdbid 
-      ? bestMovieData.imdbid 
-      : movieData.imdbid;
+    const bestMovieData = this.getBestMovieData(
+      subtitle.fullPath,
+      movieData,
+      featuresByImdbId,
+      guessItData
+    );
+    const uploadImdbId =
+      bestMovieData?.kind === 'episode' && bestMovieData.imdbid
+        ? bestMovieData.imdbid
+        : movieData.imdbid;
 
-    addDebugInfo(`🎭 Using IMDb ID for orphaned subtitle actual upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`);
+    addDebugInfo(
+      `🎭 Using IMDb ID for orphaned subtitle actual upload: ${uploadImdbId} (${bestMovieData?.kind || 'movie'})`
+    );
     addDebugInfo(`📝 Processing orphaned subtitle for actual upload: ${subtitle.name}`);
-    
+
     try {
       // Read subtitle file with content for UploadSubtitles
       const subtitleInfo = await SubtitleHashService.readAndHashSubtitleFile(subtitle.file, true);
-      
+
       // Get language ID
       const languageCode = getSubtitleLanguage(subtitle);
       const languageId = SubtitleHashService.getLanguageId(languageCode, combinedLanguages);
-      
+
       if (!languageId) {
         throw new Error(`No valid language ID found for orphaned subtitle: ${subtitle.name}`);
       }
-      
+
       // Get subtitle-specific upload options
       const subtitleOptions = uploadOptions?.[subtitle.fullPath] || {};
-      
+
       // Auto-detect features from subtitle path for orphaned subtitles
       const autoDetectedFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
-      
-      
+
       // CRITICAL FIX: User's explicit UI choice should ALWAYS override auto-detection
       // This ensures users upload exactly what they see on screen (orphaned subtitles)
-      const finalHigdefinition = subtitleOptions.highdefinition !== undefined ? subtitleOptions.highdefinition : (autoDetectedFeatures.highdefinition || '0');
-      const finalHearingimpaired = subtitleOptions.hearingimpaired !== undefined ? subtitleOptions.hearingimpaired : (autoDetectedFeatures.hearingimpaired || '0');
-      const finalForeignpartsonly = subtitleOptions.foreignpartsonly !== undefined ? subtitleOptions.foreignpartsonly : (autoDetectedFeatures.foreignpartsonly || '0');
-      
+      const finalHigdefinition =
+        subtitleOptions.highdefinition !== undefined
+          ? subtitleOptions.highdefinition
+          : autoDetectedFeatures.highdefinition || '0';
+      const finalHearingimpaired =
+        subtitleOptions.hearingimpaired !== undefined
+          ? subtitleOptions.hearingimpaired
+          : autoDetectedFeatures.hearingimpaired || '0';
+      const finalForeignpartsonly =
+        subtitleOptions.foreignpartsonly !== undefined
+          ? subtitleOptions.foreignpartsonly
+          : autoDetectedFeatures.foreignpartsonly || '0';
+
       // Debug logging for feature selection
       if (addDebugInfo) {
         addDebugInfo(`🔍 Feature Decision (Orphaned):`);
-        addDebugInfo(`   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`);
-        addDebugInfo(`   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`);
-        addDebugInfo(`   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`);
+        addDebugInfo(
+          `   - HearingImpaired: User='${subtitleOptions.hearingimpaired}' Auto='${autoDetectedFeatures.hearingimpaired}' Final='${finalHearingimpaired}'`
+        );
+        addDebugInfo(
+          `   - HighDefinition: User='${subtitleOptions.highdefinition}' Auto='${autoDetectedFeatures.highdefinition}' Final='${finalHigdefinition}'`
+        );
+        addDebugInfo(
+          `   - ForeignPartsOnly: User='${subtitleOptions.foreignpartsonly}' Auto='${autoDetectedFeatures.foreignpartsonly}' Final='${finalForeignpartsonly}'`
+        );
       }
-      
+
       // Prepare baseinfo section (only include fields we can determine for orphaned subtitles)
       // Clean the release name by removing language codes and extra markers
       const rawReleaseName = subtitle.name.replace(/\.(srt|sub|ass|ssa|vtt)$/i, '');
@@ -836,22 +972,22 @@ export class SubtitleUploadService {
         highdefinition: finalHigdefinition || '0',
         automatictranslation: subtitleOptions.automatictranslation || '0',
         subtranslator: subtitleOptions.subtranslator || '',
-        foreignpartsonly: finalForeignpartsonly || '0'
+        foreignpartsonly: finalForeignpartsonly || '0',
       };
-      
+
       // DEBUG: Log the final baseinfo values before they're sent to XML-RPC
 
       // Get FPS setting for this subtitle
       const subtitleFps = orphanedSubtitlesFps[subtitle.fullPath];
-      
+
       // Prepare cd1 section (no movie file data for orphaned subtitles)
       const cd1 = {
         subhash: subtitleInfo.hash, // Use same hash as TryUploadSubtitles (MD5 of original content)
         subfilename: subtitle.name,
-        subcontent: subtitleInfo.contentGzipBase64
+        subcontent: subtitleInfo.contentGzipBase64,
         // No movie data included for orphaned subtitles (moviehash, moviebytesize, moviefilename)
       };
-      
+
       // Add FPS if specified (only if not empty)
       if (subtitleFps && subtitleFps !== '') {
         cd1.moviefps = subtitleFps;
@@ -859,17 +995,22 @@ export class SubtitleUploadService {
       } else {
         addDebugInfo(`   - FPS: Not specified`);
       }
-      
+
       addDebugInfo(`✅ Prepared actual upload data for orphaned subtitle: ${subtitle.name}`);
       addDebugInfo(`   - Language: ${languageId}`);
       addDebugInfo(`   - IMDb ID: ${uploadImdbId}`);
       addDebugInfo(`   - Content length: ${subtitleInfo.content.length} chars`);
-      addDebugInfo(`   - Compressed content length: ${subtitleInfo.contentGzipBase64.length} chars (base64)`);
+      addDebugInfo(
+        `   - Compressed content length: ${subtitleInfo.contentGzipBase64.length} chars (base64)`
+      );
       addDebugInfo(`   - No movie fields in cd1 (orphaned subtitle)`);
-      
+
       // DEBUG: Verify compression round-trip for this specific upload
       try {
-        const debugResult = SubtitleHashService.debugCompressedContent(subtitleInfo.contentGzipBase64, subtitleInfo.content);
+        const debugResult = SubtitleHashService.debugCompressedContent(
+          subtitleInfo.contentGzipBase64,
+          subtitleInfo.content
+        );
         addDebugInfo(`   - DEBUG Round-trip verification:`);
         addDebugInfo(`     * Content match: ${debugResult.contentMatch}`);
         addDebugInfo(`     * Hash match: ${debugResult.hashMatch}`);
@@ -881,25 +1022,32 @@ export class SubtitleUploadService {
       } catch (debugError) {
         addDebugInfo(`   - DEBUG verification failed: ${debugError.message}`);
       }
-      
+
       // Final debug logging of the complete upload object right before XML-RPC call
       const uploadObject = {
         baseinfo,
         cd1,
         // Return the exact subcontent data for debugging/download purposes
-        subcontent: subtitleInfo.contentGzipBase64
+        subcontent: subtitleInfo.contentGzipBase64,
       };
-      
+
       addDebugInfo(`🔍 FINAL UPLOAD OBJECT FOR XML-RPC (${subtitle.name}):`);
       addDebugInfo(`   - Complete upload object: ${JSON.stringify(uploadObject, null, 2)}`);
-      addDebugInfo(`   - uploadObject.baseinfo.highdefinition: "${uploadObject.baseinfo.highdefinition}"`);
-      addDebugInfo(`   - uploadObject.baseinfo.hearingimpaired: "${uploadObject.baseinfo.hearingimpaired}"`);
-      addDebugInfo(`   - uploadObject.baseinfo.foreignpartsonly: "${uploadObject.baseinfo.foreignpartsonly}"`);
-      
+      addDebugInfo(
+        `   - uploadObject.baseinfo.highdefinition: "${uploadObject.baseinfo.highdefinition}"`
+      );
+      addDebugInfo(
+        `   - uploadObject.baseinfo.hearingimpaired: "${uploadObject.baseinfo.hearingimpaired}"`
+      );
+      addDebugInfo(
+        `   - uploadObject.baseinfo.foreignpartsonly: "${uploadObject.baseinfo.foreignpartsonly}"`
+      );
+
       return uploadObject;
-      
     } catch (error) {
-      addDebugInfo(`❌ Failed to prepare actual upload data for orphaned subtitle ${subtitle.name}: ${error.message}`);
+      addDebugInfo(
+        `❌ Failed to prepare actual upload data for orphaned subtitle ${subtitle.name}: ${error.message}`
+      );
       throw error;
     }
   }
@@ -914,16 +1062,16 @@ export class SubtitleUploadService {
     const features = {
       hearingimpaired: '0',
       highdefinition: '0',
-      foreignpartsonly: '0'
+      foreignpartsonly: '0',
     };
-    
+
     if (!filePath) {
       return features;
     }
-    
+
     // Split path into all components (directory parts + filename)
     const pathParts = filePath.split('/').filter(part => part.length > 0);
-    
+
     // Check each part of the path
     for (const part of pathParts) {
       // Check for High Definition indicators
@@ -931,18 +1079,18 @@ export class SubtitleUploadService {
         features.highdefinition = '1';
         addDebugInfo(`[AUTODETECT] HD: 1`);
       }
-      
+
       // Check for Foreign Parts indicators
       if (this.checkForeignPartsFromString(part)) {
         features.foreignpartsonly = '1';
       }
-      
+
       // Check for Hearing Impaired indicators
       if (this.checkHearingImpairedFromString(part)) {
         features.hearingimpaired = '1';
       }
     }
-    
+
     // Special check for hearing impaired from filename
     if (pathParts.length > 0) {
       const filename = pathParts[pathParts.length - 1];
@@ -950,10 +1098,10 @@ export class SubtitleUploadService {
         features.hearingimpaired = '1';
       }
     }
-    
+
     return features;
   }
-  
+
   /**
    * Check if a string indicates High Definition
    * @param {string} str - String to check
@@ -961,11 +1109,11 @@ export class SubtitleUploadService {
    */
   static checkHighDefinitionFromString(str) {
     if (!str) return false;
-    
+
     // Use the shared HD detection pattern from constants
     return HD_DETECTION_REGEX.test(str);
   }
-  
+
   /**
    * Check if a string indicates Foreign Parts Only
    * @param {string} str - String to check
@@ -973,15 +1121,20 @@ export class SubtitleUploadService {
    */
   static checkForeignPartsFromString(str) {
     if (!str) return false;
-    
+
     const lowerStr = str.toLowerCase();
     const foreignPatterns = [
-      'foreign', 'forced', 'signs', 'signs&songs', 'signs.songs', 'signs_songs'
+      'foreign',
+      'forced',
+      'signs',
+      'signs&songs',
+      'signs.songs',
+      'signs_songs',
     ];
-    
+
     return foreignPatterns.some(pattern => lowerStr.includes(pattern));
   }
-  
+
   /**
    * Check if a string indicates Hearing Impaired
    * @param {string} str - String to check
@@ -989,26 +1142,36 @@ export class SubtitleUploadService {
    */
   static checkHearingImpairedFromString(str) {
     if (!str) return false;
-    
+
     const lowerStr = str.toLowerCase();
-    
+
     // First check for negative patterns that explicitly indicate NOT hearing impaired
     const negativePatterns = [
-      'nonhi', 'non-hi', 'non_hi', 'non.hi',
-      'nohi', 'no-hi', 'no_hi', 'no.hi',
-      'nothi', 'not-hi', 'not_hi', 'not.hi'
+      'nonhi',
+      'non-hi',
+      'non_hi',
+      'non.hi',
+      'nohi',
+      'no-hi',
+      'no_hi',
+      'no.hi',
+      'nothi',
+      'not-hi',
+      'not_hi',
+      'not.hi',
     ];
-    
+
     if (negativePatterns.some(pattern => lowerStr.includes(pattern))) {
       return false;
     }
-    
+
     // FIXED: Use word boundaries like UI to prevent false positives (Chicago, Yudhishir, etc.)
     // This prevents substring matches in names like "Chicago" -> "hi"
-    const hiRegex = /\bsdh\b|\bpsdh\b|\bhi\b|hi[_-]|[_-]hi|\bhearing[._-]?impaired\b|\bhearingimpaired\b/i;
+    const hiRegex =
+      /\bsdh\b|\bpsdh\b|\bhi\b|hi[_-]|[_-]hi|\bhearing[._-]?impaired\b|\bhearingimpaired\b/i;
     return hiRegex.test(lowerStr);
   }
-  
+
   /**
    * Check if a filename specifically indicates Hearing Impaired
    * @param {string} filename - Filename to check
@@ -1016,39 +1179,48 @@ export class SubtitleUploadService {
    */
   static checkHearingImpairedFromFilename(filename) {
     if (!filename) return false;
-    
+
     const lowerFilename = filename.toLowerCase();
-    
+
     // First check for negative patterns that explicitly indicate NOT hearing impaired
     const negativePatterns = [
-      'nonhi', 'non-hi', 'non_hi', 'non.hi',
-      'nohi', 'no-hi', 'no_hi', 'no.hi',
-      'nothi', 'not-hi', 'not_hi', 'not.hi'
+      'nonhi',
+      'non-hi',
+      'non_hi',
+      'non.hi',
+      'nohi',
+      'no-hi',
+      'no_hi',
+      'no.hi',
+      'nothi',
+      'not-hi',
+      'not_hi',
+      'not.hi',
     ];
-    
+
     if (negativePatterns.some(pattern => lowerFilename.includes(pattern))) {
       return false;
     }
-    
+
     // FIXED: More specific filename patterns using word boundaries to prevent false positives
     // This prevents matches in names like "Chicago.srt" -> "hi"
     const filenamePatterns = [
-      /\.hi\./i,           // .hi. in filename
-      /\.sdh\./i,          // .sdh. in filename  
-      /\.psdh\./i,         // .psdh. in filename
-      /\bhi\b/i,           // hi as separate word
-      /\bsdh\b/i,          // sdh as separate word
-      /\bpsdh\b/i,         // psdh as separate word
-      /_hi\./i,            // _hi. pattern
-      /_sdh\./i,           // _sdh. pattern
-      /_psdh\./i,          // _psdh. pattern
-      /[-.]hi[-.]?/i,      // -hi- or .hi- patterns
-      /[-.]sdh[-.]?/i,     // -sdh- or .sdh- patterns
-      /[-.]psdh[-.]?/i,    // -psdh- or .psdh- patterns
-      /hi[_-]/i,           // hi_ or hi- patterns
-      /[_-]hi$/i           // ending with _hi or -hi
+      /\.hi\./i, // .hi. in filename
+      /\.sdh\./i, // .sdh. in filename
+      /\.psdh\./i, // .psdh. in filename
+      /\bhi\b/i, // hi as separate word
+      /\bsdh\b/i, // sdh as separate word
+      /\bpsdh\b/i, // psdh as separate word
+      /_hi\./i, // _hi. pattern
+      /_sdh\./i, // _sdh. pattern
+      /_psdh\./i, // _psdh. pattern
+      /[-.]hi[-.]?/i, // -hi- or .hi- patterns
+      /[-.]sdh[-.]?/i, // -sdh- or .sdh- patterns
+      /[-.]psdh[-.]?/i, // -psdh- or .psdh- patterns
+      /hi[_-]/i, // hi_ or hi- patterns
+      /[_-]hi$/i, // ending with _hi or -hi
     ];
-    
+
     return filenamePatterns.some(pattern => pattern.test(lowerFilename));
   }
 
@@ -1068,8 +1240,12 @@ export class SubtitleUploadService {
     if (movieData && featuresData && guessItVideoData && typeof guessItVideoData === 'object') {
       if (featuresData?.data?.[0]?.attributes?.seasons && guessItVideoData) {
         const attributes = featuresData.data[0].attributes;
-        
-        if (attributes.feature_type === 'Tvshow' && guessItVideoData.season && guessItVideoData.episode) {
+
+        if (
+          attributes.feature_type === 'Tvshow' &&
+          guessItVideoData.season &&
+          guessItVideoData.episode
+        ) {
           const seasonNumber = parseInt(guessItVideoData.season);
           const episodeNumber = parseInt(guessItVideoData.episode);
 
@@ -1088,7 +1264,7 @@ export class SubtitleUploadService {
                   episode_title: episode.title,
                   show_title: attributes.title,
                   feature_id: episode.feature_id,
-                  reason: 'Episode matched from GuessIt data'
+                  reason: 'Episode matched from GuessIt data',
                 };
               }
             }

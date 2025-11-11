@@ -5,7 +5,6 @@ import pako from 'pako';
  * Subtitle hash calculation utilities for OpenSubtitles
  */
 export class SubtitleHashService {
-  
   /**
    * Calculate MD5 hash of subtitle file bytes
    * @param {Uint8Array} uint8Array - Raw file bytes
@@ -15,7 +14,7 @@ export class SubtitleHashService {
     // Convert Uint8Array to WordArray for CryptoJS
     const wordArray = CryptoJS.lib.WordArray.create(uint8Array);
     const hash = CryptoJS.MD5(wordArray).toString().toLowerCase();
-    
+
     return hash;
   }
 
@@ -39,39 +38,37 @@ export class SubtitleHashService {
   static async readAndHashSubtitleFile(file, includeContent = false) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = () => {
         try {
           // Convert ArrayBuffer to string preserving exact bytes
           const arrayBuffer = reader.result;
           const uint8Array = new Uint8Array(arrayBuffer);
-          
+
           // Convert to string using TextDecoder to handle encoding properly
           const decoder = new TextDecoder('utf-8', { fatal: false, ignoreBOM: false });
           const content = decoder.decode(uint8Array);
-          
-          
+
           // Try both methods - hash from raw bytes and from string
           const hashFromBytes = this.calculateSubtitleHashFromBytes(uint8Array);
           const hashFromString = this.calculateSubtitleHash(content);
-          
-          
+
           // CRITICAL: Use hash from raw file bytes, not string content
           // The server expects the MD5 of the original file bytes
           const hash = hashFromBytes;
-          
+
           const result = {
             hash,
-            size: file.size
+            size: file.size,
           };
-          
+
           if (includeContent) {
             result.content = content;
             // Try compressing the raw file bytes instead of the decoded string
             const compressionResult = this.compressAndEncodeRawBytesWithHash(uint8Array);
             result.contentGzipBase64 = compressionResult.base64;
             result.compressedHash = compressionResult.compressedHash;
-            
+
             // Additional debug info passed to parent function
             console.log('DEBUG: Full subtitle content info:', {
               fileName: file.name,
@@ -82,18 +79,18 @@ export class SubtitleHashService {
               compressedLength: result.contentGzipBase64.length,
               compressionMethod: 'Raw binary bytes -> GZIP DEFLATE (no headers) -> Base64',
               firstLine: content.split('\n')[0],
-              lastLine: content.split('\n').slice(-2)[0] // -2 to avoid empty last line
+              lastLine: content.split('\n').slice(-2)[0], // -2 to avoid empty last line
             });
           }
-          
+
           resolve(result);
         } catch (error) {
           reject(error);
         }
       };
-      
+
       reader.onerror = () => reject(reader.error);
-      
+
       // Read as ArrayBuffer to preserve exact file content
       reader.readAsArrayBuffer(file);
     });
@@ -108,25 +105,25 @@ export class SubtitleHashService {
     try {
       // Compress the raw bytes using zlib format (gzcompress equivalent)
       const compressed = pako.deflate(rawBytes);
-      
+
       // Calculate MD5 hash of compressed data
       const compressedHash = this.calculateSubtitleHashFromBytes(compressed);
-      
+
       // Convert to base64
       const base64 = btoa(String.fromCharCode.apply(null, compressed));
-      
+
       console.log('Raw bytes compression (zlib):', {
         originalSize: rawBytes.length,
         compressedSize: compressed.length,
         base64Size: base64.length,
-        compressionRatio: (compressed.length / rawBytes.length * 100).toFixed(1) + '%',
+        compressionRatio: ((compressed.length / rawBytes.length) * 100).toFixed(1) + '%',
         compressedDataHash: compressedHash,
-        compressionFormat: 'zlib (gzcompress equivalent)'
+        compressionFormat: 'zlib (gzcompress equivalent)',
       });
-      
+
       return {
         base64,
-        compressedHash
+        compressedHash,
       };
     } catch (error) {
       console.error('Raw bytes compression failed:', error);
@@ -144,36 +141,36 @@ export class SubtitleHashService {
       // Convert string to Uint8Array
       const encoder = new TextEncoder();
       const uint8Array = encoder.encode(content);
-      
+
       // Compress with zlib format (gzcompress equivalent)
       const compressed = pako.deflate(uint8Array);
-      
+
       // Calculate MD5 hash of compressed data
       const compressedHash = this.calculateSubtitleHashFromBytes(compressed);
-      
+
       // Convert to base64
       const base64 = btoa(String.fromCharCode.apply(null, compressed));
-      
+
       // DEBUG: Verify round-trip compression/decompression
       const debugResult = this.debugCompressedContent(base64, content);
-      
+
       // ADDITIONAL DEBUG: Calculate MD5 of base64
       const base64Hash = this.calculateSubtitleHash(base64);
-      
+
       console.log('Content compression (zlib with hash):', {
         originalSize: content.length,
         compressedSize: compressed.length,
         base64Size: base64.length,
-        compressionRatio: (compressed.length / content.length * 100).toFixed(1) + '%',
+        compressionRatio: ((compressed.length / content.length) * 100).toFixed(1) + '%',
         debugVerification: debugResult,
         compressedDataHash: compressedHash,
         base64Hash: base64Hash,
-        compressionFormat: 'zlib (gzcompress equivalent)'
+        compressionFormat: 'zlib (gzcompress equivalent)',
       });
-      
+
       return {
         base64,
-        compressedHash
+        compressedHash,
       };
     } catch (error) {
       console.error('Content compression failed:', error);
@@ -191,31 +188,31 @@ export class SubtitleHashService {
       // Convert string to Uint8Array
       const encoder = new TextEncoder();
       const uint8Array = encoder.encode(content);
-      
+
       // Compress with zlib format (gzcompress equivalent)
       const compressed = pako.deflate(uint8Array);
-      
+
       // Convert to base64
       const base64 = btoa(String.fromCharCode.apply(null, compressed));
-      
+
       // DEBUG: Verify round-trip compression/decompression
       const debugResult = this.debugCompressedContent(base64, content);
-      
+
       // ADDITIONAL DEBUG: Calculate MD5 of compressed data
       const compressedHash = this.calculateSubtitleHashFromBytes(compressed);
       const base64Hash = this.calculateSubtitleHash(base64);
-      
+
       console.log('Content compression (zlib):', {
         originalSize: content.length,
         compressedSize: compressed.length,
         base64Size: base64.length,
-        compressionRatio: (compressed.length / content.length * 100).toFixed(1) + '%',
+        compressionRatio: ((compressed.length / content.length) * 100).toFixed(1) + '%',
         debugVerification: debugResult,
         compressedDataHash: compressedHash,
         base64Hash: base64Hash,
-        compressionFormat: 'zlib (gzcompress equivalent)'
+        compressionFormat: 'zlib (gzcompress equivalent)',
       });
-      
+
       return base64;
     } catch (error) {
       console.error('Content compression failed:', error);
@@ -237,22 +234,22 @@ export class SubtitleHashService {
       for (let i = 0; i < binaryString.length; i++) {
         compressedBytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       // Decompress using inflate (counterpart to deflate - zlib format)
       const decompressed = pako.inflate(compressedBytes);
-      
+
       // Convert back to string
       const decoder = new TextDecoder('utf-8');
       const decompressedContent = decoder.decode(decompressed);
-      
+
       // Calculate hash of decompressed content
       const decompressedHash = this.calculateSubtitleHash(decompressedContent);
       const originalHash = this.calculateSubtitleHash(originalContent);
-      
+
       // Compare content and hashes
       const contentMatch = decompressedContent === originalContent;
       const hashMatch = decompressedHash === originalHash;
-      
+
       console.log('DEBUG: Compression round-trip verification:', {
         originalLength: originalContent.length,
         decompressedLength: decompressedContent.length,
@@ -260,22 +257,23 @@ export class SubtitleHashService {
         originalHash: originalHash,
         decompressedHash: decompressedHash,
         hashMatch: hashMatch,
-        firstDifference: contentMatch ? null : this.findFirstDifference(originalContent, decompressedContent)
+        firstDifference: contentMatch
+          ? null
+          : this.findFirstDifference(originalContent, decompressedContent),
       });
-      
+
       return {
         contentMatch,
         hashMatch,
         decompressedHash,
-        originalHash
+        originalHash,
       };
-      
     } catch (error) {
       console.error('DEBUG: Failed to verify compressed content:', error);
       return {
         error: error.message,
         contentMatch: false,
-        hashMatch: false
+        hashMatch: false,
       };
     }
   }
@@ -283,12 +281,12 @@ export class SubtitleHashService {
   /**
    * Find the first difference between two strings for debugging
    * @param {string} str1 - First string
-   * @param {string} str2 - Second string  
+   * @param {string} str2 - Second string
    * @returns {Object} - Information about the first difference
    */
   static findFirstDifference(str1, str2) {
     const minLength = Math.min(str1.length, str2.length);
-    
+
     for (let i = 0; i < minLength; i++) {
       if (str1[i] !== str2[i]) {
         return {
@@ -299,24 +297,23 @@ export class SubtitleHashService {
           decompressedChar: str2[i],
           context: {
             before: str1.substring(Math.max(0, i - 10), i),
-            after: str1.substring(i, Math.min(str1.length, i + 10))
-          }
+            after: str1.substring(i, Math.min(str1.length, i + 10)),
+          },
         };
       }
     }
-    
+
     if (str1.length !== str2.length) {
       return {
         position: minLength,
         lengthDifference: str1.length - str2.length,
         originalLength: str1.length,
-        decompressedLength: str2.length
+        decompressedLength: str2.length,
       };
     }
-    
+
     return null;
   }
-
 
   /**
    * Get language ID in 3-letter format for OpenSubtitles
@@ -326,10 +323,10 @@ export class SubtitleHashService {
    */
   static getLanguageId(languageCode, combinedLanguages) {
     if (!languageCode || !combinedLanguages) return null;
-    
+
     const langData = combinedLanguages[languageCode];
     if (!langData) return languageCode;
-    
+
     // Return ISO639-3 if available, otherwise ISO639-2, otherwise original
     return langData.iso639_3 || langData.iso639_2 || langData.iso639 || languageCode;
   }

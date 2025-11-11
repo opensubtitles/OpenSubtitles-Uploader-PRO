@@ -16,15 +16,15 @@ export const HAS_EMBEDDED_KEYS = false;
 // Validation
 export const validateEmbeddedKeys = () => {
   const errors = [];
-  
+
   if (!EMBEDDED_OPENSUBTITLES_API_KEY) {
     errors.push('OpenSubtitles API key not embedded at compile time');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
-    hasEmbeddedKeys: HAS_EMBEDDED_KEYS
+    hasEmbeddedKeys: HAS_EMBEDDED_KEYS,
   };
 };
 
@@ -35,8 +35,8 @@ export const getEmbeddedApiKey = () => {
 
 console.log('📦 Embedded constants loaded:', {
   hasApiKey: !!EMBEDDED_OPENSUBTITLES_API_KEY,
-  apiKeyPreview: EMBEDDED_OPENSUBTITLES_API_KEY ? 
-    (EMBEDDED_OPENSUBTITLES_API_KEY.slice(0,4) + '****' + EMBEDDED_OPENSUBTITLES_API_KEY.slice(-4)) : 
-    '[NONE]',
-  buildTime: BUILD_TIMESTAMP
+  apiKeyPreview: EMBEDDED_OPENSUBTITLES_API_KEY
+    ? EMBEDDED_OPENSUBTITLES_API_KEY.slice(0, 4) + '****' + EMBEDDED_OPENSUBTITLES_API_KEY.slice(-4)
+    : '[NONE]',
+  buildTime: BUILD_TIMESTAMP,
 });

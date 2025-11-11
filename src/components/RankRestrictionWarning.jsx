@@ -32,67 +32,77 @@ const RankRestrictionWarning = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0 mt-1">
-            <svg className="h-6 w-6 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              className="h-6 w-6 text-red-200"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-lg mb-1">
               {isForbiddenRank ? '🚫 Account Restricted' : '⚠️ Insufficient Permissions'}
             </h3>
-            <p className="text-red-100 mb-2 font-medium">
-              {uploadPermission.reason}
-            </p>
-            
+            <p className="text-red-100 mb-2 font-medium">{uploadPermission.reason}</p>
+
             <div className="text-sm text-red-200">
               <div className="mb-2">
                 <span className="font-medium">Current Rank:</span> {currentRank}
               </div>
-              
+
               {userRanks.length > 0 && (
                 <div className="mb-2">
                   <span className="font-medium">All Ranks:</span> {userRanks.join(', ')}
                 </div>
               )}
-              
+
               {!isForbiddenRank && (
                 <div className="mb-2">
-                  <span className="font-medium">Required Ranks:</span> 
+                  <span className="font-medium">Required Ranks:</span>
                   <div className="mt-1 text-xs">
-                    super admin, translator, trusted member, administrator, moderator, 
-                    gold member, platinum member, trusted, subtranslator, os legend, vip lifetime member
+                    super admin, translator, trusted member, administrator, moderator, gold member,
+                    platinum member, trusted, subtranslator, os legend, vip lifetime member
                   </div>
                 </div>
               )}
-              
+
               <div className="mt-3 p-2 bg-red-700 rounded text-xs">
                 <p className="font-medium mb-1">💡 What you can do:</p>
                 <ul className="list-disc list-inside space-y-1">
                   {isForbiddenRank ? (
                     <>
                       <li>
-                        <a 
-                          href="https://opensubtitles.org/contact" 
-                          target="_blank" 
+                        <a
+                          href="https://opensubtitles.org/contact"
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-red-100 underline hover:text-white"
                         >
                           Contact OpenSubtitles support
-                        </a> to resolve account restrictions
+                        </a>{' '}
+                        to resolve account restrictions
                       </li>
                       <li>Check your account status on the OpenSubtitles website</li>
                     </>
                   ) : (
                     <>
                       <li>
-                        <a 
-                          href="https://opensubtitles.org/contact" 
-                          target="_blank" 
+                        <a
+                          href="https://opensubtitles.org/contact"
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-red-100 underline hover:text-white"
                         >
                           Contact OpenSubtitles support
-                        </a> to request rank upgrade
+                        </a>{' '}
+                        to request rank upgrade
                       </li>
                       <li>Contribute to the community to earn higher ranks</li>
                       <li>Check rank requirements on the OpenSubtitles website</li>
@@ -109,7 +119,12 @@ const RankRestrictionWarning = () => {
             aria-label="Close warning"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

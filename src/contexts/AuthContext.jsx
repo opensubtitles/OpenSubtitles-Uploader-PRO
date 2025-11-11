@@ -36,16 +36,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        
         // Use unified session detection system
         const sessionDetection = logSessionDetection('AuthContext Initialization');
-        
+
         if (sessionDetection.sessionId) {
           const sessionId = sessionDetection.sessionId;
-          
+
           // Check if the session ID is valid by calling GetUserInfo
           const userInfo = await authService.checkAuthStatus(sessionId);
-          
+
           if (userInfo) {
             // Valid session - user is already logged in on OpenSubtitles.org
             setIsAuthenticated(true);
@@ -55,17 +54,17 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ User data:', userInfo);
             console.log('✅ User:', userInfo.UserNickName);
             console.log('✅ Rank:', userInfo.UserRank);
-            
+
             // Store in localStorage for future use
             localStorage.setItem('opensubtitles_token', sessionId);
             localStorage.setItem('opensubtitles_user_data', JSON.stringify(userInfo));
             localStorage.setItem('opensubtitles_login_time', Date.now().toString());
-            
+
             // Remember username for future logins
             if (userInfo.UserNickName) {
               localStorage.setItem('opensubtitles_remembered_username', userInfo.UserNickName);
             }
-            
+
             // If session came from URL, ensure it's stored by SessionManager
             if (sessionDetection.source === SessionSource.URL_PARAMETER) {
               SessionManager.storeSessionId(sessionId);
@@ -85,7 +84,7 @@ export const AuthProvider = ({ children }) => {
           if (restored) {
             // Check if the restored session is still valid
             const userInfo = await authService.checkAuthStatus();
-            
+
             if (userInfo) {
               // Valid session restored
               setIsAuthenticated(true);
@@ -133,21 +132,20 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
-      
+
       const result = await authService.loginWithHash(username, password, language);
-      
+
       if (result.success) {
         setIsAuthenticated(true);
         setUser(result.userData);
         setToken(result.token);
         console.log('✅ Login successful:', result.userData.UserNickName);
-        
+
         // Remember username for future logins
         if (result.userData.UserNickName) {
           localStorage.setItem('opensubtitles_remembered_username', result.userData.UserNickName);
         }
-        
+
         return result;
       } else {
         setError(result.message || 'Login failed');
@@ -164,7 +162,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-
   /**
    * Logout current user
    * @returns {Promise<Object>} Logout result
@@ -173,17 +170,16 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
-      
+
       const result = await authService.logout();
-      
+
       // Clear state regardless of API response
       setIsAuthenticated(false);
       setUser(null);
       setToken(null);
-      
+
       console.log('✅ Logout completed');
-      
+
       return result;
     } catch (error) {
       const errorMessage = error.message || 'Logout failed';
@@ -226,7 +222,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // If we have a user, try to re-login with same credentials
       if (user && !isAnonymous()) {
         // Note: We can't re-login with original credentials since we don't store them
@@ -258,7 +254,7 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     error,
-    
+
     // Methods
     login,
     logout,
@@ -266,14 +262,10 @@ export const AuthProvider = ({ children }) => {
     getUserPreferredLanguages,
     clearError,
     refreshAuth,
-    
+
     // Utility
-    authService
+    authService,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

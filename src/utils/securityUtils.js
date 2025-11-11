@@ -12,7 +12,7 @@ export function hideSensitiveData(sensitiveData, dataType = 'data') {
   if (!sensitiveData || sensitiveData === '' || sensitiveData === 'null') {
     return 'null';
   }
-  
+
   return '[HIDDEN]';
 }
 
@@ -35,12 +35,12 @@ export function logSensitiveData(message, sensitiveData, dataType = 'data') {
  */
 export function createSafeDebugObject(debugData, sensitiveFields = []) {
   const safeDebug = { ...debugData };
-  
+
   for (const field of sensitiveFields) {
     if (safeDebug[field]) {
       safeDebug[field] = hideSensitiveData(safeDebug[field], field);
     }
   }
-  
+
   return safeDebug;
 }

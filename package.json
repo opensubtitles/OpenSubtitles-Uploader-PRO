@@ -1,6 +1,6 @@
 {
   "name": "opensubtitles-uploader-pro",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
   "keywords": [
     "opensubtitles",
@@ -30,6 +30,12 @@
     "build": "npm run generate-changelog && vite build",
     "preview": "vite preview",
     "test": "node --test tests/**/*.test.js",
+    "lint": "eslint src --max-warnings=0",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,json,css}\"",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run lint && npm run format:check && npm test",
     "generate-changelog": "node scripts/generate-changelog.js",
     "update-version": "node scripts/build/update-version.js",
     "update-readme-version": "node -e \"const fs=require('fs');const pkg=require('./package.json');let readme=fs.readFileSync('README.md','utf8');readme=readme.replace(/version-[0-9.]+/g,'version-'+pkg.version).replace(/Version [0-9.]+/g,'Version '+pkg.version);fs.writeFileSync('README.md',readme);\"",
@@ -43,8 +49,8 @@
     "@ffmpeg/util": "^0.12.2",
     "@opensubtitles/video-metadata-extractor": "^1.7.2",
     "@tauri-apps/api": "^2.6.0",
-    "@tauri-apps/plugin-updater": "^2.9.0",
     "@tauri-apps/plugin-process": "^2.3.0",
+    "@tauri-apps/plugin-updater": "^2.9.0",
     "archive-wasm": "^2.1.0",
     "crypto-js": "^4.2.0",
     "guessit-js": "^1.0.1",
@@ -55,15 +61,25 @@
     "react-router-dom": "^7.6.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.38.0",
     "@tauri-apps/cli": "^2.6.2",
     "@tauri-apps/plugin-dialog": "^2.3.0",
     "@tauri-apps/plugin-fs": "^2.4.0",
     "@tauri-apps/plugin-http": "^2.5.0",
     "@tauri-apps/plugin-shell": "^2.3.0",
+    "@types/node": "^24.8.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.21",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
     "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3",
     "vite": "^5.0.0"
   }
 }

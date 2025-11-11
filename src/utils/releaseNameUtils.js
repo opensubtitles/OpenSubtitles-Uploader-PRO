@@ -10,7 +10,11 @@
  * @param {boolean} isReleaseName - If true, treat input as release name (skip extension removal)
  * @returns {string|false} - Cleaned release name with leading space, or false if invalid
  */
-export function getReleaseFromSubFilename(subfilename, combinedLanguages = {}, isReleaseName = false) {
+export function getReleaseFromSubFilename(
+  subfilename,
+  combinedLanguages = {},
+  isReleaseName = false
+) {
   if (!subfilename) return false;
 
   let string;
@@ -28,18 +32,18 @@ export function getReleaseFromSubFilename(subfilename, combinedLanguages = {}, i
   }
 
   // Remove CD1/CD I patterns (e.g., .CD1, -CD1, _CD I, etc.)
-  // Pattern: ([\.\-\_\s]*)cd\s*[1I][\.\-\_\s]*
-  string = string.replace(/([\.\-\_\s]*)cd\s*[1I][\.\-\_\s]*/gi, '$1');
+  // Pattern: ([.\-_\s]*)cd\s*[1I]([.\-_\s]*)
+  string = string.replace(/([.\-_\s]*)cd\s*[1I]([.\-_\s]*)/gi, '$1');
 
   // First, remove regional language variants (e.g., pt-PT, pt-BR, en-US, es-ES)
   // Pattern: language code + hyphen + region code at the end
-  string = string.replace(/([\.\-\_]+)(\w{2,3})-(\w{2,3})([\.\-\_]*(sdh)?)?$/gi, '$1$2$4');
+  string = string.replace(/([.\-_]+)(\w{2,3})-(\w{2,3})([.\-_]*(sdh)?)?$/gi, '$1$2$4');
 
   // Build language patterns from combinedLanguages
   const languagePatterns = buildLanguagePatterns(combinedLanguages);
 
   // Check if string ends with 2-3 character language code
-  if (/[\.\-\_]+\w{2,3}[\.\-\_]*$/.test(string)) {
+  if (/[.\-_]+\w{2,3}[.\-_]*$/.test(string)) {
     // Try to remove short language codes (ISO639, ISO3) from the end
     for (const pattern of languagePatterns.shortCodes) {
       const regex = new RegExp(`(.*?)[\\.\\-\\_]+${escapeRegex(pattern)}[\\.\\-\\_]*(sdh)?$`, 'i');
@@ -62,8 +66,8 @@ export function getReleaseFromSubFilename(subfilename, combinedLanguages = {}, i
   }
 
   // Delete leading and trailing special characters: ,.-_\s=
-  string = string.replace(/^[\,\.\-\_\s\=]+/g, '');
-  string = string.replace(/[\,\.\-\_\s\=]+$/g, '');
+  string = string.replace(/^[,.\-_\s=]+/g, '');
+  string = string.replace(/[,.\-_\s=]+$/g, '');
 
   // Return false if result is too short
   if (string.length < 3) return false;
@@ -117,7 +121,7 @@ function buildLanguagePatterns(combinedLanguages) {
 
   return {
     shortCodes: shortCodesArray,
-    fullNames: fullNamesArray
+    fullNames: fullNamesArray,
   };
 }
 

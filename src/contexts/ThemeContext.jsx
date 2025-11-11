@@ -18,7 +18,7 @@ export const ThemeProvider = ({ children }) => {
     const now = Date.now();
     const cacheKey = 'opensubtitles-uploader-theme-cache';
     const cacheData = localStorage.getItem(cacheKey);
-    
+
     if (cacheData) {
       try {
         const { theme, timestamp } = JSON.parse(cacheData);
@@ -30,16 +30,20 @@ export const ThemeProvider = ({ children }) => {
         // Invalid cache data, continue with detection
       }
     }
-    
+
     // Detect system preference
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+    const prefersDark =
+      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
     // Cache the detected preference
-    localStorage.setItem(cacheKey, JSON.stringify({
-      theme: prefersDark ? 'dark' : 'light',
-      timestamp: now
-    }));
-    
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        theme: prefersDark ? 'dark' : 'light',
+        timestamp: now,
+      })
+    );
+
     return prefersDark;
   };
 
@@ -90,7 +94,7 @@ export const ThemeProvider = ({ children }) => {
         success: '#9EC068',
         error: '#dc3545',
         warning: '#ffc107',
-        info: '#2878C0'
+        info: '#2878C0',
       },
       // Dark theme colors
       dark: {
@@ -106,20 +110,22 @@ export const ThemeProvider = ({ children }) => {
         success: '#28a745',
         error: '#dc3545',
         warning: '#ffc107',
-        info: '#17a2b8'
-      }
-    }
+        info: '#17a2b8',
+      },
+    },
   };
 
   const currentColors = isDark ? theme.colors.dark : theme.colors.light;
 
   return (
-    <ThemeContext.Provider value={{ 
-      isDark, 
-      toggleTheme, 
-      colors: currentColors,
-      theme 
-    }}>
+    <ThemeContext.Provider
+      value={{
+        isDark,
+        toggleTheme,
+        colors: currentColors,
+        theme,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

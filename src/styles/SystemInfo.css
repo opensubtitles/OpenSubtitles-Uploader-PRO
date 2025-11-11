@@ -55,7 +55,9 @@
   font-size: 0.85em;
 }
 
-.expand-button, .collapse-button, .copy-button {
+.expand-button,
+.collapse-button,
+.copy-button {
   background: #007bff;
   color: white;
   border: none;
@@ -66,7 +68,9 @@
   transition: background-color 0.2s;
 }
 
-.expand-button:hover, .collapse-button:hover, .copy-button:hover {
+.expand-button:hover,
+.collapse-button:hover,
+.copy-button:hover {
   background: #0056b3;
 }
 
@@ -235,12 +239,14 @@
     color: #a0aec0;
   }
 
-  .info-section, .features-section {
+  .info-section,
+  .features-section {
     background: #1a202c;
     border-color: #4a5568;
   }
 
-  .info-section h5, .features-section h5 {
+  .info-section h5,
+  .features-section h5 {
     color: #cbd5e0;
     border-color: #4a5568;
   }

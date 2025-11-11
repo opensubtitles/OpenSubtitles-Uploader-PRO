@@ -23,7 +23,7 @@ export const useAppUpdate = () => {
     error: null,
     lastChecked: null,
     autoCheckEnabled: false,
-    currentVersion: null
+    currentVersion: null,
   });
 
   // Initialize state from update service
@@ -37,13 +37,13 @@ export const useAppUpdate = () => {
       isInstalling: status.isInstalling,
       lastChecked: status.lastChecked,
       autoCheckEnabled: status.autoCheckEnabled,
-      currentVersion: status.currentVersion
+      currentVersion: status.currentVersion,
     }));
   }, []);
 
   // Setup update service listeners
   useEffect(() => {
-    const removeListener = updateService.addEventListener((event) => {
+    const removeListener = updateService.addEventListener(event => {
       switch (event.type) {
         case 'update_check_complete':
           setUpdateState(prev => ({
@@ -52,7 +52,7 @@ export const useAppUpdate = () => {
             updateAvailable: event.updateAvailable,
             updateInfo: event.updateInfo,
             error: null,
-            lastChecked: Date.now()
+            lastChecked: Date.now(),
           }));
           break;
 
@@ -61,7 +61,7 @@ export const useAppUpdate = () => {
             ...prev,
             isChecking: false,
             error: event.error,
-            lastChecked: Date.now()
+            lastChecked: Date.now(),
           }));
           break;
 
@@ -73,7 +73,7 @@ export const useAppUpdate = () => {
             downloadedBytes: 0,
             totalBytes: 0,
             downloadStatus: 'idle',
-            error: null
+            error: null,
           }));
           break;
 
@@ -83,7 +83,7 @@ export const useAppUpdate = () => {
             downloadProgress: event.progress || 0,
             downloadedBytes: event.downloaded || 0,
             totalBytes: event.total || 0,
-            downloadStatus: event.status || 'downloading'
+            downloadStatus: event.status || 'downloading',
           }));
           break;
 
@@ -99,7 +99,7 @@ export const useAppUpdate = () => {
             showPath: event.showPath || false,
             canReveal: event.canReveal || false,
             warning: event.warning || null,
-            error: null
+            error: null,
           }));
           break;
 
@@ -109,7 +109,7 @@ export const useAppUpdate = () => {
             isDownloading: false,
             downloadProgress: 0,
             downloadStatus: 'idle',
-            error: event.error
+            error: event.error,
           }));
           break;
 
@@ -117,7 +117,7 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: true,
-            error: null
+            error: null,
           }));
           break;
 
@@ -125,7 +125,7 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: false,
-            error: null
+            error: null,
           }));
           break;
 
@@ -133,7 +133,7 @@ export const useAppUpdate = () => {
           setUpdateState(prev => ({
             ...prev,
             isDownloading: false,
-            error: event.error
+            error: event.error,
           }));
           break;
 
@@ -143,7 +143,7 @@ export const useAppUpdate = () => {
             setUpdateState(prev => ({
               ...prev,
               error: event.error,
-              isInstalling: false
+              isInstalling: false,
             }));
           }
           break;
@@ -162,14 +162,14 @@ export const useAppUpdate = () => {
 
     try {
       const result = await updateService.checkForUpdates(force);
-      
+
       if (!result.cached) {
         setUpdateState(prev => ({
           ...prev,
           updateAvailable: result.updateAvailable,
           updateInfo: result.updateInfo,
           error: result.error || null,
-          lastChecked: Date.now()
+          lastChecked: Date.now(),
         }));
       }
 
@@ -193,24 +193,30 @@ export const useAppUpdate = () => {
   }, [updateState.isStandalone]);
 
   // Open downloaded file
-  const openDownloadedFile = useCallback(async (filePath) => {
-    if (!updateState.isStandalone) {
-      return { success: false, error: 'Not running as standalone app' };
-    }
+  const openDownloadedFile = useCallback(
+    async filePath => {
+      if (!updateState.isStandalone) {
+        return { success: false, error: 'Not running as standalone app' };
+      }
 
-    const result = await updateService.openDownloadedFile(filePath);
-    return result;
-  }, [updateState.isStandalone]);
+      const result = await updateService.openDownloadedFile(filePath);
+      return result;
+    },
+    [updateState.isStandalone]
+  );
 
   // Reveal downloaded file in Finder/Explorer
-  const revealDownloadedFile = useCallback(async (filePath) => {
-    if (!updateState.isStandalone) {
-      return { success: false, error: 'Not running as standalone app' };
-    }
+  const revealDownloadedFile = useCallback(
+    async filePath => {
+      if (!updateState.isStandalone) {
+        return { success: false, error: 'Not running as standalone app' };
+      }
 
-    const result = await updateService.revealDownloadedFile(filePath);
-    return result;
-  }, [updateState.isStandalone]);
+      const result = await updateService.revealDownloadedFile(filePath);
+      return result;
+    },
+    [updateState.isStandalone]
+  );
 
   // Install update (deprecated - now downloads)
   const installUpdate = useCallback(async () => {
@@ -247,28 +253,28 @@ export const useAppUpdate = () => {
       updateAvailable: false,
       updateInfo: null,
       error: null,
-      lastChecked: null
+      lastChecked: null,
     }));
   }, []);
 
   // Get formatted last checked time
   const getLastCheckedFormatted = useCallback(() => {
     if (!updateState.lastChecked) return 'Never';
-    
+
     const now = Date.now();
     const diff = now - updateState.lastChecked;
-    
+
     if (diff < 60 * 1000) return 'Just now';
     if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))} minutes ago`;
     if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))} hours ago`;
-    
+
     return new Date(updateState.lastChecked).toLocaleDateString();
   }, [updateState.lastChecked]);
 
   return {
     // State
     ...updateState,
-    
+
     // Actions
     checkForUpdates,
     downloadUpdate,
@@ -279,8 +285,8 @@ export const useAppUpdate = () => {
     startAutoUpdates,
     stopAutoUpdates,
     clearUpdateCache,
-    
+
     // Helpers
-    getLastCheckedFormatted
+    getLastCheckedFormatted,
   };
 };

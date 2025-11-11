@@ -10,7 +10,7 @@ export class UserService {
   // Cache for getUserInfo responses (1 hour TTL)
   static _userInfoCache = new Map();
   static _cacheExpiry = 60 * 60 * 1000; // 1 hour in milliseconds
-  
+
   /**
    * Clear expired cache entries
    * @private
@@ -24,7 +24,7 @@ export class UserService {
       }
     }
   }
-  
+
   /**
    * Clear all getUserInfo cache entries
    * Call this when user logs out or authentication changes
@@ -36,7 +36,7 @@ export class UserService {
       console.log(`🗑️ Cleared ${cacheSize} getUserInfo cache entries`);
     }
   }
-  
+
   /**
    * Get session ID using unified session detection
    * @returns {string} - Session ID or empty string
@@ -44,16 +44,20 @@ export class UserService {
   static getSessionId() {
     // Use unified session detection system
     const sessionDetection = logSessionDetection('UserService.getSessionId');
-    
+
     if (sessionDetection.sessionId) {
-      logSensitiveData(`👤 UserService: ✅ Using session from ${sessionDetection.source}`, sessionDetection.sessionId, 'session');
+      logSensitiveData(
+        `👤 UserService: ✅ Using session from ${sessionDetection.source}`,
+        sessionDetection.sessionId,
+        'session'
+      );
       return sessionDetection.sessionId;
     }
-    
+
     console.log('👤 UserService: No session found, using empty string');
     return '';
   }
-  
+
   /**
    * Get user info using XML-RPC GetUserInfo with 1-hour caching
    * @param {string} sessionId - Session ID (unused now, using token from XmlRpcService)
@@ -65,23 +69,27 @@ export class UserService {
     try {
       // Clean expired cache entries first
       this._cleanExpiredCache();
-      
+
       // Get current token for cache key
       const currentToken = authService.getToken() || sessionId || '';
       const cacheKey = currentToken;
-      
+
       // Check cache if not bypassing
       if (!bypassCache && cacheKey && this._userInfoCache.has(cacheKey)) {
         const cachedEntry = this._userInfoCache.get(cacheKey);
         const now = Date.now();
-        
+
         if (now < cachedEntry.expiresAt) {
-          console.log(`📄 Using cached getUserInfo (${Math.round((cachedEntry.expiresAt - now) / 1000 / 60)}min remaining): ${cachedEntry.data?.UserNickName || 'Unknown'}`);
-          
+          console.log(
+            `📄 Using cached getUserInfo (${Math.round((cachedEntry.expiresAt - now) / 1000 / 60)}min remaining): ${cachedEntry.data?.UserNickName || 'Unknown'}`
+          );
+
           if (addDebugInfo) {
-            addDebugInfo(`📄 Used cached user info (${Math.round((cachedEntry.expiresAt - now) / 1000 / 60)}min remaining): ${cachedEntry.data?.UserNickName || 'Unknown'}`);
+            addDebugInfo(
+              `📄 Used cached user info (${Math.round((cachedEntry.expiresAt - now) / 1000 / 60)}min remaining): ${cachedEntry.data?.UserNickName || 'Unknown'}`
+            );
           }
-          
+
           return cachedEntry.data;
         } else {
           // Expired cache entry
@@ -89,13 +97,15 @@ export class UserService {
           console.log('🗑️ Removed expired cache entry');
         }
       }
-      
+
       if (addDebugInfo) {
-        addDebugInfo(`👤 Fetching fresh user info via XML-RPC GetUserInfo${bypassCache ? ' (cache bypassed)' : ''}`);
+        addDebugInfo(
+          `👤 Fetching fresh user info via XML-RPC GetUserInfo${bypassCache ? ' (cache bypassed)' : ''}`
+        );
       }
-      
+
       const userData = await XmlRpcService.getUserInfo();
-      
+
       if (userData === null) {
         // User is not logged in (401 response handled gracefully)
         if (addDebugInfo) {
@@ -103,24 +113,25 @@ export class UserService {
         }
         return null;
       }
-      
+
       // Cache the successful response
       if (cacheKey) {
         const cacheEntry = {
           data: userData,
           cachedAt: Date.now(),
-          expiresAt: Date.now() + this._cacheExpiry
+          expiresAt: Date.now() + this._cacheExpiry,
         };
         this._userInfoCache.set(cacheKey, cacheEntry);
         console.log(`💾 Cached getUserInfo for 1 hour: ${userData?.UserNickName || 'Unknown'}`);
       }
-      
+
       if (addDebugInfo) {
-        addDebugInfo(`✅ Fresh user info loaded and cached: ${userData?.UserNickName || 'Unknown'}`);
+        addDebugInfo(
+          `✅ Fresh user info loaded and cached: ${userData?.UserNickName || 'Unknown'}`
+        );
       }
-      
+
       return userData;
-      
     } catch (error) {
       if (addDebugInfo) {
         addDebugInfo(`❌ Failed to get user info via XML-RPC: ${error.message}`);
@@ -128,7 +139,7 @@ export class UserService {
       throw error;
     }
   }
-  
+
   /**
    * Extract username from XML-RPC GetUserInfo response
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -137,7 +148,7 @@ export class UserService {
   static getUsername(userInfo) {
     return userInfo?.UserNickName || 'Anonymous';
   }
-  
+
   /**
    * Check if user is logged in
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -146,7 +157,7 @@ export class UserService {
   static isLoggedIn(userInfo) {
     return !!(userInfo?.UserNickName && userInfo?.IDUser);
   }
-  
+
   /**
    * Get user's preferred languages
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -155,7 +166,7 @@ export class UserService {
   static getPreferredLanguages(userInfo) {
     return userInfo?.UserPreferedLanguages || '';
   }
-  
+
   /**
    * Get user's rank/role
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -164,7 +175,7 @@ export class UserService {
   static getUserRank(userInfo) {
     return userInfo?.UserRank || '';
   }
-  
+
   /**
    * Get user's upload count
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -173,7 +184,7 @@ export class UserService {
   static getUploadCount(userInfo) {
     return parseInt(userInfo?.UploadCnt) || 0;
   }
-  
+
   /**
    * Get user's download count
    * @param {Object} userInfo - User info response from XML-RPC GetUserInfo
@@ -200,14 +211,14 @@ export class UserService {
   static validateUserRank(userInfo) {
     const userRanks = this.getUserRanks(userInfo);
     const currentRank = this.getUserRank(userInfo);
-    
+
     // Create effective ranks array - use UserRanks if available, otherwise fall back to UserRank
-    const effectiveRanks = userRanks.length > 0 ? userRanks : (currentRank ? [currentRank] : []);
-    
+    const effectiveRanks = userRanks.length > 0 ? userRanks : currentRank ? [currentRank] : [];
+
     // Allowed ranks for application usage
     const allowedRanks = [
       'super admin',
-      'translator', 
+      'translator',
       'trusted member',
       'administrator',
       'moderator',
@@ -216,64 +227,54 @@ export class UserService {
       'trusted',
       'subtranslator',
       'os legend',
-      'vip lifetime member'
+      'vip lifetime member',
     ];
-    
+
     // Explicitly forbidden ranks
-    const forbiddenRanks = [
-      'read only'
-    ];
-    
+    const forbiddenRanks = ['read only'];
+
     // Check for forbidden ranks first (higher priority)
-    const hasForbiddenRank = effectiveRanks.some(rank => 
-      forbiddenRanks.some(forbidden => 
-        rank.toLowerCase().includes(forbidden.toLowerCase())
-      )
+    const hasForbiddenRank = effectiveRanks.some(rank =>
+      forbiddenRanks.some(forbidden => rank.toLowerCase().includes(forbidden.toLowerCase()))
     );
-    
+
     if (hasForbiddenRank) {
-      const forbiddenRank = effectiveRanks.find(rank => 
-        forbiddenRanks.some(forbidden => 
-          rank.toLowerCase().includes(forbidden.toLowerCase())
-        )
+      const forbiddenRank = effectiveRanks.find(rank =>
+        forbiddenRanks.some(forbidden => rank.toLowerCase().includes(forbidden.toLowerCase()))
       );
       console.log('❌ User has forbidden rank:', forbiddenRank);
       return {
         allowed: false,
         reason: `Access denied: Your account has "${forbiddenRank}" restriction which prevents uploading.`,
         userRanks: effectiveRanks,
-        forbiddenRank: forbiddenRank
+        forbiddenRank: forbiddenRank,
       };
     }
-    
+
     // Check if user has any allowed rank
-    const hasAllowedRank = effectiveRanks.some(rank => 
-      allowedRanks.some(allowed => 
-        rank.toLowerCase().trim() === allowed.toLowerCase().trim()
-      )
+    const hasAllowedRank = effectiveRanks.some(rank =>
+      allowedRanks.some(allowed => rank.toLowerCase().trim() === allowed.toLowerCase().trim())
     );
-    
+
     if (hasAllowedRank) {
-      const matchedRank = effectiveRanks.find(rank => 
-        allowedRanks.some(allowed => 
-          rank.toLowerCase().trim() === allowed.toLowerCase().trim()
-        )
+      const matchedRank = effectiveRanks.find(rank =>
+        allowedRanks.some(allowed => rank.toLowerCase().trim() === allowed.toLowerCase().trim())
       );
       return {
         allowed: true,
         reason: `Access granted with rank: ${matchedRank}`,
         userRanks: effectiveRanks,
-        allowedRank: matchedRank
+        allowedRank: matchedRank,
       };
     }
-    
+
     // User doesn't have sufficient rank
     console.log('❌ User does not have sufficient rank for application access');
     return {
       allowed: false,
       reason: `Access denied: Your account rank "${currentRank}" is not sufficient for uploading. Required ranks: ${allowedRanks.join(', ')}.`,
       userRanks: effectiveRanks,
-      currentRank: currentRank
+      currentRank: currentRank,
     };
   }
 
@@ -288,17 +289,17 @@ export class UserService {
       return {
         canUpload: false,
         reason: 'Please log in to upload subtitles.',
-        rankValidation: null
+        rankValidation: null,
       };
     }
-    
+
     // Then validate user rank
     const rankValidation = this.validateUserRank(userInfo);
-    
+
     return {
       canUpload: rankValidation.allowed,
       reason: rankValidation.reason,
-      rankValidation: rankValidation
+      rankValidation: rankValidation,
     };
   }
 }
