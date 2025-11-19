@@ -93,6 +93,7 @@ import { DropZone } from './DropZone.jsx';
 import { FileList } from './FileList/FileList.jsx';
 import { MatchedPairs } from './MatchedPairs.jsx';
 import { OrphanedSubtitles } from './OrphanedSubtitles.jsx';
+import { LanguageFilter } from './LanguageFilter.jsx';
 import { StatsPanel } from './StatsPanel.jsx';
 import { SubtitlePreview } from './SubtitlePreview.jsx';
 import { UploadButton } from './UploadButton.jsx';
@@ -137,6 +138,7 @@ function SubtitleUploaderInner() {
   const [openDropdowns, setOpenDropdowns] = useState({});
   const [dropdownSearch, setDropdownSearch] = useState({});
   const [uploadStates, setUploadStates] = useState({}); // New state for upload enable/disable
+  const [selectedLanguages, setSelectedLanguages] = useState(new Set()); // Languages to include in upload
   const [uploadResults, setUploadResults] = useState({}); // New state for upload results
   const [subcontentData, setSubcontentData] = useState({}); // New state for subcontent data
   const [uploadOptions, setUploadOptions] = useState({}); // New state for upload options (release name, comments, etc.)
@@ -771,6 +773,17 @@ function SubtitleUploaderInner() {
     }));
   }, []);
 
+  // Handle language filter toggle
+  const handleLanguageToggle = useCallback(
+    newSelectedLanguages => {
+      setSelectedLanguages(newSelectedLanguages);
+      addDebugInfo(
+        `Language filter updated: ${newSelectedLanguages.size} language(s) selected`
+      );
+    },
+    [addDebugInfo]
+  );
+
   // Get upload status for subtitle (default to true, but automatically disable invalid files)
   const getUploadEnabled = useCallback(
     subtitlePath => {
@@ -800,9 +813,19 @@ function SubtitleUploaderInner() {
         }
       }
 
+      // Check if subtitle's language is selected in language filter
+      if (subtitle.isSubtitle) {
+        const langCode = getSubtitleLanguage(subtitle);
+
+        // If language filter has selections and this language is not selected, disable upload
+        if (langCode && selectedLanguages.size > 0 && !selectedLanguages.has(langCode)) {
+          return false;
+        }
+      }
+
       return uploadStates[subtitlePath] !== false; // Default to true unless explicitly set to false
     },
-    [uploadStates, files, orphanedSubtitles, uploadOptions]
+    [uploadStates, files, orphanedSubtitles, uploadOptions, selectedLanguages, getSubtitleLanguage]
   );
 
   // Handle upload action
@@ -2210,6 +2233,97 @@ function SubtitleUploaderInner() {
     applyGlobalCommentToAllSubtitles,
   ]);
 
+  // Track previous languages to detect truly new ones
+  const previousLanguagesRef = useRef(new Set());
+  // Track if we've done the initial auto-select
+  const hasInitiallyAutoSelectedRef = useRef(false);
+
+  // Auto-select languages intelligently
+  useEffect(() => {
+    // Collect all unique language codes from current files
+    const allFiles = [...files, ...orphanedSubtitles];
+    const currentLanguages = new Set();
+
+    allFiles.forEach(file => {
+      if (file.isSubtitle) {
+        const langCode = getSubtitleLanguage(file);
+        if (langCode) {
+          currentLanguages.add(langCode);
+        }
+      }
+    });
+
+    // If no languages, skip
+    if (currentLanguages.size === 0) {
+      return;
+    }
+
+    // Detect truly new languages (not in previous set)
+    const newLanguages = new Set();
+    currentLanguages.forEach(lang => {
+      if (!previousLanguagesRef.current.has(lang)) {
+        newLanguages.add(lang);
+      }
+    });
+
+    // Build updated selection
+    const newSelectedLanguages = new Set(selectedLanguages);
+    let hasChanges = false;
+
+    console.log('🔍 Language filter logic:', {
+      currentLanguages: Array.from(currentLanguages),
+      selectedLanguages: Array.from(selectedLanguages),
+      previousLanguages: Array.from(previousLanguagesRef.current),
+      newLanguages: Array.from(newLanguages),
+      hasInitiallyAutoSelected: hasInitiallyAutoSelectedRef.current,
+    });
+
+    // 1. Remove languages that no longer exist (count = 0)
+    selectedLanguages.forEach(lang => {
+      if (!currentLanguages.has(lang)) {
+        newSelectedLanguages.delete(lang);
+        hasChanges = true;
+        console.log(`🗑️ Removed language from filter (0 subtitles): ${lang}`);
+        addDebugInfo(`Removed language from filter (0 subtitles): ${lang}`);
+      }
+    });
+
+    // 2. Auto-select on FIRST load only, or add genuinely NEW languages
+    if (!hasInitiallyAutoSelectedRef.current && selectedLanguages.size === 0) {
+      // Initial auto-select: add all languages (only happens once)
+      currentLanguages.forEach(lang => newSelectedLanguages.add(lang));
+      hasChanges = true;
+      hasInitiallyAutoSelectedRef.current = true;
+      console.log(
+        `✅ Initial auto-select: ${newSelectedLanguages.size} language(s): ${Array.from(newSelectedLanguages).join(', ')}`
+      );
+      addDebugInfo(
+        `Auto-selected ${newSelectedLanguages.size} language(s): ${Array.from(newSelectedLanguages).join(', ')}`
+      );
+    } else if (newLanguages.size > 0) {
+      // Add only genuinely new languages (user changed a subtitle to a new language)
+      newLanguages.forEach(lang => newSelectedLanguages.add(lang));
+      hasChanges = true;
+      console.log(
+        `➕ Auto-added new language(s): ${Array.from(newLanguages).join(', ')}`
+      );
+      addDebugInfo(`Auto-added new language(s): ${Array.from(newLanguages).join(', ')}`);
+    } else {
+      console.log('⏭️ No changes needed - respecting user selection');
+    }
+
+    // Update selection if there are changes
+    if (hasChanges) {
+      console.log(
+        `💾 Updating selection to: ${Array.from(newSelectedLanguages).join(', ')}`
+      );
+      setSelectedLanguages(newSelectedLanguages);
+    }
+
+    // Update previous languages for next comparison
+    previousLanguagesRef.current = currentLanguages;
+  }, [files, orphanedSubtitles, getSubtitleLanguage, addDebugInfo]);
+
   // Apply default translator to new subtitles when files change
   useEffect(() => {
     if (config.defaultTranslator && (pairedFiles.length > 0 || orphanedSubtitles.length > 0)) {
@@ -2611,6 +2725,19 @@ function SubtitleUploaderInner() {
             files={files}
             orphanedSubtitles={orphanedSubtitles}
             getUploadEnabled={getUploadEnabled}
+            colors={colors}
+            isDark={isDark}
+          />
+        )}
+
+        {/* Language Filter - Show after language detection */}
+        {hasUploadableContent && (
+          <LanguageFilter
+            files={[...files, ...orphanedSubtitles]}
+            selectedLanguages={selectedLanguages}
+            onLanguageToggle={handleLanguageToggle}
+            getSubtitleLanguage={getSubtitleLanguage}
+            combinedLanguages={combinedLanguages}
             colors={colors}
             isDark={isDark}
           />
