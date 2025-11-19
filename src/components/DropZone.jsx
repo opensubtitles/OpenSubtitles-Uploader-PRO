@@ -12,6 +12,7 @@ export const DropZone = ({
   colors,
   isDark,
   onFileSelect,
+  onDirectorySelect,
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -92,8 +93,9 @@ export const DropZone = ({
           </div>
         </div>
 
-        {/* File Selection Button */}
-        <div className="mt-8 flex justify-center">
+        {/* File Selection Buttons */}
+        <div className="mt-8 flex justify-center gap-4">
+          {/* Select Files */}
           <input
             type="file"
             id="file-input"
@@ -118,7 +120,35 @@ export const DropZone = ({
             }}
             title={hasFiles ? 'Add more files to the existing selection' : 'Select files to upload'}
           >
-            📁 {hasFiles ? 'Add More Files' : 'Select Files'}
+            📄 {hasFiles ? 'Add More Files' : 'Select Files'}
+          </label>
+
+          {/* Select Directory */}
+          <input
+            type="file"
+            id="directory-input"
+            webkitdirectory="true"
+            multiple
+            onChange={onDirectorySelect}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="directory-input"
+            className="px-6 py-3 rounded-lg text-white font-semibold cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg"
+            style={{
+              backgroundColor: themeColors.link || '#2878C0',
+            }}
+            onMouseEnter={e => {
+              e.target.style.backgroundColor = themeColors.linkHover || '#185DA0';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={e => {
+              e.target.style.backgroundColor = themeColors.link || '#2878C0';
+              e.target.style.transform = 'translateY(0)';
+            }}
+            title={hasFiles ? 'Add more folders to the existing selection' : 'Select a folder to upload'}
+          >
+            📁 {hasFiles ? 'Add More Folders' : 'Select Folder'}
           </label>
         </div>
       </div>

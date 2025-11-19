@@ -241,16 +241,43 @@ export class FileProcessingService {
 
       // Process items (preferred for directory support)
       if (items.length > 0) {
+        // CRITICAL FIX: Capture all webkit entries SYNCHRONOUSLY first
+        // Chrome invalidates DataTransferItemList after async operations
+        // This ensures we get all entries before they become unavailable
+        const entries = [];
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          const webkitEntry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-
-          if (item.kind === 'file' || webkitEntry || item.getAsFile) {
-            try {
-              await this.processFileHandle(item, collectedFiles, '', config);
-            } catch (error) {
-              console.error(`Error processing item ${i}:`, error);
+          if (item.webkitGetAsEntry) {
+            const entry = item.webkitGetAsEntry();
+            if (entry) {
+              entries.push({ entry, item, index: i });
             }
+          } else if (item.getAsFile) {
+            // Fallback for browsers without webkitGetAsEntry
+            entries.push({ entry: null, item, index: i });
+          }
+        }
+
+        console.log(`📦 Captured ${entries.length} entries synchronously from ${items.length} items`);
+
+        // Now process all captured entries asynchronously
+        for (const { entry, item, index } of entries) {
+          try {
+            if (entry) {
+              // Process directory or file entry
+              if (entry.isDirectory) {
+                console.log(`📂 Processing directory ${index}: ${entry.name}`);
+                await this.traverseWebkitEntry(entry, entry.name + '/', collectedFiles, config);
+              } else if (entry.isFile) {
+                console.log(`📄 Processing file ${index}: ${entry.name}`);
+                await this.processFileHandle(item, collectedFiles, '', config);
+              }
+            } else {
+              // Fallback to processFileHandle for items without entry
+              await this.processFileHandle(item, collectedFiles, '', config);
+            }
+          } catch (error) {
+            console.error(`Error processing item ${index}:`, error);
           }
         }
 

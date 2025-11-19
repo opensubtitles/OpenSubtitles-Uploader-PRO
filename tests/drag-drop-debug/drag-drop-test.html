@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Multi-Directory Debug Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 60px;
+            margin: 20px;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .drop-zone-text {
+            font-size: 18px;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-hint {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .debug-section {
+            margin: 20px;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .debug-section h2 {
+            color: #38bdf8;
+            font-size: 16px;
+            margin-bottom: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 4px;
+            border-left: 3px solid transparent;
+            border-radius: 4px;
+        }
+
+        .log-entry.info {
+            border-left-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .log-entry.success {
+            border-left-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .timestamp {
+            color: #94a3b8;
+            margin-right: 8px;
+        }
+
+        .clear-btn {
+            background: #475569;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .clear-btn:hover {
+            background: #334155;
+        }
+
+        .select-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px;
+            flex-wrap: wrap;
+        }
+
+        .select-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .select-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .select-btn.secondary {
+            background: #0891b2;
+        }
+
+        .select-btn.secondary:hover {
+            background: #0e7490;
+        }
+
+        .select-btn-icon {
+            font-size: 18px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px;
+            color: #94a3b8;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .file-tree {
+            margin-top: 12px;
+        }
+
+        .directory {
+            margin-left: 20px;
+            border-left: 2px solid #334155;
+            padding-left: 12px;
+            margin-top: 8px;
+        }
+
+        .directory-name {
+            color: #fbbf24;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .file-name {
+            color: #94a3b8;
+            padding: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 File & Directory Selection Debug Test</h1>
+            <p class="subtitle">Testing drag & drop and file picker behavior across browsers</p>
+        </header>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📁</div>
+            <div class="drop-zone-text">Drag and drop multiple directories here</div>
+            <div class="drop-zone-hint">Try dropping 2+ directories to test browser behavior</div>
+        </div>
+
+        <div class="divider">or</div>
+
+        <div class="select-buttons">
+            <button class="select-btn" onclick="document.getElementById('fileInput').click()">
+                <span class="select-btn-icon">📄</span>
+                <span>Select Files</span>
+            </button>
+            <button class="select-btn secondary" onclick="document.getElementById('dirInput').click()">
+                <span class="select-btn-icon">📁</span>
+                <span>Select Directories</span>
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" multiple accept="video/*,.srt,.sub,.ass,.ssa,.mkv,.mp4,.avi" />
+        <input type="file" id="dirInput" webkitdirectory multiple />
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Browser</div>
+                <div class="stat-value" id="browserName">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Items Dropped</div>
+                <div class="stat-value" id="itemsCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Files Count</div>
+                <div class="stat-value" id="filesCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Files Collected</div>
+                <div class="stat-value" id="collectedCount">0</div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+            <h2>Debug Logs</h2>
+            <div id="debugLogs"></div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const debugLogs = document.getElementById('debugLogs');
+
+        // Detect browser
+        const browserName = (() => {
+            const ua = navigator.userAgent;
+            if (ua.includes('Firefox')) return 'Firefox';
+            if (ua.includes('Chrome')) return 'Chrome';
+            if (ua.includes('Safari')) return 'Safari';
+            if (ua.includes('Edge')) return 'Edge';
+            return 'Unknown';
+        })();
+
+        document.getElementById('browserName').textContent = browserName;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, fractional: 3 });
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span>${message}`;
+            debugLogs.appendChild(entry);
+            debugLogs.scrollTop = debugLogs.scrollHeight;
+        }
+
+        function clearLogs() {
+            debugLogs.innerHTML = '';
+        }
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop zone when item is dragged over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('drag-over');
+            }, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        async function handleDrop(e) {
+            log('=== DROP EVENT TRIGGERED ===', 'info');
+
+            const dt = e.dataTransfer;
+
+            // Log basic info
+            log(`📊 Browser: ${browserName}`, 'info');
+            log(`📦 dataTransfer.items.length: ${dt.items?.length || 0}`, 'info');
+            log(`📦 dataTransfer.files.length: ${dt.files?.length || 0}`, 'info');
+            log(`🏷️ dataTransfer.types: ${JSON.stringify(dt.types)}`, 'info');
+
+            document.getElementById('itemsCount').textContent = dt.items?.length || 0;
+            document.getElementById('filesCount').textContent = dt.files?.length || 0;
+
+            // Log each item
+            if (dt.items) {
+                log(`\n🔍 Inspecting ${dt.items.length} items:`, 'info');
+                for (let i = 0; i < dt.items.length; i++) {
+                    const item = dt.items[i];
+                    log(`\n--- Item ${i} ---`, 'warning');
+                    log(`  kind: ${item.kind}`, 'info');
+                    log(`  type: ${item.type}`, 'info');
+
+                    // Check webkitGetAsEntry
+                    if (item.webkitGetAsEntry) {
+                        const entry = item.webkitGetAsEntry();
+                        log(`  webkitGetAsEntry(): ${entry ? 'EXISTS' : 'null'}`, entry ? 'success' : 'error');
+                        if (entry) {
+                            log(`    name: ${entry.name}`, 'info');
+                            log(`    isFile: ${entry.isFile}`, 'info');
+                            log(`    isDirectory: ${entry.isDirectory}`, 'info');
+                            log(`    fullPath: ${entry.fullPath}`, 'info');
+                        }
+                    } else {
+                        log(`  webkitGetAsEntry: NOT AVAILABLE`, 'error');
+                    }
+
+                    // Check getAsFile
+                    if (item.getAsFile) {
+                        const file = item.getAsFile();
+                        log(`  getAsFile(): ${file ? file.name : 'null'}`, file ? 'success' : 'error');
+                    }
+                }
+            }
+
+            // Process directories
+            log(`\n🚀 Starting directory traversal...`, 'warning');
+            const collectedFiles = [];
+
+            if (dt.items) {
+                // CRITICAL FIX: Capture all webkit entries SYNCHRONOUSLY first
+                // Chrome invalidates DataTransferItemList after async operations
+                log(`\n⚡ PHASE 1: Capturing all entries synchronously (Chrome fix)`, 'warning');
+                const entries = [];
+                for (let i = 0; i < dt.items.length; i++) {
+                    const item = dt.items[i];
+                    if (item.webkitGetAsEntry) {
+                        const entry = item.webkitGetAsEntry();
+                        if (entry) {
+                            entries.push({ entry, index: i });
+                            log(`  ✅ Captured entry ${i}: ${entry.name} (${entry.isDirectory ? 'directory' : 'file'})`, 'success');
+                        } else {
+                            log(`  ❌ Entry ${i}: webkitGetAsEntry() returned null`, 'error');
+                        }
+                    } else {
+                        log(`  ❌ Item ${i} does not support webkitGetAsEntry()`, 'error');
+                    }
+                }
+
+                log(`\n📦 Captured ${entries.length} entries synchronously from ${dt.items.length} items`, 'success');
+                log(`\n⚡ PHASE 2: Processing captured entries asynchronously`, 'warning');
+
+                // Now process all captured entries asynchronously
+                for (const { entry, index } of entries) {
+                    log(`\n📂 Processing entry ${index}: ${entry.name}`, 'warning');
+
+                    if (entry.isDirectory) {
+                        log(`  ✅ Is directory, traversing...`, 'success');
+                        await traverseDirectory(entry, entry.name + '/', collectedFiles);
+                    } else if (entry.isFile) {
+                        log(`  ✅ Is file, reading...`, 'success');
+                        const file = await readFile(entry);
+                        if (file) {
+                            collectedFiles.push({
+                                name: file.name,
+                                path: entry.fullPath,
+                                size: file.size,
+                                type: file.type
+                            });
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('collectedCount').textContent = collectedFiles.length;
+
+            log(`\n✅ COLLECTION COMPLETE`, 'success');
+            log(`📊 Total files collected: ${collectedFiles.length}`, 'success');
+
+            // Display file tree
+            displayFileTree(collectedFiles);
+        }
+
+        async function traverseDirectory(dirEntry, path, output) {
+            const dirReader = dirEntry.createReader();
+            const entries = [];
+
+            // Read all entries (may require multiple calls)
+            const readEntries = () => {
+                return new Promise((resolve) => {
+                    dirReader.readEntries(
+                        (results) => {
+                            if (results.length > 0) {
+                                entries.push(...results);
+                                log(`    Read ${results.length} entries from ${dirEntry.name}`, 'info');
+                                readEntries().then(resolve);
+                            } else {
+                                resolve();
+                            }
+                        },
+                        (error) => {
+                            log(`    ❌ Error reading directory ${dirEntry.name}: ${error}`, 'error');
+                            resolve();
+                        }
+                    );
+                });
+            };
+
+            await readEntries();
+
+            log(`  📁 Directory ${dirEntry.name} contains ${entries.length} entries`, 'info');
+
+            // Process all entries
+            for (const entry of entries) {
+                if (entry.isFile) {
+                    const file = await readFile(entry);
+                    if (file) {
+                        output.push({
+                            name: file.name,
+                            path: path + file.name,
+                            size: file.size,
+                            type: file.type
+                        });
+                        log(`    ✅ File: ${file.name} (${file.size} bytes)`, 'success');
+                    }
+                } else if (entry.isDirectory) {
+                    log(`    📂 Subdirectory: ${entry.name}`, 'info');
+                    await traverseDirectory(entry, path + entry.name + '/', output);
+                }
+            }
+        }
+
+        function readFile(fileEntry) {
+            return new Promise((resolve) => {
+                fileEntry.file(resolve, (error) => {
+                    log(`    ❌ Error reading file ${fileEntry.name}: ${error}`, 'error');
+                    resolve(null);
+                });
+            });
+        }
+
+        function displayFileTree(files) {
+            if (files.length === 0) return;
+
+            log(`\n📊 FILE TREE:`, 'warning');
+
+            // Group by top-level directory
+            const tree = {};
+            files.forEach(file => {
+                const parts = file.path.split('/');
+                const topDir = parts[0] || 'root';
+                if (!tree[topDir]) tree[topDir] = [];
+                tree[topDir].push(file);
+            });
+
+            // Display tree
+            Object.keys(tree).forEach(dir => {
+                log(`\n📁 ${dir}/ (${tree[dir].length} files)`, 'warning');
+                tree[dir].forEach(file => {
+                    log(`  📄 ${file.name} (${file.size} bytes)`, 'info');
+                });
+            });
+        }
+
+        // Handle file input selection
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            log('=== FILE SELECTION TRIGGERED ===', 'info');
+            log(`📊 Browser: ${browserName}`, 'info');
+
+            const files = Array.from(e.target.files);
+            log(`📦 Selected ${files.length} files`, 'info');
+
+            document.getElementById('itemsCount').textContent = files.length;
+            document.getElementById('filesCount').textContent = files.length;
+
+            const collectedFiles = [];
+
+            log(`\n🔍 Processing selected files:`, 'info');
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                log(`  ${i + 1}. ${file.name} (${file.size} bytes)`, 'info');
+                collectedFiles.push({
+                    name: file.name,
+                    path: file.webkitRelativePath || file.name,
+                    size: file.size,
+                    type: file.type
+                });
+            }
+
+            document.getElementById('collectedCount').textContent = collectedFiles.length;
+
+            log(`\n✅ COLLECTION COMPLETE`, 'success');
+            log(`📊 Total files collected: ${collectedFiles.length}`, 'success');
+
+            displayFileTree(collectedFiles);
+
+            // Reset input
+            e.target.value = '';
+        });
+
+        // Handle directory input selection
+        document.getElementById('dirInput').addEventListener('change', async (e) => {
+            log('=== DIRECTORY SELECTION TRIGGERED ===', 'info');
+            log(`📊 Browser: ${browserName}`, 'info');
+
+            const files = Array.from(e.target.files);
+            log(`📦 Selected files from directory: ${files.length}`, 'info');
+
+            document.getElementById('itemsCount').textContent = 1; // One directory selected
+            document.getElementById('filesCount').textContent = files.length;
+
+            const collectedFiles = [];
+
+            // Group by directory
+            const dirStructure = {};
+            files.forEach(file => {
+                const path = file.webkitRelativePath || file.name;
+                const parts = path.split('/');
+                const dir = parts[0];
+                if (!dirStructure[dir]) dirStructure[dir] = [];
+                dirStructure[dir].push(file);
+            });
+
+            log(`\n📁 Processing ${Object.keys(dirStructure).length} directory/directories:`, 'info');
+
+            Object.keys(dirStructure).forEach((dir, index) => {
+                log(`\n📂 Directory ${index}: ${dir}`, 'warning');
+                log(`  Contains ${dirStructure[dir].length} files`, 'info');
+
+                dirStructure[dir].forEach(file => {
+                    const path = file.webkitRelativePath || file.name;
+                    log(`    ✅ File: ${file.name} (${file.size} bytes)`, 'success');
+                    collectedFiles.push({
+                        name: file.name,
+                        path: path,
+                        size: file.size,
+                        type: file.type
+                    });
+                });
+            });
+
+            document.getElementById('collectedCount').textContent = collectedFiles.length;
+
+            log(`\n✅ COLLECTION COMPLETE`, 'success');
+            log(`📊 Total files collected: ${collectedFiles.length}`, 'success');
+
+            displayFileTree(collectedFiles);
+
+            // Reset input
+            e.target.value = '';
+        });
+
+        log('✅ Debug test page loaded', 'success');
+        log(`🌐 Browser: ${browserName}`, 'info');
+        log('📋 Ready to test drag & drop or file selection', 'info');
+    </script>
+</body>
+</html>

@@ -1259,6 +1259,195 @@ function SubtitleUploaderInner() {
     }
   };
 
+  // Handle directory selection from button
+  const handleDirectorySelect = async event => {
+    try {
+      setError(null);
+      setHasDroppedFiles(true);
+
+      const selectedFiles = Array.from(event.target.files);
+
+      if (selectedFiles.length === 0) {
+        setHasDroppedFiles(false);
+        return;
+      }
+
+      // Get directory name from first file's webkitRelativePath
+      const dirName = selectedFiles[0]?.webkitRelativePath?.split('/')[0] || 'directory';
+
+      addDebugInfo(
+        `📁 Directory selected: "${dirName}" with ${selectedFiles.length} files - adding to existing files...`
+      );
+
+      // Clear states similar to handleFileSelect
+      setUploadResults({});
+      setPreviewSubtitle(null);
+      setSubtitleContent('');
+
+      if (!uploadProgress.isUploading) {
+        setUploadProgress({
+          isUploading: false,
+          current: 0,
+          total: 0,
+          currentFile: '',
+        });
+      }
+
+      // Process selected files (same as handleFileSelect)
+      const processedFiles = [];
+
+      for (const file of selectedFiles) {
+        const { isArchiveFile } = await import('../utils/fileUtils.js');
+        if (isArchiveFile(file)) {
+          try {
+            addDebugInfo(
+              `📦 Processing archive file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+            );
+            const { ZipProcessingService } = await import('../services/zipProcessing.js');
+
+            const sizeValidation = ZipProcessingService.validateArchiveSize(file);
+            if (!sizeValidation.isValid) {
+              addDebugInfo(`⚠️ Skipping ${file.name}: ${sizeValidation.error}`);
+              continue;
+            }
+
+            const extractedFiles = await ZipProcessingService.processArchiveFile(file);
+            addDebugInfo(
+              `✅ Extracted ${extractedFiles.length} files from ${file.name}`
+            );
+            processedFiles.push(...extractedFiles);
+            continue;
+          } catch (error) {
+            addDebugInfo(`❌ Error processing archive ${file.name}: ${error.message}`);
+            continue;
+          }
+        }
+
+        const { isMediaFile } = await import('../utils/fileUtils.js');
+        const { isVideo, isSubtitle, isMedia, fileKind } = isMediaFile(file);
+
+        const processedFile = {
+          file: file,
+          name: file.name,
+          fullPath: file.webkitRelativePath || file.name,
+          size: file.size,
+          type: file.type,
+          isVideo: isVideo,
+          isSubtitle: isSubtitle,
+          movieHash: null,
+          detectedLanguage: null,
+          recognized: true,
+        };
+
+        // Debug MKV detection
+        if (file.name.toLowerCase().endsWith('.mkv')) {
+          console.log(`🔍 MKV file detected via directory selection: ${file.name}`);
+          addDebugInfo(`🔍 MKV file detected via directory selection: ${file.name}`);
+
+          if (isVideo) {
+            const extractMkvSubtitles = config.extractMkvSubtitles === true;
+
+            if (extractMkvSubtitles) {
+              processedFile.hasMkvSubtitleExtraction = true;
+              processedFile.mkvExtractionStatus = 'pending';
+
+              console.log(
+                `🎬 Detected MKV file via directory selection: ${file.name}, will detect embedded subtitles...`
+              );
+              addDebugInfo(`🎬 MKV file detected: ${file.name}`);
+              addDebugInfo(`📺 Subtitle detection will start automatically for this MKV file`);
+            } else {
+              console.log(
+                `⚠️ MKV file ${file.name} detected but extraction is disabled in settings`
+              );
+              addDebugInfo(
+                `⚠️ MKV file ${file.name} detected but extraction is disabled in settings`
+              );
+            }
+          }
+        }
+
+        if (processedFile.isVideo || processedFile.isSubtitle) {
+          processedFiles.push(processedFile);
+        }
+      }
+
+      addDebugInfo(`📁 Processed ${processedFiles.length} valid media files from directory selection`);
+
+      if (processedFiles.length > 0) {
+        setFiles(prevFiles => {
+          const existingFilePaths = new Set(prevFiles.map(f => f.fullPath + '|' + f.size));
+          const newFiles = processedFiles.filter(
+            f => !existingFilePaths.has(f.fullPath + '|' + f.size)
+          );
+          const duplicateCount = processedFiles.length - newFiles.length;
+
+          if (duplicateCount > 0) {
+            addDebugInfo(
+              `ℹ️ Skipped ${duplicateCount} duplicate file(s) already in the list`
+            );
+          }
+
+          if (newFiles.length === 0) {
+            addDebugInfo('ℹ️ All files from this directory were already in the list');
+            return prevFiles;
+          }
+
+          const combinedFiles = [...prevFiles, ...newFiles];
+
+          addDebugInfo(`✅ Added ${newFiles.length} new file(s) from directory`);
+          addDebugInfo(
+            `📊 Total files in session: ${combinedFiles.length} (${combinedFiles.filter(f => f.isVideo).length} videos, ${combinedFiles.filter(f => f.isSubtitle).length} subtitles)`
+          );
+
+          const mkvFilesInNewFiles = newFiles.filter(file => file.hasMkvSubtitleExtraction);
+          if (mkvFilesInNewFiles.length > 0) {
+            addDebugInfo(
+              `🎬 Starting MKV subtitle detection and auto-extraction for ${mkvFilesInNewFiles.length} file(s) from directory selection`
+            );
+
+            setTimeout(async () => {
+              try {
+                const { FileProcessingService } = await import('../services/fileProcessing.js');
+                await FileProcessingService.processMkvExtractions(
+                  mkvFilesInNewFiles,
+                  (filePath, updates) => {
+                    setFiles(currentFiles =>
+                      currentFiles.map(f => (f.fullPath === filePath ? { ...f, ...updates } : f))
+                    );
+                  },
+                  addDebugInfo,
+                  config
+                );
+              } catch (error) {
+                console.error('Error during MKV extraction:', error);
+                addDebugInfo(`❌ Error during MKV extraction: ${error.message}`);
+              }
+            }, 100);
+          }
+
+          return combinedFiles;
+        });
+      } else {
+        addDebugInfo('⚠️ No valid media files found in selected directory');
+        setError(
+          'No valid video or subtitle files found. Please select directories with .mp4, .mkv, .avi, .srt, .vtt, .ass files, etc.'
+        );
+        if (files.length === 0) {
+          setHasDroppedFiles(false);
+        }
+      }
+
+      // Reset directory input
+      event.target.value = '';
+    } catch (error) {
+      addDebugInfo(`❌ Error processing selected directory: ${error.message}`);
+      setError(`Error processing directory: ${error.message}`);
+      setHasDroppedFiles(false);
+      throw error;
+    }
+  };
+
   // Handle file drop with processing
   const handleFileDropComplete = async event => {
     try {
@@ -2256,6 +2445,7 @@ function SubtitleUploaderInner() {
           colors={colors}
           isDark={isDark}
           onFileSelect={handleFileSelect}
+          onDirectorySelect={handleDirectorySelect}
         />
 
         {/* Error Display */}
