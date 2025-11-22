@@ -38,6 +38,7 @@ export const OrphanedSubtitles = ({
   isDark,
   orphanedSubtitlesFps,
   onOrphanedSubtitlesFpsChange,
+  validationErrors = [], // New prop for validation errors to highlight problematic subtitles
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -75,6 +76,11 @@ export const OrphanedSubtitles = ({
   if (!orphanedSubtitles || orphanedSubtitles.length === 0) {
     return null;
   }
+
+  // Helper function to check if a subtitle has validation errors
+  const hasSubtitleValidationError = (subtitlePath) => {
+    return validationErrors.some(error => error.subtitlePath === subtitlePath);
+  };
 
   // Calculate master checkbox state for uploadable orphaned subtitles (excluding those that exist in database)
   const getMasterCheckboxState = React.useMemo(() => {
@@ -513,20 +519,32 @@ export const OrphanedSubtitles = ({
 
                 {/* Subtitle Section - reusing same structure as MatchedPairs */}
                 <div className="ml-8 space-y-2">
+                  {(() => {
+                    const subtitleElementId = `subtitle-${subtitle.fullPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    const hasError = hasSubtitleValidationError(subtitle.fullPath);
+
+                    return (
                   <div
+                    id={subtitleElementId}
                     className={`rounded p-3 border transition-all cursor-pointer shadow-sm ${
                       isUploadEnabled ? 'hover:shadow-md' : 'opacity-75 hover:opacity-90'
-                    }`}
+                    } ${hasError ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}
                     style={{
-                      backgroundColor: themeColors.cardBackground,
-                      borderColor: isUploadEnabled
-                        ? isDark
-                          ? '#4a6741'
-                          : '#d4edda'
-                        : themeColors.border,
-                      borderLeft: isUploadEnabled
-                        ? `3px solid ${themeColors.success}`
-                        : `3px solid ${themeColors.border}`,
+                      backgroundColor: hasError
+                        ? (isDark ? '#3a1a1a' : '#fef2f2')
+                        : themeColors.cardBackground,
+                      borderColor: hasError
+                        ? '#ef4444'
+                        : (isUploadEnabled
+                          ? isDark
+                            ? '#4a6741'
+                            : '#d4edda'
+                          : themeColors.border),
+                      borderLeft: hasError
+                        ? '4px solid #ef4444'
+                        : (isUploadEnabled
+                          ? `3px solid ${themeColors.success}`
+                          : `3px solid ${themeColors.border}`),
                     }}
                     onClick={e => {
                       // Prevent toggle when clicking on interactive elements
@@ -1078,6 +1096,8 @@ export const OrphanedSubtitles = ({
                       )}
                     </div>
                   </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

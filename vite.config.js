@@ -26,15 +26,16 @@ export default defineConfig({
   plugins: [react(), embedApiKeysPlugin()],
   publicDir: 'public',
   
-  // Define global constants for embedded API keys
+  // Define global constants for embedded API keys and polyfills
   define: {
     '__EMBEDDED_OPENSUBTITLES_API_KEY__': JSON.stringify(process.env.OPENSUBTITLES_API_KEY || process.env.VITE_OPENSUBTITLES_API_KEY || ''),
+    global: 'globalThis',
   },
-  
+
   // Resolve configuration to handle Node.js modules
   resolve: {
     alias: {
-      // Don't alias built-in Node.js modules, let Vite handle them
+      buffer: 'buffer',
     }
   },
   
@@ -47,13 +48,14 @@ export default defineConfig({
   // Optimize dependencies for FFmpeg, video metadata extractor, and Tauri
   optimizeDeps: {
     exclude: [
-      '@ffmpeg/ffmpeg', 
-      '@ffmpeg/util', 
+      '@ffmpeg/ffmpeg',
+      '@ffmpeg/util',
       'archive-wasm',
       '@opensubtitles/video-metadata-extractor'
     ],
     include: [
-      'jszip'
+      'jszip',
+      'buffer'
     ]
   },
   build: {
@@ -133,10 +135,9 @@ export default defineConfig({
     port: 1420,
     allowedHosts: ['uploader.opensubtitles.org'],
     headers: {
-      // Headers needed for FFmpeg WebAssembly support
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Resource-Policy': 'cross-origin'
+      // Headers needed for FFmpeg WebAssembly support (matches working demo)
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin'
     }
   },
   // Tauri expects a fixed port, and vite server will fail if the port is not available

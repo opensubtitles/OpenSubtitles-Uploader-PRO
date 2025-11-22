@@ -18,9 +18,12 @@ export const SubtitleFile = ({
   onToggleUpload, // New prop for upload toggle callback
   uploadResults, // New prop for upload results
   hashCheckResults, // New prop for CheckSubHash results
+  hasValidationError = false, // New prop for validation error highlighting
   colors,
   isDark,
 }) => {
+  // Generate unique ID for scrolling to this subtitle
+  const subtitleElementId = `subtitle-${subtitle.fullPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
   const getFilteredLanguageOptions = (searchTerm = '') => {
     const options = getLanguageOptionsForSubtitle(subtitle);
     if (!searchTerm) return options;
@@ -34,15 +37,22 @@ export const SubtitleFile = ({
 
   return (
     <div
+      id={subtitleElementId}
       className={`rounded-lg p-3 border transition-all cursor-pointer shadow-sm ${
         uploadEnabled ? 'hover:shadow-md' : 'opacity-75 hover:opacity-90'
-      }`}
+      } ${hasValidationError ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}
       style={{
-        backgroundColor: colors?.cardBackground || '#fff',
-        borderColor: uploadEnabled ? colors?.success || '#9EC068' : colors?.border || '#ccc',
-        borderLeft: uploadEnabled
-          ? `4px solid ${colors?.success || '#9EC068'}`
-          : `4px solid ${colors?.border || '#ccc'}`,
+        backgroundColor: hasValidationError
+          ? (isDark ? '#3a1a1a' : '#fef2f2')
+          : (colors?.cardBackground || '#fff'),
+        borderColor: hasValidationError
+          ? '#ef4444'
+          : (uploadEnabled ? colors?.success || '#9EC068' : colors?.border || '#ccc'),
+        borderLeft: hasValidationError
+          ? '4px solid #ef4444'
+          : (uploadEnabled
+            ? `4px solid ${colors?.success || '#9EC068'}`
+            : `4px solid ${colors?.border || '#ccc'}`),
       }}
       onClick={e => {
         // Prevent toggle when clicking on interactive elements

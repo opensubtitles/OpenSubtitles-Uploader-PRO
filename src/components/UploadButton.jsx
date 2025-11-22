@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { UserService } from '../services/userService.js';
 
 export const UploadButton = ({
@@ -18,6 +18,7 @@ export const UploadButton = ({
   colors,
   isDark,
   userInfo,
+  onValidationChange, // New callback to report validation errors to parent
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -73,10 +74,10 @@ export const UploadButton = ({
     enabledOrphanedSubtitles.forEach(subtitle => {
       const subtitleName = subtitle.name || subtitle.fullPath.split('/').pop();
 
-      // Helper function to create clickable error for orphaned subtitles
-      const createClickableError = (message, subtitlePath) => {
-        const elementId = `movie-${subtitlePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
-        return { message, elementId, videoName: subtitleName };
+      // Helper function to create clickable error for orphaned subtitles (navigates to subtitle element)
+      const createSubtitleError = (message, subtitlePath) => {
+        const elementId = `subtitle-${subtitlePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        return { message, elementId, videoName: subtitleName, subtitlePath, subtitleName };
       };
 
       // Track if this orphaned subtitle has blocking errors
@@ -99,7 +100,7 @@ export const UploadButton = ({
 
         console.log(`   - ❌ BLOCKING ERROR: Movie not identified${statusText}`);
         errors.push(
-          createClickableError(
+          createSubtitleError(
             `"${subtitleName}": Subtitle movie not identified${statusText}`,
             subtitle.fullPath
           )
@@ -122,7 +123,7 @@ export const UploadButton = ({
       if (!hasBlockingErrors && !uploadImdbId) {
         console.log(`   - ❌ BLOCKING ERROR: No IMDb ID available`);
         errors.push(
-          createClickableError(
+          createSubtitleError(
             `"${subtitleName}": No IMDb ID available for upload`,
             subtitle.fullPath
           )
@@ -131,18 +132,29 @@ export const UploadButton = ({
       }
 
       // Check if subtitle has language selected
+      // Only report error if detection is complete (not still detecting or not started)
       const subtitleLanguage = getSubtitleLanguage(subtitle);
       console.log(`   - Subtitle language: ${subtitleLanguage}`);
 
       if (!hasBlockingErrors && !subtitleLanguage) {
-        console.log(`   - ❌ BLOCKING ERROR: No language selected`);
-        errors.push(
-          createClickableError(
-            `"${subtitleName}": Upload language must be selected`,
-            subtitle.fullPath
-          )
-        );
-        hasBlockingErrors = true;
+        // Check if detection is still in progress or not started yet
+        const detectionStatus = subtitle.detectedLanguage;
+        const isStillDetecting = detectionStatus === 'detecting';
+        const notStartedYet = detectionStatus === undefined || detectionStatus === null;
+
+        // Only show error if detection is complete
+        if (!isStillDetecting && !notStartedYet) {
+          console.log(`   - ❌ BLOCKING ERROR: No language selected`);
+          errors.push(
+            createSubtitleError(
+              `"${subtitleName}": Upload language must be selected`,
+              subtitle.fullPath
+            )
+          );
+          hasBlockingErrors = true;
+        } else {
+          console.log(`   - ⏳ Language detection in progress, skipping error`);
+        }
       }
 
       // Check if we have features data for the upload IMDb ID (warnings only)
@@ -150,21 +162,21 @@ export const UploadButton = ({
         const featuresData = featuresByImdbId[uploadImdbId];
         if (!featuresData) {
           warnings.push(
-            createClickableError(
+            createSubtitleError(
               `"${subtitleName}": Features data not loaded for IMDb ${uploadImdbId}`,
               subtitle.fullPath
             )
           );
         } else if (featuresData.error) {
           warnings.push(
-            createClickableError(
+            createSubtitleError(
               `"${subtitleName}": Features data error for IMDb ${uploadImdbId}: ${featuresData.error}`,
               subtitle.fullPath
             )
           );
         } else if (!featuresData.data?.[0]?.attributes) {
           warnings.push(
-            createClickableError(
+            createSubtitleError(
               `"${subtitleName}": Features data format error for IMDb ${uploadImdbId}`,
               subtitle.fullPath
             )
@@ -190,10 +202,16 @@ export const UploadButton = ({
     videoGroups.forEach(({ video, subtitles, movieData }, videoPath) => {
       const videoName = video.name || videoPath.split('/').pop();
 
-      // Helper function to create clickable error with navigation
-      const createClickableError = (message, videoPath) => {
-        const elementId = `movie-${videoPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+      // Helper function to create clickable error with navigation to movie
+      const createClickableError = (message, targetPath) => {
+        const elementId = `movie-${targetPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
         return { message, elementId, videoName };
+      };
+
+      // Helper function to create clickable error with navigation to specific subtitle
+      const createSubtitleError = (message, subtitlePath, subtitleName) => {
+        const elementId = `subtitle-${subtitlePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        return { message, elementId, videoName, subtitlePath, subtitleName };
       };
 
       // Track if this video group has blocking errors
@@ -232,26 +250,34 @@ export const UploadButton = ({
       }
 
       // Check if all subtitles have languages selected
-      const subtitlesWithoutLanguage = subtitles.filter(subtitle => !getSubtitleLanguage(subtitle));
+      // Only report errors for subtitles where language detection is COMPLETE but no language found
+      // Skip subtitles still detecting ('detecting') or not yet started (undefined/null)
+      const subtitlesWithoutLanguage = subtitles.filter(subtitle => {
+        const hasLanguage = getSubtitleLanguage(subtitle);
+        if (hasLanguage) return false; // Has language, no error
+
+        // Check if detection is still in progress or not started yet
+        const detectionStatus = subtitle.detectedLanguage;
+        const isStillDetecting = detectionStatus === 'detecting';
+        const notStartedYet = detectionStatus === undefined || detectionStatus === null;
+
+        // Only include in error list if detection is complete (not detecting, not undefined)
+        // This means: detectionStatus is 'error' OR an object without language_code
+        return !isStillDetecting && !notStartedYet;
+      });
+
       if (!hasBlockingErrors && subtitlesWithoutLanguage.length > 0) {
-        if (subtitlesWithoutLanguage.length === 1) {
-          const subtitleName =
-            subtitlesWithoutLanguage[0].name ||
-            subtitlesWithoutLanguage[0].fullPath.split('/').pop();
+        // Create individual error for each subtitle without language (so user can click to navigate to each one)
+        subtitlesWithoutLanguage.forEach(subtitle => {
+          const subtitleName = subtitle.name || subtitle.fullPath.split('/').pop();
           errors.push(
-            createClickableError(
-              `"${videoName}": Subtitle "${subtitleName}" needs upload language selected`,
-              videoPath
+            createSubtitleError(
+              `"${subtitleName}": Upload language must be selected`,
+              subtitle.fullPath,
+              subtitleName
             )
           );
-        } else {
-          errors.push(
-            createClickableError(
-              `"${videoName}": ${subtitlesWithoutLanguage.length} subtitles need upload languages selected`,
-              videoPath
-            )
-          );
-        }
+        });
         hasBlockingErrors = true;
       }
 
@@ -292,6 +318,23 @@ export const UploadButton = ({
     const totalSubtitles =
       Array.from(videoGroups.values()).reduce((sum, group) => sum + group.subtitles.length, 0) +
       enabledOrphanedSubtitles.length;
+
+    // Debug logging for validation summary
+    console.log('🔍 UploadButton: Validation summary', {
+      totalSubtitles,
+      readySubtitlesCount,
+      videoGroups: videoGroups.size,
+      enabledOrphanedSubtitles: enabledOrphanedSubtitles.length,
+      errors: errors.length,
+      warnings: warnings.length,
+      isValid: errors.length === 0,
+    });
+
+    if (totalSubtitles !== readySubtitlesCount) {
+      console.warn(
+        `⚠️ UploadButton: Mismatch detected! ${totalSubtitles} total subtitles but only ${readySubtitlesCount} ready (${totalSubtitles - readySubtitlesCount} subtitles have blocking errors)`
+      );
+    }
 
     return {
       isValid: errors.length === 0,
@@ -349,6 +392,21 @@ export const UploadButton = ({
 
   const validation = validateUpload();
   const { isValid, errors, warnings, readySubtitlesCount, totalSubtitles } = validation;
+
+  // Report validation errors to parent component for highlighting subtitles
+  const prevErrorsRef = useRef([]);
+  useEffect(() => {
+    if (onValidationChange) {
+      // Only report if errors have changed (compare by subtitlePath)
+      const currentPaths = errors.filter(e => e.subtitlePath).map(e => e.subtitlePath).sort().join(',');
+      const prevPaths = prevErrorsRef.current.filter(e => e.subtitlePath).map(e => e.subtitlePath).sort().join(',');
+
+      if (currentPaths !== prevPaths) {
+        onValidationChange(errors);
+        prevErrorsRef.current = errors;
+      }
+    }
+  }, [errors, onValidationChange]);
 
   const isUploading = uploadProgress?.isUploading || false;
   const uploadProgressPercent =

@@ -112,6 +112,7 @@ export const MatchedPairs = ({
   getVideoMetadata, // Function to get video metadata
   isMetadataLoading, // Function to check if metadata is loading
   getMetadataError, // Function to get metadata error
+  validationErrors = [], // New prop for validation errors to highlight problematic subtitles
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -128,6 +129,11 @@ export const MatchedPairs = ({
     warning: '#ffc107',
   };
   const successfulPairs = pairedFiles.filter(pair => pair.video && pair.subtitles.length > 0);
+
+  // Helper function to check if a subtitle has validation errors
+  const hasSubtitleValidationError = (subtitlePath) => {
+    return validationErrors.some(error => error.subtitlePath === subtitlePath);
+  };
 
   // Movie search state - Simplified to use MovieSearch component
   const [openMovieSearch, setOpenMovieSearch] = React.useState(null);
@@ -390,14 +396,23 @@ export const MatchedPairs = ({
 
                 {/* Subtitle Files */}
                 <div className="ml-8 space-y-2">
-                  {pair.subtitles.map((subtitle, idx) => (
+                  {pair.subtitles.map((subtitle, idx) => {
+                    const subtitleElementId = `subtitle-${subtitle.fullPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    const hasError = hasSubtitleValidationError(subtitle.fullPath);
+
+                    return (
                     <div
                       key={idx}
-                      className={`rounded p-3 border transition-all cursor-pointer shadow-sm hover:shadow-md`}
+                      id={subtitleElementId}
+                      className={`rounded p-3 border transition-all cursor-pointer shadow-sm hover:shadow-md ${hasError ? 'ring-2 ring-red-500 ring-offset-2' : ''}`}
                       style={{
-                        backgroundColor: themeColors.cardBackground,
-                        borderColor: themeColors.border,
-                        borderLeft: `3px solid ${themeColors.border}`,
+                        backgroundColor: hasError
+                          ? (isDark ? '#3a1a1a' : '#fef2f2')
+                          : themeColors.cardBackground,
+                        borderColor: hasError ? '#ef4444' : themeColors.border,
+                        borderLeft: hasError
+                          ? '4px solid #ef4444'
+                          : `3px solid ${themeColors.border}`,
                       }}
                       onClick={e => {
                         // Prevent toggle when clicking on interactive elements
@@ -991,7 +1006,8 @@ export const MatchedPairs = ({
                         )}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
             </div>

@@ -39,7 +39,20 @@ export const LanguageFilter = ({
     });
 
     // Sort by count (descending)
-    return Array.from(stats.values()).sort((a, b) => b.count - a.count);
+    const sorted = Array.from(stats.values()).sort((a, b) => b.count - a.count);
+
+    // Debug logging
+    console.log('📊 LanguageFilter: Language statistics', {
+      totalLanguages: sorted.length,
+      totalSubtitles: sorted.reduce((sum, lang) => sum + lang.count, 0),
+      languages: sorted.map(lang => ({
+        code: lang.code,
+        name: lang.name,
+        count: lang.count,
+      })),
+    });
+
+    return sorted;
   }, [files, getSubtitleLanguage, combinedLanguages]);
 
   if (languageStats.length === 0) {
@@ -152,9 +165,19 @@ export const LanguageFilter = ({
                   const newSelected = new Set(selectedLanguages);
                   if (isSelected) {
                     newSelected.delete(lang.code);
+                    console.log(
+                      `🔲 LanguageFilter: Unchecked "${lang.name}" (${lang.code}) - ${lang.count} subtitles will be disabled`
+                    );
                   } else {
                     newSelected.add(lang.code);
+                    console.log(
+                      `✅ LanguageFilter: Checked "${lang.name}" (${lang.code}) - ${lang.count} subtitles will be enabled`
+                    );
                   }
+                  console.log('📝 LanguageFilter: New selection state', {
+                    selectedLanguages: Array.from(newSelected),
+                    totalSelected: newSelected.size,
+                  });
                   onLanguageToggle(newSelected);
                 }}
                 className="w-4 h-4"

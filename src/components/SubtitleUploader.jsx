@@ -102,6 +102,7 @@ import { ConfigOverlay } from './ConfigOverlay.jsx';
 import { HelpOverlay } from './HelpOverlay.jsx';
 import ProgressOverlay from './ProgressOverlay.jsx';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext.jsx';
+import LoginDialog from './LoginDialog.jsx';
 import { getThemeStyles, createHoverHandlers } from '../utils/themeUtils.js';
 import { APP_VERSION } from '../utils/constants.js';
 import { SessionManager } from '../services/sessionManager.js';
@@ -154,6 +155,8 @@ function SubtitleUploaderInner() {
     currentSubtitle: '',
     results: [],
   }); // Enhanced upload progress tracking
+  const [validationErrors, setValidationErrors] = useState([]); // Validation errors from UploadButton for highlighting subtitles
+  const [showLoginDialog, setShowLoginDialog] = useState(false); // Login dialog for "Login to Upload" button
 
   // File processing progress state
   const [processingProgress, setProcessingProgress] = useState({
@@ -793,11 +796,15 @@ function SubtitleUploaderInner() {
       );
 
       if (!subtitle) {
+        console.log(`⚠️ getUploadEnabled: Subtitle not found: ${subtitlePath}`);
         return uploadStates[subtitlePath] !== false;
       }
 
+      const subtitleName = subtitle.name || subtitlePath.split('/').pop();
+
       // Automatically disable empty files (0 bytes)
       if (subtitle.size === 0) {
+        console.log(`❌ getUploadEnabled: "${subtitleName}" disabled (empty file, 0 bytes)`);
         return false;
       }
 
@@ -809,6 +816,9 @@ function SubtitleUploaderInner() {
         const isForeignPartsOnly = options.foreignpartsonly === '1';
 
         if (!isForeignPartsOnly) {
+          console.log(
+            `❌ getUploadEnabled: "${subtitleName}" disabled (small file ${subtitle.size} bytes, not marked as foreign parts only)`
+          );
           return false; // Disable small files that aren't foreign parts only
         }
       }
@@ -819,11 +829,30 @@ function SubtitleUploaderInner() {
 
         // If language filter has selections and this language is not selected, disable upload
         if (langCode && selectedLanguages.size > 0 && !selectedLanguages.has(langCode)) {
+          console.log(
+            `❌ getUploadEnabled: "${subtitleName}" disabled (language "${langCode}" not in selected languages)`,
+            {
+              subtitleLanguage: langCode,
+              selectedLanguages: Array.from(selectedLanguages),
+              selectedLanguagesSize: selectedLanguages.size,
+            }
+          );
           return false;
+        } else if (langCode && selectedLanguages.size > 0) {
+          console.log(
+            `✅ getUploadEnabled: "${subtitleName}" enabled (language "${langCode}" is selected)`
+          );
         }
       }
 
-      return uploadStates[subtitlePath] !== false; // Default to true unless explicitly set to false
+      const finalResult = uploadStates[subtitlePath] !== false;
+      if (!finalResult) {
+        console.log(
+          `❌ getUploadEnabled: "${subtitleName}" disabled (uploadStates[${subtitlePath}] = ${uploadStates[subtitlePath]})`
+        );
+      }
+
+      return finalResult; // Default to true unless explicitly set to false
     },
     [uploadStates, files, orphanedSubtitles, uploadOptions, selectedLanguages, getSubtitleLanguage]
   );
@@ -2677,6 +2706,7 @@ function SubtitleUploaderInner() {
               getVideoMetadata={getVideoMetadata}
               isMetadataLoading={isMetadataLoading}
               getMetadataError={getMetadataError}
+              validationErrors={validationErrors}
             />
           </div>
         )}
@@ -2715,6 +2745,7 @@ function SubtitleUploaderInner() {
             isDark={isDark}
             orphanedSubtitlesFps={orphanedSubtitlesFps}
             onOrphanedSubtitlesFpsChange={handleOrphanedSubtitlesFpsChange}
+            validationErrors={validationErrors}
           />
         )}
 
@@ -2731,9 +2762,10 @@ function SubtitleUploaderInner() {
         )}
 
         {/* Language Filter - Show after language detection */}
+        {/* Note: `files` already contains all subtitle files (both paired and orphaned), no need to add orphanedSubtitles again */}
         {hasUploadableContent && (
           <LanguageFilter
-            files={[...files, ...orphanedSubtitles]}
+            files={files}
             selectedLanguages={selectedLanguages}
             onLanguageToggle={handleLanguageToggle}
             getSubtitleLanguage={getSubtitleLanguage}
@@ -2763,6 +2795,7 @@ function SubtitleUploaderInner() {
               colors={colors}
               isDark={isDark}
               userInfo={userInfo}
+              onValidationChange={setValidationErrors}
             />
           </div>
         )}
@@ -2813,10 +2846,9 @@ function SubtitleUploaderInner() {
             </div>
             <button
               onClick={() => {
-                // This will be handled by the UserProfile component
-                // User can click on the profile to access login
+                setShowLoginDialog(true);
               }}
-              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl transition-all transform"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl transition-all transform cursor-pointer"
               style={{
                 backgroundColor: colors.success,
                 color: 'white',
@@ -2871,6 +2903,12 @@ function SubtitleUploaderInner() {
           onClose={handleHelpClose}
           colors={colors}
           isDark={isDark}
+        />
+
+        {/* Login Dialog for "Login to Upload" button */}
+        <LoginDialog
+          isOpen={showLoginDialog}
+          onClose={() => setShowLoginDialog(false)}
         />
 
         {/* Progress Overlay */}

@@ -40,6 +40,15 @@ export const StatsPanel = ({
   );
   const disabledSubtitles = allAvailableSubtitles.length - enabledSubtitles.length;
 
+  // Debug logging
+  console.log('📈 StatsPanel: Subtitle counts', {
+    totalAvailable: allAvailableSubtitles.length,
+    enabled: enabledSubtitles.length,
+    disabled: disabledSubtitles,
+    pairedSubtitles: pairedSubtitles.length,
+    orphanedSubtitles: orphanedSubtitles.length,
+  });
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <div

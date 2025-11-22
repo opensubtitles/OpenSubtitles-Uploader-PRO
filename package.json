@@ -1,6 +1,6 @@
 {
   "name": "opensubtitles-uploader-pro",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "description": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
   "keywords": [
     "opensubtitles",
@@ -47,11 +47,12 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@opensubtitles/video-metadata-extractor": "^1.7.2",
+    "@opensubtitles/video-metadata-extractor": "^1.8.1",
     "@tauri-apps/api": "^2.6.0",
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-updater": "^2.9.0",
     "archive-wasm": "^2.1.0",
+    "buffer": "^6.0.3",
     "crypto-js": "^4.2.0",
     "guessit-js": "^1.0.1",
     "jszip": "^3.10.1",

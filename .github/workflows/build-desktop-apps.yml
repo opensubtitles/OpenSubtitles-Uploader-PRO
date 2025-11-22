@@ -172,9 +172,19 @@ jobs:
             echo "✅ Release $VERSION already exists"
           else
             echo "📦 Creating release $VERSION..."
+
+            # Extract commit message for release notes (remove emoji prefix and "RELEASE:" text)
+            COMMIT_MSG=$(git log -1 --format='%B' | sed 's/^🚀 RELEASE: //' | sed "s/^Version $VERSION - //")
+
+            # If commit message is empty or generic, use a default message
+            if [ -z "$COMMIT_MSG" ] || echo "$COMMIT_MSG" | grep -qi "^Build"; then
+              COMMIT_MSG="New release with improvements and bug fixes. See commit history for detailed changes."
+            fi
+
+            # Create release with commit message as notes
             gh release create "$VERSION" \
-              --title "$VERSION - Build ${{ github.run_number }}" \
-              --notes "Automated release created by GitHub Actions build.${{ '\n\n' }}**Build Information:**${{ '\n' }}- Build Number: ${{ github.run_number }}${{ '\n' }}- Commit: ${{ github.sha }}${{ '\n' }}- Triggered by: ${{ github.event_name }}${{ '\n\n' }}Assets will be uploaded as builds complete on each platform.${{ '\n\n' }}🤖 Generated with [Claude Code](https://claude.ai/code)${{ '\n\n' }}Co-Authored-By: Claude <noreply@anthropic.com>"
+              --title "$VERSION" \
+              --notes "$COMMIT_MSG"
             echo "✅ Release $VERSION created successfully"
           fi
 
