@@ -1,5 +1,11 @@
 # Claude Code Instructions
 
+## Commit and Release Notes Style
+
+- **Do NOT add** the "🤖 Generated with Claude Code" footer to commits or releases
+- **Do NOT add** "Co-Authored-By: Claude" to commits or releases
+- Keep commit messages and release notes clean and professional
+
 ## Build and Release Process
 
 **IMPORTANT**: When asked to build and make a release:

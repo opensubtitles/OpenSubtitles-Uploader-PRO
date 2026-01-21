@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKV Subtitle Extraction Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .drop-zone {
+            border: 3px dashed #ccc;
+            border-radius: 10px;
+            padding: 50px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+        .drop-zone.dragover {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .file-info {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .log div {
+            margin: 5px 0;
+        }
+        .error {
+            color: #f44336;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .info {
+            color: #2196F3;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 MKV Subtitle Extraction Test</h1>
+    <p>Test the @opensubtitles/video-metadata-extractor package directly</p>
+
+    <div class="drop-zone" id="dropZone">
+        <h2>📁 Drop MKV file here</h2>
+        <p>or</p>
+        <input type="file" id="fileInput" accept=".mkv,.mp4,.avi" style="display: none;">
+        <button onclick="document.getElementById('fileInput').click()">Choose File</button>
+    </div>
+
+    <div id="fileInfo" class="file-info" style="display: none;">
+        <h3>File Information</h3>
+        <div id="fileDetails"></div>
+        <button id="extractBtn" disabled onclick="extractSubtitles()">Extract Subtitles</button>
+        <button onclick="clearFile()">Clear</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <div id="results" style="display: none;">
+        <h3>Extraction Results</h3>
+        <div id="resultsList"></div>
+    </div>
+
+    <script type="module">
+        import { extractAllSubtitles, extractMetadata } from 'https://cdn.jsdelivr.net/npm/@opensubtitles/video-metadata-extractor@1.8.1/+esm';
+
+        let currentFile = null;
+
+        // Make functions globally available
+        window.extractSubtitles = extractSubtitles;
+        window.clearFile = clearFile;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileDetails = document.getElementById('fileDetails');
+        const extractBtn = document.getElementById('extractBtn');
+        const logDiv = document.getElementById('log');
+        const results = document.getElementById('results');
+        const resultsList = document.getElementById('resultsList');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // Drag and drop handlers
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+
+            log('📥 File dropped', 'info');
+            log(`Drop event type: ${e.type}`, 'info');
+            log(`DataTransfer available: ${!!e.dataTransfer}`, 'info');
+            log(`Files count: ${e.dataTransfer.files.length}`, 'info');
+
+            // Use dataTransfer.files directly (like the working demo)
+            const file = e.dataTransfer.files[0];
+
+            if (file) {
+                log(`✅ Got file from dataTransfer.files[0]: ${file.name}`, 'success');
+                handleFile(file);
+            } else {
+                log('❌ No file found in dataTransfer.files', 'error');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                log(`✅ Got file from input: ${file.name}`, 'success');
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file) {
+                log('❌ No file provided', 'error');
+                return;
+            }
+
+            log(`📄 File: ${file.name}`, 'info');
+            log(`📊 Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, 'info');
+            log(`📁 Type: ${file.type || 'unknown'}`, 'info');
+            log(`🔍 File instanceof File: ${file instanceof File}`, 'info');
+            log(`🔍 File instanceof Blob: ${file instanceof Blob}`, 'info');
+
+            currentFile = file;
+
+            fileDetails.innerHTML = `
+                <p><strong>Name:</strong> ${file.name}</p>
+                <p><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p><strong>Type:</strong> ${file.type || 'unknown'}</p>
+                <p><strong>Last Modified:</strong> ${new Date(file.lastModified).toLocaleString()}</p>
+            `;
+
+            fileInfo.style.display = 'block';
+            extractBtn.disabled = false;
+        }
+
+        async function extractSubtitles() {
+            if (!currentFile) {
+                log('❌ No file selected', 'error');
+                return;
+            }
+
+            extractBtn.disabled = true;
+            results.style.display = 'none';
+            resultsList.innerHTML = '';
+
+            try {
+                log('🚀 Starting subtitle extraction...', 'info');
+                log('📦 Calling extractAllSubtitles() from npm package...', 'info');
+
+                const startTime = performance.now();
+                const result = await extractAllSubtitles(currentFile);
+                const duration = (performance.now() - startTime) / 1000;
+
+                log(`✅ Extraction completed in ${duration.toFixed(2)}s`, 'success');
+                log(`📊 Result type: ${typeof result}`, 'info');
+                log(`📊 Result keys: ${Object.keys(result).join(', ')}`, 'info');
+
+                if (result && result.extractedFiles) {
+                    log(`✅ Found ${result.extractedFiles.length} subtitle files`, 'success');
+
+                    resultsList.innerHTML = '<h4>Extracted Subtitles:</h4>';
+                    result.extractedFiles.forEach((sub, idx) => {
+                        log(`  📝 ${idx + 1}. ${sub.filename} (${sub.language}) - ${sub.size} bytes`, 'success');
+
+                        const subDiv = document.createElement('div');
+                        subDiv.style.cssText = 'border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px;';
+                        subDiv.innerHTML = `
+                            <p><strong>File:</strong> ${sub.filename}</p>
+                            <p><strong>Language:</strong> ${sub.language}</p>
+                            <p><strong>Size:</strong> ${sub.size} bytes</p>
+                            <p><strong>Stream Index:</strong> ${sub.streamIndex}</p>
+                            <p><strong>Forced:</strong> ${sub.forced ? 'Yes' : 'No'}</p>
+                        `;
+                        resultsList.appendChild(subDiv);
+                    });
+
+                    results.style.display = 'block';
+                } else {
+                    log('⚠️ No subtitles found in file', 'info');
+                }
+
+            } catch (error) {
+                log(`❌ Extraction failed: ${error.message}`, 'error');
+                log(`❌ Error stack: ${error.stack}`, 'error');
+                console.error('Full error:', error);
+            } finally {
+                extractBtn.disabled = false;
+            }
+        }
+
+        function clearFile() {
+            currentFile = null;
+            fileInfo.style.display = 'none';
+            results.style.display = 'none';
+            fileInput.value = '';
+            log('🗑️ Cleared file', 'info');
+        }
+
+        // Log browser info
+        log('🌐 Browser: ' + navigator.userAgent, 'info');
+        log('📍 Testing in Chrome: ' + (/Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent)), 'info');
+        log('✅ Demo ready - drop an MKV file to test', 'success');
+    </script>
+</body>
+</html>
