@@ -60,9 +60,9 @@ export const SubtitleUploadOptions = ({
   // Translator validation function
   const validateTranslator = value => {
     if (!value) return ''; // Empty is allowed
-    const translatorRegex = /^[a-zA-Z\-_. ]{0,20}$/;
+    const translatorRegex = /^[\w\.\-\ ]{3,32}$/;
     if (!translatorRegex.test(value)) {
-      return 'Translator must be 0-20 characters, letters, hyphen, underscore, dot, space only';
+      return 'Translator must be 3-32 characters, letters, numbers, hyphen, underscore, dot, space only';
     }
     return '';
   };
@@ -599,7 +599,7 @@ export const SubtitleUploadOptions = ({
               type="text"
               value={localTranslatorValue || currentOptions.subtranslator || ''}
               onChange={e => handleFieldChange('subtranslator', e.target.value)}
-              placeholder="Who translated the subtitles (0-20 chars, a-Z -_. )"
+              placeholder="Who translated the subtitles (3-32 chars, a-Z 0-9 -_. )"
               className={`flex-1 px-2 py-1 text-xs rounded border ${translatorError ? 'border-red-500' : ''}`}
               style={{
                 backgroundColor: colors.cardBackground,

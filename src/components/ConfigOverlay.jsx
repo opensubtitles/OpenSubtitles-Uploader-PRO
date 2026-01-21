@@ -52,9 +52,9 @@ export const ConfigOverlay = ({
   // Translator validation function
   const validateTranslator = value => {
     if (!value) return ''; // Empty is allowed
-    const translatorRegex = /^[\w-]{3,20}$/;
+    const translatorRegex = /^[\w\.\-\ ]{3,32}$/;
     if (!translatorRegex.test(value)) {
-      return 'Translator must be 3-20 characters, letters, numbers, underscore, hyphen only';
+      return 'Translator must be 3-32 characters, letters, numbers, hyphen, underscore, dot, space only';
     }
     return '';
   };
@@ -579,13 +579,13 @@ export const ConfigOverlay = ({
                   Default Translator
                 </label>
                 <p className="text-xs" style={{ color: colors.textSecondary }}>
-                  Pre-fill translator field for all subtitles (3-20 characters, a-Z 0-9 _ -)
+                  Pre-fill translator field for all subtitles (3-32 characters, a-Z 0-9 _ - . space)
                 </p>
                 <input
                   type="text"
                   value={localConfig.defaultTranslator || ''}
                   onChange={e => handleChange('defaultTranslator', e.target.value)}
-                  placeholder="Enter default translator name (3-20 chars, a-Z 0-9 _ -)"
+                  placeholder="Enter default translator name (3-32 chars, a-Z 0-9 _ -. )"
                   className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 ${translatorError ? 'border-red-500' : ''}`}
                   style={{
                     backgroundColor: colors.background,
@@ -600,12 +600,12 @@ export const ConfigOverlay = ({
                     e.target.style.borderColor = translatorError ? '#ef4444' : colors.border;
                     e.target.style.boxShadow = 'none';
                   }}
-                  maxLength={20}
+                  maxLength={32}
                 />
                 {translatorError && <div className="text-xs text-red-500">{translatorError}</div>}
                 <div className="flex justify-between items-center">
                   <span className="text-xs" style={{ color: colors.textSecondary }}>
-                    {localConfig.defaultTranslator?.length || 0}/20 characters
+                    {localConfig.defaultTranslator?.length || 0}/32 characters
                   </span>
                   {localConfig.defaultTranslator && (
                     <button
