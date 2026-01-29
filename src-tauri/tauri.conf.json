@@ -1,12 +1,12 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.8.6",
+  "version": "1.8.8",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173"
+    "devUrl": "http://localhost:1420"
   },
   "app": {
     "windows": [

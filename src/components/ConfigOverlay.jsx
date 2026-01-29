@@ -9,6 +9,7 @@ export const ConfigOverlay = ({
   colors,
   isDark,
   combinedLanguages,
+  userInfo, // Add userInfo prop
 }) => {
   const [localConfig, setLocalConfig] = useState(config);
   const [activeTab, setActiveTab] = useState('general');
@@ -127,6 +128,7 @@ export const ConfigOverlay = ({
       uploadOptionsExpanded: true,
       extractMkvSubtitles: true,
       uploadMovieHashOnly: false,
+      uploadAsAnonymous: false,
     };
     setLocalConfig(defaultConfig);
     onConfigChange(defaultConfig);
@@ -777,6 +779,51 @@ export const ConfigOverlay = ({
                   <span>⚠️</span>
                   <span>Subtitles will not be uploaded, only movie hashes will be updated</span>
                 </div>
+              )}
+
+              {/* Upload as Anonymous Setting - ONLY for OS Legend rank */}
+              {userInfo?.UserRanks?.includes('os legend') && (
+                <>
+                  {/* Minimal separator line */}
+                  <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium" style={{ color: colors.text }}>
+                        Upload as Anonymous
+                      </label>
+                      <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                        Upload subtitles without associating them with your account (no token sent)
+                      </p>
+                    </div>
+                    <div className="ml-4">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={localConfig.uploadAsAnonymous === true}
+                          onChange={e => handleChange('uploadAsAnonymous', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div
+                          className="w-11 h-6 rounded-full peer transition-colors duration-200 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                          style={{
+                            backgroundColor:
+                              localConfig.uploadAsAnonymous === true ? colors.success : colors.border,
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  {localConfig.uploadAsAnonymous === true && (
+                    <div
+                      className="flex items-center gap-2 text-xs"
+                      style={{ color: colors.warning || colors.error }}
+                    >
+                      <span>🔒</span>
+                      <span>Anonymous upload enabled - uploads will not be credited to your account</span>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

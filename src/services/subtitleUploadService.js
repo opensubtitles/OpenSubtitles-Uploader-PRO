@@ -88,7 +88,25 @@ export class SubtitleUploadService {
           // Process each subtitle individually (using cd1 for each)
           const subtitleResults = [];
 
-          for (const subtitle of subtitles) {
+          // Sort subtitles: HI first, then non-HI for same movie/language
+          const sortedSubtitles = [...subtitles].sort((a, b) => {
+            const optionsA = uploadOptions?.[a.fullPath] || {};
+            const optionsB = uploadOptions?.[b.fullPath] || {};
+
+            const hiA = optionsA.hearingimpaired === '1' || optionsA.hearingimpaired === true;
+            const hiB = optionsB.hearingimpaired === '1' || optionsB.hearingimpaired === true;
+
+            // HI (true) comes before non-HI (false)
+            if (hiA && !hiB) return -1;
+            if (!hiA && hiB) return 1;
+
+            // If same HI status, maintain original order
+            return 0;
+          });
+
+          addDebugInfo(`📋 Sorted ${subtitles.length} subtitles: HI first, then non-HI`);
+
+          for (const subtitle of sortedSubtitles) {
             addDebugInfo(`📤 Attempting upload for subtitle: ${subtitle.name}`);
 
             const uploadData = await this.prepareUploadDataForSingleSubtitle({
@@ -104,7 +122,10 @@ export class SubtitleUploadService {
               getVideoMetadata,
             });
 
-            const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(uploadData);
+            const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(
+              uploadData,
+              config.uploadAsAnonymous === true
+            );
 
             addDebugInfo(`✅ TryUpload response received for ${subtitle.name}:`);
             addDebugInfo(JSON.stringify(tryUploadResponse, null, 2));
@@ -148,7 +169,10 @@ export class SubtitleUploadService {
                   getVideoMetadata,
                 });
 
-                actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
+                actualUploadResponse = await XmlRpcService.uploadSubtitles(
+                  actualUploadData,
+                  config.uploadAsAnonymous === true
+                );
 
                 addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
                 addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));
@@ -281,7 +305,27 @@ export class SubtitleUploadService {
       }
 
       // Process orphaned subtitles
-      for (const subtitle of enabledOrphanedSubtitles) {
+      // Sort orphaned subtitles: HI first, then non-HI
+      const sortedOrphanedSubtitles = [...enabledOrphanedSubtitles].sort((a, b) => {
+        const optionsA = uploadOptions?.[a.fullPath] || {};
+        const optionsB = uploadOptions?.[b.fullPath] || {};
+
+        const hiA = optionsA.hearingimpaired === '1' || optionsA.hearingimpaired === true;
+        const hiB = optionsB.hearingimpaired === '1' || optionsB.hearingimpaired === true;
+
+        // HI (true) comes before non-HI (false)
+        if (hiA && !hiB) return -1;
+        if (!hiA && hiB) return 1;
+
+        // If same HI status, maintain original order
+        return 0;
+      });
+
+      if (enabledOrphanedSubtitles.length > 0) {
+        addDebugInfo(`📋 Sorted ${enabledOrphanedSubtitles.length} orphaned subtitles: HI first, then non-HI`);
+      }
+
+      for (const subtitle of sortedOrphanedSubtitles) {
         addDebugInfo(`📝 Processing orphaned subtitle: ${subtitle.name}`);
 
         try {
@@ -312,7 +356,10 @@ export class SubtitleUploadService {
             orphanedSubtitlesFps,
           });
 
-          const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(uploadData);
+          const tryUploadResponse = await XmlRpcService.tryUploadSubtitles(
+            uploadData,
+            config.uploadAsAnonymous === true
+          );
 
           addDebugInfo(`✅ TryUpload response received for ${subtitle.name}:`);
           addDebugInfo(JSON.stringify(tryUploadResponse, null, 2));
@@ -355,7 +402,10 @@ export class SubtitleUploadService {
                 orphanedSubtitlesFps,
               });
 
-              actualUploadResponse = await XmlRpcService.uploadSubtitles(actualUploadData);
+              actualUploadResponse = await XmlRpcService.uploadSubtitles(
+                actualUploadData,
+                config.uploadAsAnonymous === true
+              );
 
               addDebugInfo(`✅ UploadSubtitles response received for ${subtitle.name}:`);
               addDebugInfo(JSON.stringify(actualUploadResponse, null, 2));

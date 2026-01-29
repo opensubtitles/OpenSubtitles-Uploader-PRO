@@ -17,6 +17,89 @@ import { logSensitiveData } from '../../utils/securityUtils.js';
 export class XmlRpcService {
   // Request deduplication - prevent multiple simultaneous identical requests
   static activeRequests = new Map();
+
+  // Store anonymous token for anonymous uploads
+  static anonymousToken = null;
+
+  /**
+   * Perform anonymous login to get a session token
+   * @returns {Promise<string>} - Anonymous session token
+   */
+  static async anonymousLogin() {
+    // If we already have an anonymous token, return it
+    if (this.anonymousToken) {
+      console.log('🔒 Using existing anonymous token');
+      return this.anonymousToken;
+    }
+
+    try {
+      console.log('🔒 Performing anonymous login...');
+
+      const xmlRpcBody = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>LogIn</methodName>
+  <params>
+    <param><value><string></string></value></param>
+    <param><value><string></string></value></param>
+    <param><value><string>en</string></value></param>
+    <param><value><string>OpenSubtitles Uploader PRO</string></value></param>
+  </params>
+</methodCall>`;
+
+      const response = await delayedFetch(API_ENDPOINTS.OPENSUBTITLES_XMLRPC, {
+        method: 'POST',
+        headers: getApiHeaders('text/xml'),
+        body: xmlRpcBody,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Anonymous login failed: ${response.status} ${response.statusText}`);
+      }
+
+      const xmlText = await response.text();
+      const xmlDoc = this.parseXmlRpcResponse(xmlText);
+
+      // Extract token from response - use the existing extractStructData method
+      const responseStruct = xmlDoc.querySelector('methodResponse param value struct');
+      if (!responseStruct) {
+        console.error('❌ Invalid anonymous login response structure');
+        console.error('Raw XML:', xmlText);
+        throw new Error('Invalid anonymous login response structure');
+      }
+
+      const result = this.extractStructData(responseStruct);
+
+      // Get token from result
+      const token = result.token;
+
+      if (!token) {
+        console.error('❌ Anonymous login response missing token');
+        console.error('Response data:', result);
+        throw new Error('Anonymous login response missing token');
+      }
+
+      // Store the anonymous token for reuse
+      this.anonymousToken = token;
+      console.log('✅ Anonymous login successful, token received');
+
+      return token;
+    } catch (error) {
+      console.error('❌ Anonymous login failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear stored anonymous token
+   * Call this when switching from anonymous to authenticated mode
+   */
+  static clearAnonymousToken() {
+    if (this.anonymousToken) {
+      console.log('🔒 Clearing anonymous token');
+      this.anonymousToken = null;
+    }
+  }
+
   /**
    * Get authentication token using unified session detection
    */
@@ -739,12 +822,20 @@ export class XmlRpcService {
   /**
    * Try to upload subtitles using XML-RPC API with PHPSESSID token
    * @param {Object} uploadData - Upload data structure
+   * @param {boolean} uploadAsAnonymous - Upload with anonymous token (default: false)
    * @returns {Promise<Object>} - Upload response
    */
-  static async tryUploadSubtitles(uploadData) {
+  static async tryUploadSubtitles(uploadData, uploadAsAnonymous = false) {
     try {
       console.log('🚀 TryUploadSubtitles: Starting upload attempt...');
-      const token = this.getAuthToken();
+      let token;
+
+      if (uploadAsAnonymous) {
+        console.log('🔒 TryUploadSubtitles: Anonymous upload enabled - getting anonymous token');
+        token = await this.anonymousLogin();
+      } else {
+        token = this.getAuthToken();
+      }
 
       console.log(
         `🚀 TryUploadSubtitles: Retrieved token - Length: ${token.length}, Value: ${token ? token.substring(0, 8) + '...' : 'EMPTY'}`
@@ -802,6 +893,15 @@ export class XmlRpcService {
       const responseStruct = xmlDoc.querySelector('methodResponse param value struct');
       if (responseStruct) {
         const result = this.extractStructData(responseStruct);
+
+        // Check for anonymous upload 401 error
+        if (uploadAsAnonymous && result.status === '401 Unauthorized') {
+          console.error('❌ TryUploadSubtitles: Anonymous upload not supported by API');
+          throw new Error(
+            'Anonymous uploads are not supported by the OpenSubtitles API. Please disable "Upload as Anonymous" in settings and try again.'
+          );
+        }
+
         return result;
       }
 
@@ -931,11 +1031,19 @@ export class XmlRpcService {
   /**
    * Upload subtitles using XML-RPC API (for new uploads when alreadyindb=0)
    * @param {Object} uploadData - Upload data structure with baseinfo and cd1
+   * @param {boolean} uploadAsAnonymous - Upload with anonymous token (default: false)
    * @returns {Promise<Object>} - Upload response
    */
-  static async uploadSubtitles(uploadData) {
+  static async uploadSubtitles(uploadData, uploadAsAnonymous = false) {
     try {
-      const token = this.getAuthToken();
+      let token;
+
+      if (uploadAsAnonymous) {
+        console.log('🔒 UploadSubtitles: Anonymous upload enabled - getting anonymous token');
+        token = await this.anonymousLogin();
+      } else {
+        token = this.getAuthToken();
+      }
 
       // Convert upload data to XML-RPC format
       const xmlRpcBody = this.buildUploadSubtitlesXml(token, uploadData);
@@ -969,6 +1077,15 @@ export class XmlRpcService {
       const responseStruct = xmlDoc.querySelector('methodResponse param value struct');
       if (responseStruct) {
         const result = this.extractStructData(responseStruct);
+
+        // Check for anonymous upload 401 error
+        if (uploadAsAnonymous && result.status === '401 Unauthorized') {
+          console.error('❌ UploadSubtitles: Anonymous upload not supported by API');
+          throw new Error(
+            'Anonymous uploads are not supported by the OpenSubtitles API. Please disable "Upload as Anonymous" in settings and try again.'
+          );
+        }
+
         return result;
       }
 
