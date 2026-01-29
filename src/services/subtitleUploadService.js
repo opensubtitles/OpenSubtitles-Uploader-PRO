@@ -88,7 +88,8 @@ export class SubtitleUploadService {
           // Process each subtitle individually (using cd1 for each)
           const subtitleResults = [];
 
-          // Sort subtitles: HI first, then non-HI for same movie/language
+          // Sort subtitles: HI first, then non-HI FOR THIS VIDEO ONLY
+          // This ensures HI and non-HI for the same movie appear together
           const sortedSubtitles = [...subtitles].sort((a, b) => {
             const optionsA = uploadOptions?.[a.fullPath] || {};
             const optionsB = uploadOptions?.[b.fullPath] || {};
@@ -96,7 +97,7 @@ export class SubtitleUploadService {
             const hiA = optionsA.hearingimpaired === '1' || optionsA.hearingimpaired === true;
             const hiB = optionsB.hearingimpaired === '1' || optionsB.hearingimpaired === true;
 
-            // HI (true) comes before non-HI (false)
+            // HI (true) comes before non-HI (false) for THIS VIDEO
             if (hiA && !hiB) return -1;
             if (!hiA && hiB) return 1;
 
@@ -104,7 +105,7 @@ export class SubtitleUploadService {
             return 0;
           });
 
-          addDebugInfo(`📋 Sorted ${subtitles.length} subtitles: HI first, then non-HI`);
+          addDebugInfo(`📋 Sorted ${subtitles.length} subtitles for ${video.name}: HI first, then non-HI`);
 
           for (const subtitle of sortedSubtitles) {
             addDebugInfo(`📤 Attempting upload for subtitle: ${subtitle.name}`);
