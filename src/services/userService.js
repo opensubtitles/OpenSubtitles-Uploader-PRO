@@ -227,7 +227,6 @@ export class UserService {
       'trusted',
       'subtranslator',
       'os legend',
-      'vip lifetime member',
     ];
 
     // Explicitly forbidden ranks

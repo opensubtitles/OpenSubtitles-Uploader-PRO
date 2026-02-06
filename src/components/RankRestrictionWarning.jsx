@@ -68,7 +68,7 @@ const RankRestrictionWarning = () => {
                   <span className="font-medium">Required Ranks:</span>
                   <div className="mt-1 text-xs">
                     super admin, translator, trusted member, administrator, moderator, gold member,
-                    platinum member, trusted, subtranslator, os legend, vip lifetime member
+                    platinum member, trusted, subtranslator, os legend
                   </div>
                 </div>
               )}
