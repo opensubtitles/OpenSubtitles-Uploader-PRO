@@ -1265,11 +1265,13 @@ export class SubtitleUploadService {
       /_hi\./i, // _hi. pattern
       /_sdh\./i, // _sdh. pattern
       /_psdh\./i, // _psdh. pattern
-      /[-.]hi[-.]?/i, // -hi- or .hi- patterns
-      /[-.]sdh[-.]?/i, // -sdh- or .sdh- patterns
-      /[-.]psdh[-.]?/i, // -psdh- or .psdh- patterns
+      /[-.]hi(?=[-.]|$)/i, // .hi or -hi only when followed by separator or end (NOT .high, .hindi)
+      /[-.]sdh(?=[-.]|$)/i, // .sdh or -sdh only when followed by separator or end
+      /[-.]psdh(?=[-.]|$)/i, // .psdh or -psdh only when followed by separator or end
       /hi[_-]/i, // hi_ or hi- patterns
       /[_-]hi$/i, // ending with _hi or -hi
+      /\bhearing[._-]?impaired\b/i, // hearing.impaired / hearing-impaired / hearingimpaired
+      /\bhearingimpaired\b/i,
     ];
 
     return filenamePatterns.some(pattern => pattern.test(lowerFilename));
