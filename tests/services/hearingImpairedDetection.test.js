@@ -106,3 +106,51 @@ describe('Hearing Impaired detection — regression: forum.opensubtitles.org/p=5
     );
   });
 });
+
+describe('Hearing Impaired detection — regression: forum-reported Hi-in-title false positives', () => {
+  // User-reported 2026-06: bare `\bhi\b` and `.hi.` in mid-name release titles
+  // were misclassifying ~500 episodes and ~100 movies as HI. Titles below all
+  // contain `Hi` as part of the actual title, NOT as a hearing-impaired marker.
+  const titleHiCases = [
+    'The.Hi-Lo.Country.1998.1080p.USA.BluRay.AVC.DTS-HD.MA.5.1-rmHD.mkv',
+    'The.King.of.Queens.S03E13.Hi.Def.Jam.1080p.NF.WEB-DL.AAC2.0.H.264-POWER.mkv',
+    'For.All.Mankind.S01E07.Hi.Bob.1080p.WEB-DL.6CH.x265.HEVC-PSA.mkv',
+    'The.Hi-Lo.Country.1998.1080p.USA.BluRay.AVC.DTS-HD.MA.5.1-rmHD.srt',
+    'For.All.Mankind.S01E07.Hi.Bob.1080p.WEB-DL.6CH.x265.HEVC-PSA.srt',
+    'Hi.School.Love.On.E01.srt',
+    'Hi-Fi.Lounge.S01E01.srt',
+  ];
+  for (const name of titleHiCases) {
+    test(`does NOT detect HI when "Hi" is part of the title: "${name}"`, () => {
+      assert.strictEqual(
+        fromFilename(name),
+        false,
+        `false positive — "${name}" has Hi in title, not as HI marker`
+      );
+      assert.strictEqual(
+        detect(name),
+        '0',
+        `detectFeaturesFromPath false positive — "${name}" must not auto-set HI`
+      );
+      assert.strictEqual(
+        fromString(name),
+        false,
+        `per-string scanner false positive — "${name}" has Hi in title, not as HI marker`
+      );
+    });
+  }
+
+  // Real HI markers near the extension must still fire — including for the same
+  // episodes that previously misfired purely on title text.
+  const stillDetected = [
+    'For.All.Mankind.S01E07.Hi.Bob.1080p.WEB-DL.HEVC-PSA.eng.hi.srt',
+    'The.Hi-Lo.Country.1998.eng.sdh.srt',
+    'The.King.of.Queens.S03E13.Hi.Def.Jam.hi.srt',
+  ];
+  for (const name of stillDetected) {
+    test(`still detects HI when marker is in the language-code slot: "${name}"`, () => {
+      assert.strictEqual(fromFilename(name), true);
+      assert.strictEqual(detect(name), '1');
+    });
+  }
+});

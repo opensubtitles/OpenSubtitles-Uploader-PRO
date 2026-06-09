@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-06-07T20:29:46.918Z",
+  "generated_at": "2026-06-09T23:54:01.510Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.10",
+      "name": "v1.8.10",
+      "published_at": "2026-06-07T20:48:40Z",
+      "body": "🔧 FIX: Bump guessit-js 1.0.1 → ^4.0.0 (v1.0.1 unpublished from npm registry)\n\nCI builds for v1.8.10 failed with:\n  npm error 404 Not Found - GET https://registry.npmjs.org/guessit-js/-/guessit-js-1.0.1.tgz\n\nguessit-js@1.0.1 has been unpublished from npm. The package now starts at 3.8.1\nwith 4.0.0 as latest (same publisher: opensubtitles). Earlier builds worked off\nGitHub Actions' cache; fresh `npm ci` can no longer fetch v1.0.1.\n\nAPI surface in src/services/offlineGuessItService.js (`import { guessit }`,\n`guessit(filename)`, `guessit(filename, options)`) is unchanged between 1.x and\n4.x. Verified end-to-end locally:\n  - npm test → 197/197 pass\n  - OfflineGuessItService.guessFromFilename('The.Man.In.The.High.Castle.S01E01.1080p.mkv')\n    → {title: 'The Man In The High Castle', season: 1, episode: 1}\n  - npm run build → clean vite build",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.10",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/latest.json",
+          "size": 1988
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.10_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_amd64.AppImage",
+          "size": 100881600
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.10_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_amd64.deb",
+          "size": 15532978
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.10_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_universal.dmg",
+          "size": 30660455
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.10_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_x64-setup.exe",
+          "size": 13133778
+        }
+      ]
+    },
     {
       "version": "v1.8.9",
       "name": "v1.8.9",
@@ -530,36 +565,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.7.3_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.3/OpenSubtitles.Uploader.PRO_1.7.3_x64-setup.exe",
           "size": 4721132
-        }
-      ]
-    },
-    {
-      "version": "v1.7.1",
-      "name": "v1.7.1 - Fixed GitHub Actions Workflow",
-      "published_at": "2025-08-11T23:22:56Z",
-      "body": "## Version 1.7.1 - Fixed GitHub Actions Workflow\n\nThis release removes duplicate builds by making the workflow manual-only.\n\n### Key Changes:\n- 🔧 Removed automatic triggers from build workflow \n- 📝 Updated documentation with correct workflow commands\n- 🎯 Manual-only workflow prevents duplicate CI builds\n- ✅ No more automatic builds on push/tag\n\n### Downloads:\n- **macOS**: `OpenSubtitles.Uploader.PRO_1.7.1_universal.dmg` (Universal Binary)\n- **Windows**: `OpenSubtitles.Uploader.PRO_1.7.1_x64-setup.exe` (64-bit)\n- **Linux**: `OpenSubtitles.Uploader.PRO_1.7.1_amd64.AppImage` (64-bit)\n\n### Auto-updater manifest:\n- `latest.json` - For automatic updates\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.7.1",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.1/latest.json",
-          "size": 826
-        },
-        {
-          "name": "latest_final.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.1/latest_final.json",
-          "size": 826
-        },
-        {
-          "name": "latest_fixed.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.1/latest_fixed.json",
-          "size": 842
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.1_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.1/OpenSubtitles.Uploader.PRO_1.7.1_universal.dmg",
-          "size": 14098405
         }
       ]
     }

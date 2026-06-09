@@ -1196,7 +1196,6 @@ export class SubtitleUploadService {
 
     const lowerStr = str.toLowerCase();
 
-    // First check for negative patterns that explicitly indicate NOT hearing impaired
     const negativePatterns = [
       'nonhi',
       'non-hi',
@@ -1216,10 +1215,12 @@ export class SubtitleUploadService {
       return false;
     }
 
-    // FIXED: Use word boundaries like UI to prevent false positives (Chicago, Yudhishir, etc.)
-    // This prevents substring matches in names like "Chicago" -> "hi"
+    // Bare `hi` is only treated as an HI marker when the whole string IS "hi"
+    // (e.g. a directory literally named `HI/`). Anywhere else it is too ambiguous —
+    // release names contain `Hi-Lo`, `Hi.Def`, `Hi.Bob`, `Hi-Fi`, etc.
+    // Filename-level positional matching is done in checkHearingImpairedFromFilename.
     const hiRegex =
-      /\bsdh\b|\bpsdh\b|\bhi\b|hi[_-]|[_-]hi|\bhearing[._-]?impaired\b|\bhearingimpaired\b/i;
+      /\bsdh\b|\bpsdh\b|\bhearing[._-]?impaired\b|\bhearingimpaired\b|^hi$/i;
     return hiRegex.test(lowerStr);
   }
 
@@ -1233,7 +1234,6 @@ export class SubtitleUploadService {
 
     const lowerFilename = filename.toLowerCase();
 
-    // First check for negative patterns that explicitly indicate NOT hearing impaired
     const negativePatterns = [
       'nonhi',
       'non-hi',
@@ -1253,28 +1253,20 @@ export class SubtitleUploadService {
       return false;
     }
 
-    // FIXED: More specific filename patterns using word boundaries to prevent false positives
-    // This prevents matches in names like "Chicago.srt" -> "hi"
-    const filenamePatterns = [
-      /\.hi\./i, // .hi. in filename
-      /\.sdh\./i, // .sdh. in filename
-      /\.psdh\./i, // .psdh. in filename
-      /\bhi\b/i, // hi as separate word
-      /\bsdh\b/i, // sdh as separate word
-      /\bpsdh\b/i, // psdh as separate word
-      /_hi\./i, // _hi. pattern
-      /_sdh\./i, // _sdh. pattern
-      /_psdh\./i, // _psdh. pattern
-      /[-.]hi(?=[-.]|$)/i, // .hi or -hi only when followed by separator or end (NOT .high, .hindi)
-      /[-.]sdh(?=[-.]|$)/i, // .sdh or -sdh only when followed by separator or end
-      /[-.]psdh(?=[-.]|$)/i, // .psdh or -psdh only when followed by separator or end
-      /hi[_-]/i, // hi_ or hi- patterns
-      /[_-]hi$/i, // ending with _hi or -hi
-      /\bhearing[._-]?impaired\b/i, // hearing.impaired / hearing-impaired / hearingimpaired
-      /\bhearingimpaired\b/i,
-    ];
+    // Multi-word marker matches anywhere (rare in titles, safe).
+    if (/\bhearing[._-]?impaired\b/i.test(lowerFilename)) return true;
 
-    return filenamePatterns.some(pattern => pattern.test(lowerFilename));
+    // Positional check: HI markers belong near the end of the basename, in the
+    // slot normally used for language codes / feature flags. `.Hi.` buried mid-name
+    // in a release title (Hi-Lo, Hi.Def.Jam, Hi.Bob) must NOT fire.
+    const SUBTITLE_EXT = /\.(srt|sub|ssa|ass|vtt|smi|txt|mpl|tmp|xss|idx|sup)$/i;
+    const basename = lowerFilename.replace(SUBTITLE_EXT, '');
+    const tokens = basename.split(/[.\-_]+/).filter(Boolean);
+
+    const HI_TOKENS = new Set(['hi', 'sdh', 'psdh', 'hearingimpaired']);
+    // Look in the last 3 tokens only — the language-code / feature-flag slot.
+    const tail = tokens.slice(-3);
+    return tail.some(t => HI_TOKENS.has(t));
   }
 
   /**
