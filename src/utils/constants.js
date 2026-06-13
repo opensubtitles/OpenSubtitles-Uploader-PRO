@@ -1,5 +1,5 @@
 // Application version - updated manually to match package.json
-export const APP_VERSION = '1.8.11';
+export const APP_VERSION = '1.8.12';
 
 // API Configuration - embedded keys take priority over environment variables
 // Global __EMBEDDED_OPENSUBTITLES_API_KEY__ is defined by Vite at build time
@@ -61,6 +61,8 @@ export const CACHE_KEYS = {
   FEATURES_CACHE_EXPIRY: 'opensubtitles_features_cache_expiry',
   XMLRPC_CHECKSUB: 'opensubtitles_xmlrpc_checksub_cache',
   XMLRPC_CHECKSUB_EXPIRY: 'opensubtitles_xmlrpc_checksub_cache_expiry',
+  XMLRPC_SEARCHSUB: 'opensubtitles_xmlrpc_searchsub_cache',
+  XMLRPC_SEARCHSUB_EXPIRY: 'opensubtitles_xmlrpc_searchsub_cache_expiry',
   DEBUG_MODE: 'opensubtitles_debug_mode',
 };
 
@@ -232,6 +234,7 @@ export const DEFAULT_SETTINGS = {
   LANGUAGE_DETECTION_CACHE_DURATION: 259200, // 72 hours in seconds (3 days)
   FEATURES_CACHE_DURATION: 259200, // 72 hours in seconds (3 days)
   CHECKSUB_CACHE_DURATION: 86400, // 24 hours in seconds (1 day) - shorter for hash checks
+  SEARCHSUB_CACHE_DURATION: 86400, // 24 hours - per-IMDB+language count from SearchSubtitles
   LANGUAGE_DETECTION_CHUNK_SIZE: 5120, // 5KB
   MOVIE_HASH_CHUNK_SIZE: 65536, // 64KB
   DEBUG_LOG_LIMIT: 1000,

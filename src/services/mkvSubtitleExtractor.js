@@ -9,6 +9,48 @@ import {
 import JSZip from 'jszip';
 
 /**
+ * Browser FileReader is bounded by ArrayBuffer allocation (~2GB on most engines)
+ * even though @opensubtitles/video-metadata-extractor advertises 88GB support —
+ * its `createCompleteFileDataInChunks` reassembles all chunks into a single Blob
+ * which still needs to be read into a single ArrayBuffer by @ffmpeg/util's
+ * fetchFile() -> FileReader.readAsArrayBuffer(). Above ~2GB the OS-level
+ * FileReader fires onerror with no DOM error code, surfacing as the cryptic
+ * "File could not be read! Code=-1".
+ *
+ * Threshold here is a soft warning trigger — we still attempt extraction below
+ * the ceiling because exact limits vary by browser/OS.
+ *
+ * TODO(native-extraction): the durable fix is a Tauri sidecar that spawns
+ * mkvextract or ffmpeg natively for files above the browser ceiling. Tauri
+ * already has tauri-plugin-shell + filesystem access; bundling a static
+ * mkvextract binary or shelling out to system ffmpeg would bypass the WASM
+ * memory cap entirely. Bigger lift (binary bundling, signing per-platform).
+ */
+const BROWSER_FILEREADER_SOFT_LIMIT = 2 * 1024 * 1024 * 1024; // 2 GB
+
+/**
+ * Convert the cryptic FFmpeg/FileReader error chain into something a user can
+ * actually act on. Detects the "File could not be read! Code=-1" pattern (and
+ * adjacent "Failed to extract metadata" wrap) and rewrites it with a real
+ * explanation + workaround. Leaves unrelated errors alone.
+ */
+const humanizeExtractorError = (error, file) => {
+  const message = (error && (error.message || String(error))) || 'unknown error';
+  const looksLikeBrowserMemoryFailure =
+    /file could not be read.*code=-1/i.test(message) ||
+    /failed to extract metadata.*file could not be read/i.test(message);
+  if (!looksLikeBrowserMemoryFailure) return message;
+
+  const sizeGb = file?.size ? (file.size / 1024 / 1024 / 1024).toFixed(2) : '?';
+  return (
+    `Browser cannot read files this large (${sizeGb} GB). The browser's ` +
+    `FileReader hits a ~2 GB memory cap regardless of the extractor's chunking. ` +
+    `Workaround: extract the subtitle tracks locally with mkvextract or ffmpeg, ` +
+    `then drop the .srt files onto the uploader directly.`
+  );
+};
+
+/**
  * Service for extracting subtitles from MKV files using the OpenSubtitles video metadata extractor
  * Now using the official @opensubtitles/video-metadata-extractor package v1.8.1+
  *
@@ -17,6 +59,9 @@ import JSZip from 'jszip';
  * - Improved performance with 10MB chunks (reduced from 50MB)
  * - Better memory management and resource cleanup
  * - Enhanced support for large files up to 88GB
+ *
+ * Real-world ceiling on browser is the FileReader limit — see
+ * BROWSER_FILEREADER_SOFT_LIMIT above for the why.
  */
 export class MkvSubtitleExtractor {
   constructor() {
@@ -110,6 +155,15 @@ export class MkvSubtitleExtractor {
     if (file.size > 1000 * 1024 * 1024) {
       console.log(`ℹ️ Large file - using optimized 10MB chunks for better performance`);
     }
+    if (file.size > BROWSER_FILEREADER_SOFT_LIMIT) {
+      // Browser FileReader will likely fail on files above ~2GB regardless of
+      // the package's chunking story. We still attempt but pre-warn so the
+      // eventual humanized error makes sense in the debug log.
+      console.warn(
+        `⚠️ File exceeds browser FileReader soft limit (~2 GB). Extraction may fail with ` +
+          `"File could not be read! Code=-1". File: ${file.name} (${fileSizeMB} MB)`
+      );
+    }
 
     // Store file for later extraction
     this.currentFile = file;
@@ -182,7 +236,9 @@ export class MkvSubtitleExtractor {
             console.log(`  - Browser: ${navigator.userAgent.split(' ')[0]}`);
             console.log(`  - Available memory: ${navigator.deviceMemory || 'unknown'} GB`);
             console.log(`💡 This file may be too large or corrupted for browser-based extraction`);
-            throw new Error(`Subtitle detection failed: ${fallbackError.message}`);
+            throw new Error(
+              `Subtitle detection failed: ${humanizeExtractorError(fallbackError, file)}`
+            );
           }
         }
       } else {
@@ -230,7 +286,7 @@ export class MkvSubtitleExtractor {
       }));
     } catch (error) {
       console.error('❌ Video subtitle detection failed:', error);
-      throw new Error(`Subtitle detection failed: ${error.message}`);
+      throw new Error(`Subtitle detection failed: ${humanizeExtractorError(error, file)}`);
     }
   }
 
@@ -661,7 +717,9 @@ export class MkvSubtitleExtractor {
       };
     } catch (error) {
       console.error('❌ Legacy extractAllSubtitles failed:', error);
-      throw new Error(`Legacy extract all subtitles failed: ${error.message}`);
+      throw new Error(
+        `Legacy extract all subtitles failed: ${humanizeExtractorError(error, file)}`
+      );
     }
   }
 

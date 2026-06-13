@@ -103,6 +103,7 @@ export const MatchedPairs = ({
   fetchFeaturesByImdbId, // New prop for fetching features by IMDb ID
   uploadResults, // New prop for upload results
   hashCheckResults, // New prop for CheckSubHash results
+  osDuplicateCounts = {}, // New prop: { [subtitle.fullPath]: { status, count, searchUrl } }
   uploadOptions, // New prop for upload options
   onUpdateUploadOptions, // New prop for updating upload options
   config, // New prop for configuration settings
@@ -338,7 +339,8 @@ export const MatchedPairs = ({
                             📝 No Subtitles
                           </span>
                         )}
-                        {pair.video.mkvExtractionStatus === 'error' && (
+                        {(pair.video.mkvExtractionStatus === 'error' ||
+                          pair.video.mkvExtractionStatus === 'extraction_failed') && (
                           <span
                             className="px-2 py-1 text-xs rounded font-medium"
                             style={{
@@ -347,7 +349,7 @@ export const MatchedPairs = ({
                             }}
                             title={`MKV extraction failed: ${pair.video.mkvExtractionError || 'Unknown error'}`}
                           >
-                            ❌ Error
+                            ❌ Extraction failed
                           </span>
                         )}
                       </span>
@@ -716,8 +718,6 @@ export const MatchedPairs = ({
                                   : 'Subtitle File'}
                               </span>
 
-                              {/* Language-specific subtitle count - TEMPORARILY DISABLED */}
-                              {null}
                             </div>
 
                             {/* Preview Button - Fourth position */}
@@ -736,6 +736,93 @@ export const MatchedPairs = ({
                             >
                               Preview
                             </button>
+
+                            {/* OS Duplicate Count - Right-side badge:
+                                "N on OS" for this movie + language */}
+                            {(() => {
+                              const dup = osDuplicateCounts?.[subtitle.fullPath];
+                              if (!dup) return null;
+
+                              if (dup.status === 'loading') {
+                                return (
+                                  <span
+                                    className="ml-auto text-xs px-2 py-1 rounded flex-shrink-0"
+                                    style={{
+                                      color: themeColors.textMuted,
+                                      backgroundColor: isDark ? '#2a2a2a' : '#f3f4f6',
+                                    }}
+                                    title="Checking OpenSubtitles for existing subtitles in this language..."
+                                  >
+                                    ⏳ checking OS…
+                                  </span>
+                                );
+                              }
+
+                              if (dup.status === 'error') {
+                                return (
+                                  <span
+                                    className="ml-auto text-xs px-2 py-1 rounded flex-shrink-0"
+                                    style={{
+                                      color: themeColors.textMuted,
+                                      backgroundColor: isDark ? '#2a2a2a' : '#f3f4f6',
+                                    }}
+                                    title={`OS check failed: ${dup.error || 'unknown error'}`}
+                                  >
+                                    ⚠️ OS check failed
+                                  </span>
+                                );
+                              }
+
+                              if (dup.status !== 'done') return null;
+
+                              const count = dup.count ?? 0;
+                              const isZero = count === 0;
+                              const label = isZero
+                                ? '🟢 0 on OS — new language for this title'
+                                : `🟡 ${count} on OS`;
+                              const tooltip = isZero
+                                ? 'OpenSubtitles has no subtitles for this movie in this language yet — your upload will be the first.'
+                                : `OpenSubtitles already has ${count} subtitle${count === 1 ? '' : 's'} for this movie in this language. Click to compare.`;
+
+                              const badgeStyle = {
+                                color: isZero
+                                  ? themeColors.success || '#10b981'
+                                  : isDark
+                                    ? '#fcd34d'
+                                    : '#92400e',
+                                backgroundColor: isZero
+                                  ? isDark
+                                    ? '#064e3b'
+                                    : '#ecfdf5'
+                                  : isDark
+                                    ? '#3f2d0a'
+                                    : '#fef3c7',
+                                border: `1px solid ${isZero ? (isDark ? '#065f46' : '#a7f3d0') : isDark ? '#78350f' : '#fde68a'}`,
+                              };
+
+                              return dup.searchUrl ? (
+                                <a
+                                  href={dup.searchUrl}
+                                  onClick={e => {
+                                    e.preventDefault();
+                                    openExternal(dup.searchUrl);
+                                  }}
+                                  className="ml-auto text-xs px-2 py-1 rounded flex-shrink-0 underline-offset-2 hover:underline"
+                                  style={badgeStyle}
+                                  title={tooltip}
+                                >
+                                  {label}
+                                </a>
+                              ) : (
+                                <span
+                                  className="ml-auto text-xs px-2 py-1 rounded flex-shrink-0"
+                                  style={badgeStyle}
+                                  title={tooltip}
+                                >
+                                  {label}
+                                </span>
+                              );
+                            })()}
                           </div>
                         )}
 

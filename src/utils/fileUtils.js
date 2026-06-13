@@ -36,6 +36,29 @@ export const getImdbUrl = imdbId => {
 };
 
 /**
+ * Generate OpenSubtitles search URL for an IMDB ID (all languages).
+ * @param {string|number} imdbId - Raw IMDB ID (with or without 'tt' prefix)
+ * @returns {string} - OS search URL filtered by imdbid only
+ */
+export const getOsImdbSearchUrl = imdbId => {
+  if (!imdbId) return '';
+  const clean = String(imdbId).toLowerCase().replace(/^tt/, '').replace(/^0+/, '') || '0';
+  return `https://www.opensubtitles.org/en/search/imdbid-${clean}`;
+};
+
+/**
+ * Generate OpenSubtitles search URL for an IMDB ID restricted to a language.
+ * @param {string|number} imdbId - Raw IMDB ID
+ * @param {string} sublanguageid - 3-letter language code (e.g. 'eng')
+ * @returns {string} - OS search URL filtered by imdbid + sublanguageid
+ */
+export const getOsImdbLanguageSearchUrl = (imdbId, sublanguageid) => {
+  if (!imdbId || !sublanguageid) return '';
+  const clean = String(imdbId).toLowerCase().replace(/^tt/, '').replace(/^0+/, '') || '0';
+  return `https://www.opensubtitles.org/en/search/sublanguageid-${sublanguageid}/imdbid-${clean}`;
+};
+
+/**
  * Check if a file is a video file based on extension
  */
 export const isVideoFile = fileOrName => {

@@ -78,6 +78,7 @@ import { useMovieGuess } from '../hooks/useMovieGuess.js';
 import { useGuessIt } from '../hooks/useGuessIt.js';
 import { useUserSession } from '../hooks/useUserSession.js';
 import { useCheckSubHash } from '../hooks/useCheckSubHash.js';
+import { useAutoOsDuplicateCount } from '../hooks/useOsDuplicateCount.js';
 import { useVideoMetadata } from '../hooks/useVideoMetadata.js';
 import { useWasmInitialization } from '../hooks/useWasmInitialization.js';
 import { useAppUpdate } from '../hooks/useAppUpdate.js';
@@ -409,6 +410,18 @@ function SubtitleUploaderInner() {
     getHashCheckSummary,
     clearHashCheckResults,
   } = useCheckSubHash(addDebugInfo);
+
+  // OS duplicate count per (imdbid, sublanguageid) — surfaced as "N on OS" badge
+  const {
+    osDuplicateCounts,
+    clearOsDuplicateCounts,
+  } = useAutoOsDuplicateCount({
+    pairedFiles,
+    movieGuesses,
+    getSubtitleLanguage,
+    combinedLanguages,
+    addDebugInfo,
+  });
 
   // Mock CheckSubHash functions to prevent errors (commented out)
   // const hashCheckResults = {};
@@ -1524,6 +1537,7 @@ function SubtitleUploaderInner() {
       clearAllLanguageState(); // Language detection processing state
       clearSubtitleLanguages(); // Subtitle language selections
       clearHashCheckResults(); // Clear CheckSubHash results
+      clearOsDuplicateCounts(); // Clear OS duplicate counts (per imdb+lang)
       clearAllVideoMetadata(); // Clear video metadata
 
       // Reset all UI state when new files are dropped
@@ -2169,6 +2183,7 @@ function SubtitleUploaderInner() {
     clearAllLanguageState(); // Language detection processing state
     clearSubtitleLanguages(); // Subtitle language selections
     clearHashCheckResults(); // Clear CheckSubHash results
+    clearOsDuplicateCounts(); // Clear OS duplicate counts (per imdb+lang)
     clearAllVideoMetadata(); // Clear video metadata
 
     // Clear files and UI state
@@ -2698,6 +2713,7 @@ function SubtitleUploaderInner() {
               fetchFeaturesByImdbId={fetchFeaturesByImdbId}
               uploadResults={uploadResults}
               hashCheckResults={hashCheckResults}
+              osDuplicateCounts={osDuplicateCounts}
               uploadOptions={uploadOptions}
               onUpdateUploadOptions={handleUploadOptionsUpdate}
               config={config}

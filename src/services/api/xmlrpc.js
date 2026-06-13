@@ -820,6 +820,143 @@ export class XmlRpcService {
   }
 
   /**
+   * Generate cache key for SearchSubtitles by (imdbid, sublanguageid)
+   */
+  static generateSearchSubtitlesCacheKey(imdbid, sublanguageid) {
+    const raw = `${imdbid}|${sublanguageid}`;
+    return `${CACHE_KEYS.XMLRPC_SEARCHSUB}_${btoa(raw).replace(/[^a-zA-Z0-9]/g, '_')}`;
+  }
+
+  static loadSearchSubtitlesFromCache(imdbid, sublanguageid) {
+    return CacheService.loadFromCache(
+      this.generateSearchSubtitlesCacheKey(imdbid, sublanguageid)
+    );
+  }
+
+  static saveSearchSubtitlesToCache(imdbid, sublanguageid, data) {
+    return CacheService.saveToCacheWithDuration(
+      this.generateSearchSubtitlesCacheKey(imdbid, sublanguageid),
+      data,
+      DEFAULT_SETTINGS.SEARCHSUB_CACHE_DURATION
+    );
+  }
+
+  /**
+   * Build XML-RPC body for SearchSubtitles by IMDB + language
+   * imdbid: numeric string, no "tt" prefix
+   * sublanguageid: 3-letter language code (e.g. "eng", "ger", "spa")
+   */
+  static buildSearchSubtitlesByImdbXml(token, imdbid, sublanguageid) {
+    const cleanImdb = String(imdbid).replace(/^tt/i, '').replace(/^0+/, '');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<methodCall>
+  <methodName>SearchSubtitles</methodName>
+  <params>
+    <param><value><string>${token}</string></value></param>
+    <param>
+      <value>
+        <array>
+          <data>
+            <value>
+              <struct>
+                <member>
+                  <name>imdbid</name>
+                  <value><string>${cleanImdb}</string></value>
+                </member>
+                <member>
+                  <name>sublanguageid</name>
+                  <value><string>${sublanguageid}</string></value>
+                </member>
+              </struct>
+            </value>
+          </data>
+        </array>
+      </value>
+    </param>
+  </params>
+</methodCall>`;
+  }
+
+  /**
+   * SearchSubtitles by (imdbid, sublanguageid) without cache.
+   * Returns { count, searchUrl, items }
+   */
+  static async searchSubtitlesByImdbUncached(imdbid, sublanguageid) {
+    const token = this.getAuthToken();
+    const cleanImdb = String(imdbid).replace(/^tt/i, '').replace(/^0+/, '');
+    const xmlRpcBody = this.buildSearchSubtitlesByImdbXml(token, cleanImdb, sublanguageid);
+
+    const response = await delayedFetch(API_ENDPOINTS.OPENSUBTITLES_XMLRPC, {
+      method: 'POST',
+      headers: getApiHeaders('text/xml'),
+      body: xmlRpcBody,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `XML-RPC SearchSubtitles failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const xmlText = await response.text();
+    const xmlDoc = this.parseXmlRpcResponse(xmlText);
+    const responseStruct = xmlDoc.querySelector('methodResponse param value struct');
+    if (!responseStruct) {
+      throw new Error('Invalid SearchSubtitles response structure');
+    }
+
+    const result = this.extractStructData(responseStruct);
+
+    // OS returns data as array on hits, or as boolean false / empty when no matches
+    let items = [];
+    if (Array.isArray(result.data)) {
+      items = result.data;
+    } else if (result.data && typeof result.data === 'object') {
+      items = Object.values(result.data);
+    }
+
+    const searchUrl = `https://www.opensubtitles.org/en/search/sublanguageid-${sublanguageid}/imdbid-${cleanImdb}`;
+
+    return {
+      imdbid: cleanImdb,
+      sublanguageid,
+      count: items.length,
+      searchUrl,
+      status: result.status,
+      seconds: result.seconds,
+    };
+  }
+
+  /**
+   * SearchSubtitles by (imdbid, sublanguageid) with 24h cache.
+   */
+  static async searchSubtitlesByImdb(imdbid, sublanguageid, addDebugInfo = null) {
+    const cleanImdb = String(imdbid).replace(/^tt/i, '').replace(/^0+/, '');
+    const cached = this.loadSearchSubtitlesFromCache(cleanImdb, sublanguageid);
+    if (cached) {
+      if (addDebugInfo) {
+        addDebugInfo(
+          `🎯 SearchSubtitles cache HIT for imdb=${cleanImdb} lang=${sublanguageid} (count=${cached.count})`
+        );
+      }
+      return cached;
+    }
+    if (addDebugInfo) {
+      addDebugInfo(
+        `❗ SearchSubtitles cache MISS for imdb=${cleanImdb} lang=${sublanguageid}, calling XML-RPC`
+      );
+    }
+    const data = await this.searchSubtitlesByImdbUncached(cleanImdb, sublanguageid);
+    this.saveSearchSubtitlesToCache(cleanImdb, sublanguageid, data);
+    if (addDebugInfo) {
+      addDebugInfo(
+        `💾 SearchSubtitles cached for imdb=${cleanImdb} lang=${sublanguageid} (count=${data.count}, 24h)`
+      );
+    }
+    return data;
+  }
+
+  /**
    * Try to upload subtitles using XML-RPC API with PHPSESSID token
    * @param {Object} uploadData - Upload data structure
    * @param {boolean} uploadAsAnonymous - Upload with anonymous token (default: false)

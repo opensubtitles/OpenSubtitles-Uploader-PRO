@@ -1,5 +1,10 @@
 import React from 'react';
-import { areTitlesSimilar, formatImdbId, getImdbUrl } from '../utils/fileUtils.js';
+import {
+  areTitlesSimilar,
+  formatImdbId,
+  getImdbUrl,
+  getOsImdbSearchUrl,
+} from '../utils/fileUtils.js';
 import { MetadataTags } from './MetadataTags.jsx';
 
 export const MovieDisplay = ({
@@ -852,6 +857,16 @@ export const MovieDisplay = ({
                         >
                           {formatImdbId(finalMovieData.imdbid)}
                         </a>
+                        <a
+                          href={getOsImdbSearchUrl(finalMovieData.imdbid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this episode on OpenSubtitles"
+                        >
+                          [OS]
+                        </a>
                         <span className="text-xs ml-2" style={{ color: themeColors.success }}>
                           (Episode)
                         </span>
@@ -869,6 +884,18 @@ export const MovieDisplay = ({
                           onMouseLeave={e => (e.target.style.color = themeColors.linkHover)}
                         >
                           {formatImdbId(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
+                        </a>
+                        <a
+                          href={getOsImdbSearchUrl(
+                            finalMovieData.parent_imdb_id || originalMovieData.imdbid
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this TV series on OpenSubtitles"
+                        >
+                          [OS]
                         </a>
                       </div>
 
@@ -899,6 +926,16 @@ export const MovieDisplay = ({
                           onMouseLeave={e => (e.target.style.color = themeColors.success)}
                         >
                           {formatImdbId(originalMovieData.imdbid)}
+                        </a>
+                        <a
+                          href={getOsImdbSearchUrl(originalMovieData.imdbid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this title on OpenSubtitles"
+                        >
+                          [OS]
                         </a>
                         <span className="text-xs ml-2" style={{ color: '#28a745' }}>
                           (
@@ -983,6 +1020,16 @@ export const MovieDisplay = ({
                         >
                           {formatImdbId(finalMovieData.imdbid)}
                         </a>
+                        <a
+                          href={getOsImdbSearchUrl(finalMovieData.imdbid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this episode on OpenSubtitles"
+                        >
+                          [OS]
+                        </a>
                         <span className="text-xs ml-2" style={{ color: themeColors.success }}>
                           (Episode)
                         </span>
@@ -1000,6 +1047,18 @@ export const MovieDisplay = ({
                           onMouseLeave={e => (e.target.style.color = themeColors.linkHover)}
                         >
                           {formatImdbId(finalMovieData.parent_imdb_id || originalMovieData.imdbid)}
+                        </a>
+                        <a
+                          href={getOsImdbSearchUrl(
+                            finalMovieData.parent_imdb_id || originalMovieData.imdbid
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this TV series on OpenSubtitles"
+                        >
+                          [OS]
                         </a>
                       </div>
 
@@ -1030,6 +1089,16 @@ export const MovieDisplay = ({
                           onMouseLeave={e => (e.target.style.color = themeColors.success)}
                         >
                           {formatImdbId(originalMovieData.imdbid)}
+                        </a>
+                        <a
+                          href={getOsImdbSearchUrl(originalMovieData.imdbid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 text-xs underline font-mono"
+                          style={{ color: themeColors.link }}
+                          title="View this title on OpenSubtitles"
+                        >
+                          [OS]
                         </a>
                         <span className="text-xs ml-2" style={{ color: '#28a745' }}>
                           ({bestMovieData.kind === 'tv series' ? 'TV Series' : 'Movie'})
