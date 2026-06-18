@@ -70,6 +70,37 @@ export class MkvSubtitleExtractor {
     this.loadingPromise = null;
     this.currentFile = null;
     this.cachedMetadata = new Map(); // Cache metadata to avoid redundant extraction
+    // Ring buffer of the last N raw FFmpeg log lines from the class instance.
+    // Surfaced on extraction failure so the debug panel shows what ffmpeg-WASM
+    // actually reported (codec/demuxer errors, missing tracks, etc.) instead
+    // of the generic "Failed to extract metadata" rewrap.
+    this.ffmpegLogRing = [];
+    this.FFMPEG_LOG_RING_SIZE = 80;
+  }
+
+  _recordFfmpegLog(line) {
+    if (!line) return;
+    this.ffmpegLogRing.push(String(line));
+    if (this.ffmpegLogRing.length > this.FFMPEG_LOG_RING_SIZE) {
+      this.ffmpegLogRing.splice(0, this.ffmpegLogRing.length - this.FFMPEG_LOG_RING_SIZE);
+    }
+  }
+
+  /**
+   * Return the most recent raw FFmpeg log lines captured by the class
+   * instance. Native-API extraction paths (extractMetadata/extractSubtitle
+   * imported from the package) run against a separate global FFmpeg instance
+   * and are NOT captured here — only logs from the class-instance fallback
+   * path are surfaced. That is fine for diagnosis because the class fallback
+   * is exactly the path that re-runs on native failure.
+   */
+  getRecentFfmpegLogs(limit = 40) {
+    if (!this.ffmpegLogRing.length) return [];
+    return this.ffmpegLogRing.slice(-limit);
+  }
+
+  clearFfmpegLogs() {
+    this.ffmpegLogRing = [];
   }
 
   /**
@@ -113,6 +144,19 @@ export class MkvSubtitleExtractor {
 
       console.log('⏳ Initializing FFmpeg WebAssembly (this may take a moment)...');
       await this.extractor.initialize();
+
+      // Attach our own log listener to the class-instance FFmpeg. The package
+      // only auto-logs to console when debug=true, so this is the cheapest way
+      // to retain raw ffmpeg stderr for diagnostics without flooding the
+      // console on normal runs.
+      try {
+        const ffmpeg = this.extractor?.ffmpeg;
+        if (ffmpeg && typeof ffmpeg.on === 'function') {
+          ffmpeg.on('log', ({ message }) => this._recordFfmpegLog(message));
+        }
+      } catch (hookErr) {
+        console.warn('⚠️ Could not attach FFmpeg log listener:', hookErr?.message || hookErr);
+      }
 
       this.isLoaded = true;
       console.log('✅ VideoMetadataExtractor ready');

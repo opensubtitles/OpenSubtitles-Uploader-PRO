@@ -430,6 +430,31 @@ export class FileProcessingService {
           });
           if (addDebugInfo) {
             addDebugInfo(`❌ Extraction failed: ${mkvFile.name} - ${error.message}`);
+            // Surface the raw FFmpeg log tail so failures like the AMZN WEB-DL /
+            // DDP audio file from forum post #54986 carry actionable diagnostic
+            // info (codec name, demuxer error, missing stream) into the debug
+            // panel instead of just the generic wrapped message.
+            try {
+              const ffmpegLogs = mkvSubtitleExtractor.getRecentFfmpegLogs?.(30) || [];
+              if (ffmpegLogs.length > 0) {
+                addDebugInfo(`📋 FFmpeg log tail (${ffmpegLogs.length} lines):`);
+                for (const line of ffmpegLogs) {
+                  addDebugInfo(`  ${line}`);
+                }
+              } else {
+                addDebugInfo(
+                  `📋 No FFmpeg log captured (failure occurred on native path before class-instance fallback ran).`
+                );
+              }
+            } catch (logErr) {
+              console.warn('⚠️ Failed to surface FFmpeg logs:', logErr?.message || logErr);
+            }
+          }
+          // Reset ring buffer so the next file doesn't inherit stale lines.
+          try {
+            mkvSubtitleExtractor.clearFfmpegLogs?.();
+          } catch {
+            /* noop */
           }
           continue;
         }
