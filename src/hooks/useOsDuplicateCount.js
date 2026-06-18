@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { XmlRpcService } from '../services/api/xmlrpc.js';
 import { SubtitleHashService } from '../services/subtitleHash.js';
+import { resolveEpisodeImdbId } from '../utils/fileUtils.js';
 
 /**
  * useOsDuplicateCount
@@ -33,9 +34,19 @@ export const useOsDuplicateCount = (addDebugInfo) => {
    * movieGuesses: { [videoPath]: { imdbid, ... } }
    * getSubtitleLanguage: (subtitle) => language code (2 or 3 letter)
    * combinedLanguages: language data (used to normalise to 3-letter sublanguageid)
+   * featuresByImdbId/guessItData: optional, lets us resolve the per-episode
+   *   imdb when the video is a TV episode so the OS link points at the
+   *   episode's subtitles, not the series-level listing.
    */
   const refreshFromPairs = useCallback(
-    async (pairedFiles, movieGuesses, getSubtitleLanguage, combinedLanguages) => {
+    async (
+      pairedFiles,
+      movieGuesses,
+      getSubtitleLanguage,
+      combinedLanguages,
+      featuresByImdbId,
+      guessItData
+    ) => {
       if (!pairedFiles || pairedFiles.length === 0) return;
 
       // Build the list of (subtitle.fullPath, imdbid, sublang) tasks
@@ -43,7 +54,11 @@ export const useOsDuplicateCount = (addDebugInfo) => {
       for (const pair of pairedFiles) {
         if (!pair?.video || !pair.subtitles?.length) continue;
         const movie = movieGuesses?.[pair.video.fullPath];
-        const imdbid = movie?.imdbid;
+        const imdbid = resolveEpisodeImdbId(
+          movie,
+          featuresByImdbId,
+          guessItData?.[pair.video.fullPath]
+        );
         if (!imdbid) continue;
 
         for (const subtitle of pair.subtitles) {
@@ -169,19 +184,28 @@ export const useAutoOsDuplicateCount = ({
   movieGuesses,
   getSubtitleLanguage,
   combinedLanguages,
+  featuresByImdbId,
+  guessItData,
   addDebugInfo,
 }) => {
   const { osDuplicateCounts, refreshOsDuplicateCounts, clearOsDuplicateCounts } =
     useOsDuplicateCount(addDebugInfo);
 
   // Build a stable signature so we only re-fire when the actual (path -> imdb -> lang)
-  // tuples change. Otherwise React re-renders on unrelated state would re-trigger.
+  // tuples change. Use the resolved episode imdb (when available) so the effect
+  // re-fires once features data lands and the series→episode imdb is known.
   const signature = (() => {
     if (!pairedFiles?.length) return '';
     const parts = [];
     for (const pair of pairedFiles) {
       if (!pair?.video || !pair.subtitles?.length) continue;
-      const imdb = movieGuesses?.[pair.video.fullPath]?.imdbid || '-';
+      const movie = movieGuesses?.[pair.video.fullPath];
+      const imdb =
+        resolveEpisodeImdbId(
+          movie,
+          featuresByImdbId,
+          guessItData?.[pair.video.fullPath]
+        ) || '-';
       for (const sub of pair.subtitles) {
         const lang = getSubtitleLanguage?.(sub) || '-';
         parts.push(`${sub.fullPath}:${imdb}:${lang}`);
@@ -196,7 +220,9 @@ export const useAutoOsDuplicateCount = ({
       pairedFiles,
       movieGuesses,
       getSubtitleLanguage,
-      combinedLanguages
+      combinedLanguages,
+      featuresByImdbId,
+      guessItData
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);

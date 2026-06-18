@@ -420,6 +420,8 @@ function SubtitleUploaderInner() {
     movieGuesses,
     getSubtitleLanguage,
     combinedLanguages,
+    featuresByImdbId,
+    guessItData,
     addDebugInfo,
   });
 

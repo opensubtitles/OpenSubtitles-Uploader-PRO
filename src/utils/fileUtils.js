@@ -59,6 +59,49 @@ export const getOsImdbLanguageSearchUrl = (imdbId, sublanguageid) => {
 };
 
 /**
+ * Resolve the upload-level IMDb ID for a video: episode IMDb when the video
+ * is a TV episode and features data has resolved the per-episode ID,
+ * otherwise the movie/series IMDb. Mirrors the resolution path in
+ * MovieDisplay so duplicate-count queries and per-language OS links land on
+ * the same imdb the upload itself uses.
+ *
+ * @param {object} movie - movieGuesses[videoPath] entry
+ * @param {object} featuresByImdbId - { [imdb]: { data: [{ attributes }] } }
+ * @param {object} guessItForPath - guessItData[videoPath] (may carry season/episode)
+ * @returns {string|null} - effective IMDb (no formatting/padding)
+ */
+export const resolveEpisodeImdbId = (movie, featuresByImdbId, guessItForPath) => {
+  const baseImdb = movie?.imdbid;
+  if (!baseImdb) return null;
+
+  const features = featuresByImdbId?.[baseImdb];
+  const attrs = features?.data?.[0]?.attributes;
+
+  // User-selected episode — base imdb is already episode-level
+  if (attrs?.feature_type === 'Episode') return baseImdb;
+
+  // TV series with season/episode info — drill into seasons for episode imdb
+  const isSeries = attrs?.feature_type === 'Tvshow' || attrs?.feature_type === 'tv_series';
+  const seasons = Array.isArray(attrs?.seasons) ? attrs.seasons : null;
+  const season =
+    guessItForPath?.season ?? guessItForPath?.episode_info?.season ?? movie?.season;
+  const episode =
+    guessItForPath?.episode ?? guessItForPath?.episode_info?.episode ?? movie?.episode;
+
+  if (isSeries && seasons && season != null && episode != null) {
+    const sNum = parseInt(season, 10);
+    const eNum = parseInt(episode, 10);
+    if (!isNaN(sNum) && !isNaN(eNum)) {
+      const seasonRow = seasons.find(s => s.season_number === sNum);
+      const epRow = seasonRow?.episodes?.find(e => e.episode_number === eNum);
+      if (epRow?.feature_imdb_id) return epRow.feature_imdb_id.toString();
+    }
+  }
+
+  return baseImdb;
+};
+
+/**
  * Check if a file is a video file based on extension
  */
 export const isVideoFile = fileOrName => {
