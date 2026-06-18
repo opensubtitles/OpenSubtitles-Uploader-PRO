@@ -6,10 +6,18 @@ export const LanguageFilter = ({
   onLanguageToggle,
   getSubtitleLanguage,
   combinedLanguages,
+  // Per-subtitle upload state — lets the filter reflect changes the user
+  // makes on individual track checkboxes (forum post #54986 item 4: cascade
+  // was one-way, this makes it bidirectional).
+  getUploadEnabled,
+  onToggleUpload,
   colors,
   isDark
 }) => {
-  // Group subtitles by current language (manual selection or detected)
+  // Group subtitles by current language (manual selection or detected).
+  // Each language entry also tracks how many of its subs are currently
+  // enabled for upload, so the checkbox can render checked / indeterminate
+  // / unchecked off real state instead of the language-only Set.
   const languageStats = useMemo(() => {
     const stats = new Map();
 
@@ -28,6 +36,7 @@ export const LanguageFilter = ({
             code: langCode,
             name: langName,
             count: 0,
+            enabledCount: 0,
             files: []
           });
         }
@@ -35,6 +44,9 @@ export const LanguageFilter = ({
         const entry = stats.get(langCode);
         entry.count++;
         entry.files.push(file.fullPath);
+        if (getUploadEnabled?.(file.fullPath)) {
+          entry.enabledCount++;
+        }
       }
     });
 
@@ -53,7 +65,7 @@ export const LanguageFilter = ({
     });
 
     return sorted;
-  }, [files, getSubtitleLanguage, combinedLanguages]);
+  }, [files, getSubtitleLanguage, combinedLanguages, getUploadEnabled]);
 
   if (languageStats.length === 0) {
     return null;
@@ -85,9 +97,17 @@ export const LanguageFilter = ({
         <div className="flex gap-2">
           <button
             onClick={() => {
-              // Select all languages
+              // Select all languages + enable every subtitle so the file list
+              // matches what the filter advertises.
               const allLangs = new Set(languageStats.map(l => l.code));
               onLanguageToggle(allLangs);
+              if (typeof onToggleUpload === 'function') {
+                for (const lang of languageStats) {
+                  for (const fullPath of lang.files) {
+                    onToggleUpload(fullPath, true);
+                  }
+                }
+              }
             }}
             className="text-sm px-3 py-1 rounded transition-colors"
             style={{
@@ -105,8 +125,16 @@ export const LanguageFilter = ({
           </button>
           <button
             onClick={() => {
-              // Deselect all languages
+              // Deselect all languages + disable every subtitle so the file
+              // list matches what the filter advertises.
               onLanguageToggle(new Set());
+              if (typeof onToggleUpload === 'function') {
+                for (const lang of languageStats) {
+                  for (const fullPath of lang.files) {
+                    onToggleUpload(fullPath, false);
+                  }
+                }
+              }
             }}
             className="text-sm px-3 py-1 rounded transition-colors"
             style={{
@@ -134,7 +162,21 @@ export const LanguageFilter = ({
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {languageStats.map(lang => {
-          const isSelected = selectedLanguages.has(lang.code);
+          // Bidirectional state — the language tile reflects the union of:
+          //  (a) language-level filter set (selectedLanguages), and
+          //  (b) per-subtitle upload toggles (getUploadEnabled).
+          // If the caller wired getUploadEnabled, we compute the effective
+          // state from real per-sub flags so unchecking individual tracks
+          // is mirrored here. Otherwise we fall back to the legacy Set.
+          const hasPerSubState =
+            typeof getUploadEnabled === 'function' && lang.count > 0;
+          const allEnabled = hasPerSubState
+            ? lang.enabledCount === lang.count
+            : selectedLanguages.has(lang.code);
+          const someEnabled = hasPerSubState
+            ? lang.enabledCount > 0 && lang.enabledCount < lang.count
+            : false;
+          const isSelected = allEnabled;
 
           return (
             <label
@@ -145,15 +187,15 @@ export const LanguageFilter = ({
                   ? (isDark ? '#1f2937' : '#f0fdf4')
                   : (isDark ? '#111827' : '#f9fafb'),
                 border: `2px solid ${isSelected ? themeColors.success : themeColors.border}`,
-                opacity: isSelected ? 1 : 0.6,
+                opacity: isSelected || someEnabled ? 1 : 0.6,
               }}
               onMouseEnter={e => {
-                if (!isSelected) {
+                if (!isSelected && !someEnabled) {
                   e.currentTarget.style.opacity = '0.8';
                 }
               }}
               onMouseLeave={e => {
-                if (!isSelected) {
+                if (!isSelected && !someEnabled) {
                   e.currentTarget.style.opacity = '0.6';
                 }
               }}
@@ -161,24 +203,29 @@ export const LanguageFilter = ({
               <input
                 type="checkbox"
                 checked={isSelected}
+                ref={el => {
+                  if (el) el.indeterminate = someEnabled && !isSelected;
+                }}
                 onChange={() => {
+                  const newChecked = !(isSelected || someEnabled);
                   const newSelected = new Set(selectedLanguages);
-                  if (isSelected) {
-                    newSelected.delete(lang.code);
-                    console.log(
-                      `🔲 LanguageFilter: Unchecked "${lang.name}" (${lang.code}) - ${lang.count} subtitles will be disabled`
-                    );
-                  } else {
+                  if (newChecked) {
                     newSelected.add(lang.code);
-                    console.log(
-                      `✅ LanguageFilter: Checked "${lang.name}" (${lang.code}) - ${lang.count} subtitles will be enabled`
-                    );
+                  } else {
+                    newSelected.delete(lang.code);
                   }
-                  console.log('📝 LanguageFilter: New selection state', {
-                    selectedLanguages: Array.from(newSelected),
-                    totalSelected: newSelected.size,
-                  });
+                  console.log(
+                    `${newChecked ? '✅' : '🔲'} LanguageFilter: ${newChecked ? 'Checked' : 'Unchecked'} ` +
+                      `"${lang.name}" (${lang.code}) - ${lang.count} subtitles affected`
+                  );
                   onLanguageToggle(newSelected);
+                  // Cascade to per-subtitle toggles so the file list rows
+                  // and this filter never drift out of sync (forum #54986).
+                  if (typeof onToggleUpload === 'function') {
+                    for (const fullPath of lang.files) {
+                      onToggleUpload(fullPath, newChecked);
+                    }
+                  }
                 }}
                 className="w-4 h-4"
                 style={{
@@ -197,7 +244,9 @@ export const LanguageFilter = ({
                   className="text-xs"
                   style={{ color: themeColors.textSecondary }}
                 >
-                  {lang.count} {lang.count === 1 ? 'subtitle' : 'subtitles'}
+                  {hasPerSubState && lang.enabledCount !== lang.count
+                    ? `${lang.enabledCount} of ${lang.count} ${lang.count === 1 ? 'subtitle' : 'subtitles'}`
+                    : `${lang.count} ${lang.count === 1 ? 'subtitle' : 'subtitles'}`}
                 </div>
               </div>
             </label>

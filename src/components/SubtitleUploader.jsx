@@ -2788,6 +2788,8 @@ function SubtitleUploaderInner() {
             onLanguageToggle={handleLanguageToggle}
             getSubtitleLanguage={getSubtitleLanguage}
             combinedLanguages={combinedLanguages}
+            getUploadEnabled={getUploadEnabled}
+            onToggleUpload={handleSubtitleUploadToggle}
             colors={colors}
             isDark={isDark}
           />
