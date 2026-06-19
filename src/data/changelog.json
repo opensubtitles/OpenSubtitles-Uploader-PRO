@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-06-13T17:29:38.441Z",
+  "generated_at": "2026-06-19T00:27:38.000Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.12",
+      "name": "v1.8.12",
+      "published_at": "2026-06-13T17:31:15Z",
+      "body": "Version 1.8.12 - Duplicate-on-OS badges, [OS] title links, clearer big-file extraction errors\n\nThree forum-requested improvements from 0pener (forum post p54971):\n\n1) \"N on OS\" badge per matched subtitle row (per imdb + language)\n   - New XmlRpcService.searchSubtitlesByImdb with 24h cache (de-duped by\n     imdb+lang key — 20 episodes in 1 language = at most 20 API calls)\n   - New useAutoOsDuplicateCount hook that fires when (movie, language)\n     settles for each pair; results fanned out to all rows sharing the key\n   - MatchedPairs row, right side (ml-auto), surfaces:\n       🟡 N on OS   — amber badge linking to OS search filtered by\n                       imdbid + sublanguageid\n       🟢 0 on OS — new language for this title — positive \"fresh\"\n                       signal in green\n       ⏳ checking OS… / ⚠️ OS check failed — transient states\n   - Replaces the long-disabled \"Language-specific subtitle count\" stub\n\n2) [OS] links next to every IMDB ID in the movie display\n   - Two new helpers in fileUtils.js: getOsImdbSearchUrl(imdbId) and\n     getOsImdbLanguageSearchUrl(imdbId, sublang)\n   - Six [OS] links inserted across MovieDisplay (3 link positions × 2\n     code branches: featuresData + XML-RPC fallback) — next to Episode,\n     TV Series, and Movie/Main IMDB IDs\n   - 0pener's complaint was \"titles link to IMDB twice, but not to OS\";\n     now every IMDB ID has a sibling [OS] link\n\n3) Clearer error when extraction fails on huge MKVs\n   - Root cause is NOT mkvmerge version (0pener's hypothesis was a\n     correlation): FileReader.readAsArrayBuffer hits a ~2GB browser\n     memory cap. @opensubtitles/video-metadata-extractor's \"88GB\"\n     chunking reassembles all chunks into one Blob, which still needs\n     a single ArrayBuffer when handed to @ffmpeg/util's fetchFile()\n   - New BROWSER_FILEREADER_SOFT_LIMIT (2GB) and pre-flight warning\n     when file size exceeds it\n   - New humanizeExtractorError(error, file) rewrites the cryptic\n     \"Failed to extract metadata: File could not be read! Code=-1\" into:\n       Browser cannot read files this large (X.XX GB). The browser's\n       FileReader hits a ~2 GB memory cap regardless of the extractor's\n       chunking. Workaround: extract the subtitle tracks locally with\n       mkvextract or ffmpeg, then drop the .srt files onto the\n       uploader directly.\n   - Wrapped at all three throw sites in mkvSubtitleExtractor.js\n   - Bug-fix bonus: UI's \"extraction_failed\" status was set but never\n     rendered (badge only matched \"error\"). Combined them — both now\n     surface as \"❌ Extraction failed\" with the humanized error in\n     the tooltip\n   - TODO comment documents the durable fix: Tauri sidecar spawning\n     native mkvextract/ffmpeg (tauri-plugin-shell + filesystem already\n     in place; needs binary bundling + signing per-platform)\n\nTests: 207/207 pass. Build clean.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.12",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.12/latest.json",
+          "size": 4071
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.12_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.12/OpenSubtitles.Uploader.PRO_1.8.12_amd64.AppImage",
+          "size": 100885696
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.12_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.12/OpenSubtitles.Uploader.PRO_1.8.12_amd64.deb",
+          "size": 15534944
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.12_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.12/OpenSubtitles.Uploader.PRO_1.8.12_universal.dmg",
+          "size": 30661174
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.12_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.12/OpenSubtitles.Uploader.PRO_1.8.12_x64-setup.exe",
+          "size": 13133356
+        }
+      ]
+    },
     {
       "version": "v1.8.11",
       "name": "v1.8.11",
@@ -510,41 +545,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.7.6_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.6/OpenSubtitles.Uploader.PRO_1.7.6_x64-setup.exe",
           "size": 4720782
-        }
-      ]
-    },
-    {
-      "version": "v1.7.5",
-      "name": "v1.7.5 - Build 184",
-      "published_at": "2025-08-21T21:10:45Z",
-      "body": "Automated release created by GitHub Actions build.\\n\\n**Build Information:**\\n- Build Number: 184\\n- Commit: fca82517e2b1f32f4e3f1d2859a0769614d2c994\\n- Triggered by: push\\n\\nAssets will be uploaded as builds complete on each platform.\\n\\n🤖 Generated with [Claude Code](https://claude.ai/code)\\n\\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.7.5",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.5/latest.json",
-          "size": 1157
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.5_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.5/OpenSubtitles.Uploader.PRO_1.7.5_amd64.AppImage",
-          "size": 91882688
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.5_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.5/OpenSubtitles.Uploader.PRO_1.7.5_amd64.deb",
-          "size": 7387686
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.5_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.5/OpenSubtitles.Uploader.PRO_1.7.5_universal.dmg",
-          "size": 14108008
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.5_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.5/OpenSubtitles.Uploader.PRO_1.7.5_x64-setup.exe",
-          "size": 4722614
         }
       ]
     }
