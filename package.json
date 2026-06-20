@@ -47,7 +47,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@opensubtitles/video-metadata-extractor": "^1.8.1",
+    "@opensubtitles/video-metadata-extractor": "^1.9.0",
     "@tauri-apps/api": "^2.6.0",
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-updater": "^2.9.0",

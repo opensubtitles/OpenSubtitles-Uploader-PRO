@@ -3,6 +3,8 @@ import {
   extractMetadata,
   extractSubtitle,
   extractAllSubtitles as extractAllSubtitlesFromPackage,
+  extractMkvSubtitlesFast,
+  isMatroska,
   getVideoInfo,
   cleanup,
 } from '@opensubtitles/video-metadata-extractor';
@@ -509,17 +511,131 @@ export class MkvSubtitleExtractor {
   }
 
   /**
-   * Extract all subtitles from a video file using the new v1.8.1 native API
+   * Pure-JS MKV/WebM fast path (v1.9.0): bypasses ffmpeg-WASM entirely by
+   * walking EBML/Matroska structure directly. Works past the 2 GB browser
+   * Blob limit, byte-identical to `ffmpeg -map 0:N -c:s copy`, and dodges
+   * the ffmpeg-WASM demux quirks that break specific MKV files (e.g. the
+   * AMZN WEB-DL DDP audio file from forum #54986).
+   *
+   * Upstream API auto-downloads a ZIP via `<a download>.click()` and strips
+   * the raw subtitle bytes from the returned report — neither is useful for
+   * the in-app pairing pipeline. We intercept both URL.createObjectURL and
+   * the synthetic anchor's click so the ZIP blob stays in memory, then
+   * unzip it to recover per-track bytes in the existing extractedFiles
+   * shape. Wrappers restored in finally so concurrent code is unaffected.
+   *
+   * Returns null when:
+   *  - the file is not Matroska/WebM (caller falls back to ffmpeg path), or
+   *  - no subtitles found, or
+   *  - any error occurs during fast extraction (caller falls back).
+   * Throws nothing on its own — failure is signalled by null return so the
+   * existing ffmpeg ladder picks up cleanly.
+   */
+  async _tryExtractMkvFast(file) {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+    let matroska = false;
+    try {
+      matroska = await isMatroska(file);
+    } catch (err) {
+      console.warn(`⚠️ isMatroska check failed for ${file.name}:`, err?.message || err);
+      return null;
+    }
+    if (!matroska) return null;
+
+    console.log(`🚀 MKV fast path (pure-JS EBML, v1.9.0) for: ${file.name}`);
+
+    // Intercept the ZIP blob and suppress the auto-download.
+    const origCreateObjectURL = URL.createObjectURL;
+    const origCreateElement = document.createElement.bind(document);
+    let capturedBlob = null;
+    URL.createObjectURL = blob => {
+      // The fast path only minted one blob (the ZIP) right before clicking
+      // the anchor; we still let it return a real URL so the rest of the
+      // package code doesn't blow up if it inspects it.
+      capturedBlob = blob;
+      return origCreateObjectURL(blob);
+    };
+    document.createElement = tag => {
+      const el = origCreateElement(tag);
+      if (String(tag).toLowerCase() === 'a') {
+        // Suppress the synthetic anchor's auto-click without breaking other
+        // calls that genuinely need an anchor element.
+        el.click = () => {};
+      }
+      return el;
+    };
+
+    try {
+      const t0 = performance.now();
+      const report = await extractMkvSubtitlesFast(file, (text, percent) => {
+        if (typeof percent === 'number' && percent % 25 === 0) {
+          console.log(`[mkvfast] ${text} (${percent}%)`);
+        }
+      });
+      const duration = (performance.now() - t0).toFixed(0);
+      console.log(
+        `✅ MKV fast path done in ${duration}ms: ${report.extractedCount}/${report.totalSubtitleStreams} subtitle streams`
+      );
+      if (report.errors?.length) {
+        console.warn(`[mkvfast] errors:`, report.errors);
+      }
+
+      if (!capturedBlob || report.extractedCount === 0) {
+        return { extractedFiles: [], zipBlob: capturedBlob || null };
+      }
+
+      // Unzip the captured ZIP to recover per-track bytes.
+      const zip = await JSZip.loadAsync(capturedBlob);
+      const extractedFiles = [];
+      for (const meta of report.extracted) {
+        const entry = zip.file(meta.filename);
+        if (!entry) {
+          console.warn(`[mkvfast] missing zip entry: ${meta.filename}`);
+          continue;
+        }
+        const data = await entry.async('uint8array');
+        extractedFiles.push({
+          filename: meta.filename,
+          data,
+          size: data.length,
+          language: meta.language || 'unknown',
+          forced: false,
+          streamIndex: meta.streamIndex,
+        });
+      }
+      return { extractedFiles, zipBlob: capturedBlob };
+    } catch (err) {
+      console.warn(`⚠️ MKV fast path failed for ${file.name}: ${err?.message || err}`);
+      this._recordFfmpegLog(`[mkvfast] FAILED: ${err?.message || err}`);
+      return null;
+    } finally {
+      URL.createObjectURL = origCreateObjectURL;
+      document.createElement = origCreateElement;
+    }
+  }
+
+  /**
+   * Extract all subtitles from a video file. v1.9.0 fast path tries first
+   * for Matroska/WebM (pure-JS, no FFmpeg), then falls back to the
+   * ffmpeg-WASM ladder for anything the fast path declines or fails on.
    * @param {File} file - Video file to extract subtitles from
    * @returns {Promise<Object>} Object with extractedFiles array and zipBlob
    */
   async extractAllSubtitles(file) {
-    console.log(`🎬 Starting extractAllSubtitles for: ${file.name} using v1.8.1 native API`);
+    console.log(`🎬 Starting extractAllSubtitles for: ${file.name}`);
+
+    // Pure-JS MKV path first — fastest, sidesteps every known ffmpeg-WASM
+    // demux quirk, no 2 GB Blob ceiling. Returns null on miss / failure so
+    // the existing ffmpeg ladder still runs.
+    const fast = await this._tryExtractMkvFast(file);
+    if (fast && fast.extractedFiles.length > 0) {
+      return fast;
+    }
 
     try {
       // Try the native extractAllSubtitles function first (single-pass)
       console.log(
-        `🚀 Trying native extractAllSubtitles() from package v1.8.1 (single file read)...`
+        `🚀 Trying native extractAllSubtitles() from package (single file read)...`
       );
 
       const startTime = performance.now();
