@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-06-20T02:13:18.569Z",
+  "generated_at": "2026-06-22T15:58:08.598Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.14",
+      "name": "v1.8.14",
+      "published_at": "2026-06-20T02:14:13Z",
+      "body": "Version 1.8.14 - MKV fast path bypasses ffmpeg-WASM for Matroska files",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.14",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/latest.json",
+          "size": 1186
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.14_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_amd64.AppImage",
+          "size": 100885696
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.14_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_amd64.deb",
+          "size": 15544210
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.14_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_universal.dmg",
+          "size": 30661262
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
+          "size": 13139150
+        }
+      ]
+    },
     {
       "version": "v1.8.13",
       "name": "v1.8.13",
@@ -490,41 +525,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.7.8_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/OpenSubtitles.Uploader.PRO_1.7.8_x64-setup.exe",
           "size": 4725442
-        }
-      ]
-    },
-    {
-      "version": "v1.7.7",
-      "name": "v1.7.7 - Critical Gold Member Access Fix & UI Improvements",
-      "published_at": "2025-09-05T22:36:13Z",
-      "body": "## 🔧 Critical Bug Fix Release\n\nThis release fixes a critical issue where **gold members and other authorized users were incorrectly denied access** to the uploader, despite having sufficient permissions.\n\n### 🐛 Critical Bug Fixed\n- **Gold Member Access Issue**: Fixed rank validation logic that was incorrectly denying access to gold members and other authorized users\n- **Root Cause**: System was only checking the `UserRanks` array, but when empty, it should fall back to the primary `UserRank` field\n- **Impact**: Users with valid ranks (gold member, platinum member, etc.) can now upload normally\n\n### 🎯 UI Improvements\n- **Close Button**: Added close button (×) to rank restriction warning dialog\n- **Contact Links**: Added direct clickable links to [OpenSubtitles Contact](https://opensubtitles.org/contact) for support requests\n- **Better UX**: Users can now easily dismiss permission warnings and contact support directly\n\n### 🔧 Technical Details\n- Enhanced rank validation with `effectiveRanks` fallback logic\n- When `UserRanks` array is empty, system now uses `[UserRank]` as fallback\n- Maintains backward compatibility with existing rank validation systems\n- Added proper error handling and logging for rank validation\n\n### ✅ Tested & Verified\n- Gold members now get `canUpload: true` (previously false)\n- Bronze members still correctly denied access  \n- Users with populated `UserRanks` arrays continue working normally\n- All existing functionality preserved\n\nThis is a **critical fix** - users who were previously locked out due to the rank validation bug can now access the uploader normally.\n\n---\n\n**Build Information:**\n- Build Number: 188\n- Commit: 31b17771ccb11a69e00b8139483ed43c7d11f1f0\n- Triggered by: push\n\n🚀 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.7.7",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.7/latest.json",
-          "size": 1157
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.6_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.7/OpenSubtitles.Uploader.PRO_1.7.6_amd64.AppImage",
-          "size": 91886784
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.6_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.7/OpenSubtitles.Uploader.PRO_1.7.6_amd64.deb",
-          "size": 7388922
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.6_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.7/OpenSubtitles.Uploader.PRO_1.7.6_universal.dmg",
-          "size": 14099857
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.6_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.7/OpenSubtitles.Uploader.PRO_1.7.6_x64-setup.exe",
-          "size": 4720015
         }
       ]
     }
