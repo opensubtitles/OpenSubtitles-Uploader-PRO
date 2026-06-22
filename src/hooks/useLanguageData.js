@@ -362,6 +362,26 @@ export const useLanguageData = addDebugInfo => {
     [subtitleLanguages]
   );
 
+  // Sibling-language families. fasttext returns one top guess; for languages
+  // where the script/text is near-identical across variants (Chinese
+  // Simplified vs Traditional vs Cantonese, Portuguese vs Brazilian,
+  // Spanish-Spain vs Latin America, French-France vs Canada) the picked
+  // variant is often wrong but a close sibling is right. We pre-rank every
+  // sibling in the same family so the user can pick the correct variant
+  // without scrolling the alphabetic tail (forum #55000 item 3).
+  //
+  // Keyed by lowercase code (either ISO 639-1 / ISO 639-2/T / OS-specific).
+  // Codes that don't exist in combinedLanguages are silently ignored, so
+  // listing extra aliases is safe.
+  const LANGUAGE_FAMILIES = [
+    ['zh', 'zho', 'chi', 'zh-cn', 'zhs', 'zht', 'zh-tw', 'zhe', 'yue', 'nan', 'wuu'],
+    ['pt', 'por', 'pob', 'pt-br', 'pt-pt'],
+    ['es', 'spa', 'spl', 'spn', 'es-mx', 'es-419', 'es-es'],
+    ['fr', 'fre', 'fra', 'frc', 'fr-ca', 'fr-fr'],
+    ['en', 'eng', 'en-us', 'en-gb'],
+    ['nb', 'nn', 'no', 'nor'], // Norwegian variants
+    ['sr', 'srp', 'hr', 'hrv', 'bs', 'bos', 'sh'], // Serbo-Croatian cluster
+  ];
   // Get language options for subtitle dropdown
   const getLanguageOptionsForSubtitle = useCallback(
     subtitle => {
@@ -389,8 +409,46 @@ export const useLanguageData = addDebugInfo => {
           });
       }
 
-      // Add other upload-enabled languages
+      // Promote siblings of any detected code so close variants surface at
+      // the top of the dropdown instead of getting buried in the alphabetic
+      // tail. Synthetic confidence sits just below the lowest detected
+      // confidence so siblings sort under their parent detection.
       const detectedCodes = new Set(options.map(opt => opt.code));
+      if (options.length > 0) {
+        const minDetectedConf = Math.min(
+          ...options.map(o => (typeof o.confidence === 'number' ? o.confidence : 0))
+        );
+        const siblingConf = Math.max(0, minDetectedConf - 0.05);
+        const siblingCodes = new Set();
+        const findFamily = c => {
+          if (!c) return null;
+          const lc = c.toLowerCase();
+          return LANGUAGE_FAMILIES.find(f => f.includes(lc)) || null;
+        };
+        for (const opt of [...options]) {
+          const fam = findFamily(opt.code);
+          if (!fam) continue;
+          for (const sib of fam) {
+            if (sib === opt.code) continue;
+            if (detectedCodes.has(sib) || siblingCodes.has(sib)) continue;
+            const combinedLang = combinedLanguages[sib];
+            if (!combinedLang || !combinedLang.canUpload) continue;
+            options.push({
+              code: sib,
+              ...combinedLang,
+              confidence: siblingConf,
+              isDetected: true,
+              isSibling: true,
+            });
+            siblingCodes.add(sib);
+          }
+        }
+        // Keep ordering: detected (by confidence) -> siblings (by confidence)
+        options.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+        for (const sib of siblingCodes) detectedCodes.add(sib);
+      }
+
+      // Add other upload-enabled languages
       Object.entries(combinedLanguages)
         .filter(([code, lang]) => lang.canUpload && !detectedCodes.has(code))
         .sort(([_, a], [__, b]) => a.displayName.localeCompare(b.displayName))
