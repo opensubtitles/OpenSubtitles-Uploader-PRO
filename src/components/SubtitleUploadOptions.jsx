@@ -294,6 +294,14 @@ export const SubtitleUploadOptions = ({
         shouldBeHearingImpaired = checkFeatureFromPath(subtitleFile.fullPath, 'hearingimpaired');
       }
 
+      // For MKV-extracted subtitles the only SDH marker is often in the
+      // Matroska TrackEntry name (e.g. "English [SDH]"), not anywhere in
+      // the synthesised filename. Treat trackTitle as another input to the
+      // same checkers (forum #55000 item 2).
+      if (!shouldBeHearingImpaired && subtitleFile?.trackTitle) {
+        shouldBeHearingImpaired = checkHearingImpairedFromString(subtitleFile.trackTitle);
+      }
+
       if (shouldBeHearingImpaired) {
         updates.hearingimpaired = '1';
         setLocalHearingImpairedValue('1');

@@ -695,7 +695,11 @@ export class SubtitleUploadService {
 
       // Auto-detect features from video and subtitle paths
       const videoFeatures = this.detectFeaturesFromPath(video.fullPath, addDebugInfo);
-      const subtitleFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
+      const subtitleFeatures = this.detectFeaturesFromPath(
+        subtitle.fullPath,
+        addDebugInfo,
+        subtitle.trackTitle ? [subtitle.trackTitle] : []
+      );
 
       // Combine auto-detected features (video path has higher priority for HD)
       const autoDetectedFeatures = {
@@ -971,7 +975,11 @@ export class SubtitleUploadService {
       const subtitleOptions = uploadOptions?.[subtitle.fullPath] || {};
 
       // Auto-detect features from subtitle path for orphaned subtitles
-      const autoDetectedFeatures = this.detectFeaturesFromPath(subtitle.fullPath, addDebugInfo);
+      const autoDetectedFeatures = this.detectFeaturesFromPath(
+        subtitle.fullPath,
+        addDebugInfo,
+        subtitle.trackTitle ? [subtitle.trackTitle] : []
+      );
 
       // CRITICAL FIX: User's explicit UI choice should ALWAYS override auto-detection
       // This ensures users upload exactly what they see on screen (orphaned subtitles)
@@ -1109,7 +1117,7 @@ export class SubtitleUploadService {
    * @param {Function} addDebugInfo - Debug callback
    * @returns {Object} - Object with detected features
    */
-  static detectFeaturesFromPath(filePath, addDebugInfo) {
+  static detectFeaturesFromPath(filePath, addDebugInfo, extraStrings = []) {
     const features = {
       hearingimpaired: '0',
       highdefinition: '0',
@@ -1123,8 +1131,14 @@ export class SubtitleUploadService {
     // Split path into all components (directory parts + filename)
     const pathParts = filePath.split('/').filter(part => part.length > 0);
 
-    // Check each part of the path
-    for (const part of pathParts) {
+    // Extra strings (e.g. Matroska TrackEntry "Name" for MKV-extracted subs)
+    // are checked alongside the path so SDH markers that only appear in the
+    // track title aren't missed.
+    const extras = (Array.isArray(extraStrings) ? extraStrings : [extraStrings])
+      .filter(s => typeof s === 'string' && s.length > 0);
+
+    // Check each part of the path + every extra string
+    for (const part of pathParts.concat(extras)) {
       // Check for High Definition indicators
       if (this.checkHighDefinitionFromString(part)) {
         features.highdefinition = '1';

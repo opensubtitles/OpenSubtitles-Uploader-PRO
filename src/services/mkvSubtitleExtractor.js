@@ -601,6 +601,11 @@ export class MkvSubtitleExtractor {
           language: meta.language || 'unknown',
           forced: false,
           streamIndex: meta.streamIndex,
+          // Propagate the track title from the MKV TrackEntry so downstream
+          // SDH/HI auto-detection can read it. Many releases label a hearing
+          // -impaired stream as "English [SDH]" / "Hearing Impaired" / etc.
+          // (forum #55000 item 2).
+          title: meta.title || null,
         });
       }
       return { extractedFiles, zipBlob: capturedBlob };
