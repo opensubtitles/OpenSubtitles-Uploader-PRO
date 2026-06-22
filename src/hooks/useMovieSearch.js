@@ -1,4 +1,5 @@
 import React from 'react';
+import { OpenSubtitlesApiService } from '../services/api/openSubtitlesApi.js';
 
 /**
  * Shared movie search hook for both MatchedPairs and OrphanedSubtitles
@@ -61,6 +62,45 @@ export const useMovieSearch = onMovieChange => {
     return extractImdbId(input) !== null;
   };
 
+  // Fallback for IMDB IDs unknown to suggest_imdb.php — pull the title from
+  // the opensubtitles.com /features endpoint so the user can still attach
+  // the entered IMDB id. Returns a single-element results array shaped like
+  // the suggest_imdb response, or [] if features has nothing either.
+  const searchFeaturesByImdb = async imdbId => {
+    try {
+      const cleanImdb = String(imdbId).toLowerCase().replace(/^tt/, '').replace(/^0+/, '');
+      if (!cleanImdb) return [];
+      const features = await OpenSubtitlesApiService.getFeaturesByImdbId(cleanImdb);
+      const attrs = features?.data?.[0]?.attributes;
+      if (!attrs) return [];
+      const ft = (attrs.feature_type || '').toLowerCase();
+      const kind =
+        ft === 'tvshow' || ft === 'tv_series'
+          ? 'tv series'
+          : ft === 'episode'
+            ? 'episode'
+            : 'movie';
+      const title =
+        attrs.title ||
+        attrs.parent_title ||
+        attrs.original_title ||
+        imdbId;
+      return [
+        {
+          id: imdbId.toLowerCase().startsWith('tt') ? imdbId : `tt${cleanImdb.padStart(7, '0')}`,
+          name: title,
+          year: attrs.year || '',
+          kind,
+          source: 'features-api-fallback',
+          pic: attrs.img_url || undefined,
+        },
+      ];
+    } catch (err) {
+      console.warn('Features fallback for IMDB id failed:', err?.message || err);
+      return [];
+    }
+  };
+
   // Debounced movie search
   React.useEffect(() => {
     if (!movieSearchQuery.trim()) {
@@ -80,7 +120,17 @@ export const useMovieSearch = onMovieChange => {
             `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`
           );
           const results = await response.json();
-          setMovieSearchResults(results || []);
+          if (Array.isArray(results) && results.length > 0) {
+            setMovieSearchResults(results);
+          } else {
+            // suggest_imdb.php has no record for this IMDB id (happens for
+            // brand-new or niche titles not yet indexed on .org). Fall back
+            // to opensubtitles.com /features which has a separate, fresher
+            // catalog. Lets the user attach a valid IMDB id even when the
+            // suggest endpoint is empty (forum #55000 — Rental Family 2025).
+            const fallback = await searchFeaturesByImdb(imdbId);
+            setMovieSearchResults(fallback);
+          }
         } else {
           // Regular text search
           const response = await fetch(
