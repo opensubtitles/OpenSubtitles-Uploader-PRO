@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-06-22T15:58:08.598Z",
+  "generated_at": "2026-06-23T18:15:51.509Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.15",
+      "name": "v1.8.15",
+      "published_at": "2026-06-22T15:59:26Z",
+      "body": "Version 1.8.15 - IMDB fallback, MKV track SDH auto-flag, sibling language hints",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.15",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/latest.json",
+          "size": 1195
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.15_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_amd64.AppImage",
+          "size": 100881600
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.15_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_amd64.deb",
+          "size": 15534510
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.15_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_universal.dmg",
+          "size": 30676435
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
+          "size": 13141476
+        }
+      ]
+    },
     {
       "version": "v1.8.14",
       "name": "v1.8.14",
@@ -490,41 +525,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.7.9_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.9/OpenSubtitles.Uploader.PRO_1.7.9_x64-setup.exe",
           "size": 4722202
-        }
-      ]
-    },
-    {
-      "version": "v1.7.8",
-      "name": "v1.7.8 - IMDb ID Formatting Fix & URL Corrections",
-      "published_at": "2025-09-05T22:59:18Z",
-      "body": "## 🎬 Display & URL Formatting Fix\n\nThis release fixes IMDb ID display formatting and URL generation issues that were causing broken links and inconsistent display throughout the application.\n\n### 🐛 Issues Fixed\n- **Missing Leading Zeros**: IMDb IDs displayed as \"749451\" instead of proper \"0749451\" format\n- **Broken URLs**: Links generated as `https://www.imdb.com/title/tt749451/` (404 error) instead of `https://www.imdb.com/title/tt0749451/` (working)\n- **Inconsistent Display**: IMDb IDs shown differently across various components\n- **The Wire Episode Example**: Episode links like tt749451 now correctly show as tt0749451\n\n### 🔧 Technical Improvements\n- **New Utility Functions**: Added `formatImdbId()` and `getImdbUrl()` functions in fileUtils.js\n- **7-Digit Padding**: All IMDb IDs consistently padded to 7 digits with leading zeros\n- **Proper URL Generation**: All IMDb links now generate correctly formatted URLs\n- **Component Updates**: Updated MovieDisplay.jsx and VideoFile.jsx to use new formatting\n\n### ✅ Before vs After\n**Display Format:**\n- Before: `🎯 Upload IMDb: 749451(Episode)`\n- After: `🎯 Upload IMDb: 0749451(Episode)`\n\n**URL Generation:**\n- Before: `https://www.imdb.com/title/tt749451/` ❌ (broken link)\n- After: `https://www.imdb.com/title/tt0749451/` ✅ (working link)\n\n### 🧪 Tested & Verified  \n- ✅ The Wire episodes now show correct IMDb IDs (0749451 instead of 749451)\n- ✅ All IMDb links work correctly and navigate to proper pages\n- ✅ Consistent formatting across all components\n- ✅ Handles edge cases (empty IDs, already formatted IDs, various input formats)\n\nThis fix ensures all IMDb references in the application display correctly and link to the proper IMDb pages.\n\n🚀 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.7.8",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/latest.json",
-          "size": 2983
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.8_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/OpenSubtitles.Uploader.PRO_1.7.8_amd64.AppImage",
-          "size": 91890880
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.8_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/OpenSubtitles.Uploader.PRO_1.7.8_amd64.deb",
-          "size": 7394596
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.8_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/OpenSubtitles.Uploader.PRO_1.7.8_universal.dmg",
-          "size": 14106170
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.7.8_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.7.8/OpenSubtitles.Uploader.PRO_1.7.8_x64-setup.exe",
-          "size": 4725442
         }
       ]
     }
