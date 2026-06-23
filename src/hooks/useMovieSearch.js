@@ -62,6 +62,38 @@ export const useMovieSearch = onMovieChange => {
     return extractImdbId(input) !== null;
   };
 
+  // Map a single /features entry to the suggest_imdb result shape so the
+  // existing render path doesn't need to special-case the fallback.
+  const featuresAttrToResult = (attrs, imdbHint) => {
+    if (!attrs) return null;
+    const ft = (attrs.feature_type || '').toLowerCase();
+    const kind =
+      ft === 'tvshow' || ft === 'tv_series'
+        ? 'tv series'
+        : ft === 'episode'
+          ? 'episode'
+          : 'movie';
+    const rawImdb = attrs.imdb_id || attrs.parent_imdb_id || imdbHint || '';
+    const imdb = String(rawImdb).toLowerCase().startsWith('tt')
+      ? rawImdb
+      : rawImdb
+        ? `tt${String(rawImdb).replace(/^0+/, '').padStart(7, '0')}`
+        : '';
+    return {
+      id: imdb,
+      name:
+        attrs.title ||
+        attrs.parent_title ||
+        attrs.original_title ||
+        imdb ||
+        '(no title)',
+      year: attrs.year || '',
+      kind,
+      source: 'features-api-fallback',
+      pic: attrs.img_url || undefined,
+    };
+  };
+
   // Fallback for IMDB IDs unknown to suggest_imdb.php — pull the title from
   // the opensubtitles.com /features endpoint so the user can still attach
   // the entered IMDB id. Returns a single-element results array shaped like
@@ -72,31 +104,30 @@ export const useMovieSearch = onMovieChange => {
       if (!cleanImdb) return [];
       const features = await OpenSubtitlesApiService.getFeaturesByImdbId(cleanImdb);
       const attrs = features?.data?.[0]?.attributes;
-      if (!attrs) return [];
-      const ft = (attrs.feature_type || '').toLowerCase();
-      const kind =
-        ft === 'tvshow' || ft === 'tv_series'
-          ? 'tv series'
-          : ft === 'episode'
-            ? 'episode'
-            : 'movie';
-      const title =
-        attrs.title ||
-        attrs.parent_title ||
-        attrs.original_title ||
-        imdbId;
-      return [
-        {
-          id: imdbId.toLowerCase().startsWith('tt') ? imdbId : `tt${cleanImdb.padStart(7, '0')}`,
-          name: title,
-          year: attrs.year || '',
-          kind,
-          source: 'features-api-fallback',
-          pic: attrs.img_url || undefined,
-        },
-      ];
+      const result = featuresAttrToResult(attrs, imdbId);
+      return result ? [result] : [];
     } catch (err) {
       console.warn('Features fallback for IMDB id failed:', err?.message || err);
+      return [];
+    }
+  };
+
+  // Text-search fallback via opensubtitles.com /features?query=... . Used
+  // when suggest_imdb.php is unreachable (Anubis 307 redirect, network
+  // error, or genuinely empty). Returns up to N results in the suggest
+  // shape (forum #55008 — even "Life of Brian" returned nothing because
+  // every suggest call was being challenged before it could reach JSON).
+  const searchFeaturesByQuery = async query => {
+    try {
+      if (!query || query.length < 2) return [];
+      const features = await OpenSubtitlesApiService.searchFeatures(query);
+      const rows = Array.isArray(features?.data) ? features.data : [];
+      return rows
+        .map(row => featuresAttrToResult(row?.attributes, null))
+        .filter(Boolean)
+        .slice(0, 20);
+    } catch (err) {
+      console.warn('Features text fallback failed:', err?.message || err);
       return [];
     }
   };
@@ -114,30 +145,45 @@ export const useMovieSearch = onMovieChange => {
         const query = movieSearchQuery.trim();
         const imdbId = extractImdbId(query);
 
-        // If it's an IMDB ID input, search using the IMDB ID directly
+        // Best-effort suggest_imdb.php call. Wrapped in its own try so that
+        // a network error or non-JSON body (the endpoint now sits behind
+        // the Anubis bot challenge — returns HTTP 307 to /.within.website/
+        // for any User-Agent, including real browsers, so JSON.parse throws)
+        // does not skip the .com features fallback (forum #55008).
+        const fetchSuggest = async key => {
+          try {
+            const response = await fetch(
+              `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${key}`
+            );
+            const ct = (response.headers.get('content-type') || '').toLowerCase();
+            if (!response.ok || !ct.includes('json')) return null;
+            const json = await response.json();
+            return Array.isArray(json) ? json : null;
+          } catch (err) {
+            console.warn('suggest_imdb.php unavailable:', err?.message || err);
+            return null;
+          }
+        };
+
         if (imdbId) {
-          const response = await fetch(
-            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${imdbId}`
-          );
-          const results = await response.json();
-          if (Array.isArray(results) && results.length > 0) {
-            setMovieSearchResults(results);
+          const suggest = await fetchSuggest(imdbId);
+          if (suggest && suggest.length > 0) {
+            setMovieSearchResults(suggest);
           } else {
-            // suggest_imdb.php has no record for this IMDB id (happens for
-            // brand-new or niche titles not yet indexed on .org). Fall back
-            // to opensubtitles.com /features which has a separate, fresher
-            // catalog. Lets the user attach a valid IMDB id even when the
-            // suggest endpoint is empty (forum #55000 — Rental Family 2025).
+            // suggest is blocked / empty — try .com /features by imdb id.
             const fallback = await searchFeaturesByImdb(imdbId);
             setMovieSearchResults(fallback);
           }
         } else {
-          // Regular text search
-          const response = await fetch(
-            `https://www.opensubtitles.org/libs/suggest_imdb.php?m=${encodeURIComponent(query)}`
-          );
-          const results = await response.json();
-          setMovieSearchResults(results || []);
+          // Regular text search.
+          const suggest = await fetchSuggest(encodeURIComponent(query));
+          if (suggest && suggest.length > 0) {
+            setMovieSearchResults(suggest);
+          } else {
+            // Text-mode fallback to .com /features?query=...
+            const fallback = await searchFeaturesByQuery(query);
+            setMovieSearchResults(fallback);
+          }
         }
       } catch (error) {
         console.error('Movie search error:', error);
