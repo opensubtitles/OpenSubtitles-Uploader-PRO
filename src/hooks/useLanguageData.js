@@ -373,14 +373,32 @@ export const useLanguageData = addDebugInfo => {
   // Keyed by lowercase code (either ISO 639-1 / ISO 639-2/T / OS-specific).
   // Codes that don't exist in combinedLanguages are silently ignored, so
   // listing extra aliases is safe.
+  // Codes drawn from OS XML-RPC SubLanguage table (export_languages.php) so
+  // they match the keys used in combinedLanguages. Aliases (ISO 639-1
+  // 2-letter, ISO 639-2/T 3-letter, and OS extensions like 'pob'/'spl')
+  // sit side-by-side because fasttext + REST API return varying forms.
   const LANGUAGE_FAMILIES = [
-    ['zh', 'zho', 'chi', 'zh-cn', 'zhs', 'zht', 'zh-tw', 'zhe', 'yue', 'nan', 'wuu'],
-    ['pt', 'por', 'pob', 'pt-br', 'pt-pt'],
-    ['es', 'spa', 'spl', 'spn', 'es-mx', 'es-419', 'es-es'],
+    // Chinese: simplified (chi/zh), traditional (zht/zt), bilingual (zhe/ze),
+    // Cantonese (zhc/zc) — every track in a Chinese release tends to be
+    // mis-mapped to "chi" by fasttext, so cross-promote them all.
+    ['zh', 'zho', 'chi', 'zhs', 'zhi', 'zht', 'zt', 'zhe', 'ze', 'zhc', 'zc', 'yue', 'nan', 'wuu'],
+    // Portuguese: PT (por/pt), Brazil (pob/pb), Mozambique (pom/pm).
+    ['pt', 'por', 'pob', 'pb', 'pom', 'pm', 'pt-br', 'pt-pt'],
+    // Spanish: generic (spa/es), Latin America (spl/ea), Europe (spn/sp).
+    ['es', 'spa', 'spl', 'ea', 'spn', 'sp', 'es-mx', 'es-419', 'es-es'],
+    // French: every variant rolls up to 'fre' on OS, but keep aliases.
     ['fr', 'fre', 'fra', 'frc', 'fr-ca', 'fr-fr'],
+    // English (US/GB) — same key on OS, kept for fasttext aliases.
     ['en', 'eng', 'en-us', 'en-gb'],
-    ['nb', 'nn', 'no', 'nor'], // Norwegian variants
-    ['sr', 'srp', 'hr', 'hrv', 'bs', 'bos', 'sh'], // Serbo-Croatian cluster
+    // Scandinavian — Bokmål/Nynorsk are technically Norwegian variants,
+    // and Danish + Swedish are close enough that fasttext frequently
+    // confuses them. User-reported (forum #55008): NO surfaced DK as a
+    // sibling but DK didn't surface NO. Single cluster fixes both
+    // directions.
+    ['nb', 'nob', 'nn', 'nno', 'no', 'nor', 'da', 'dan', 'sv', 'swe'],
+    // Serbo-Croatian cluster — Serbian (scc/sr), Croatian (hrv/hr),
+    // Bosnian (bos/bs), Montenegrin (mne/me). Plus catch-all 'sh'.
+    ['sr', 'srp', 'scc', 'hr', 'hrv', 'bs', 'bos', 'sh', 'mne', 'me'],
   ];
   // Get language options for subtitle dropdown
   const getLanguageOptionsForSubtitle = useCallback(
