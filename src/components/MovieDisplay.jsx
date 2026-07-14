@@ -145,8 +145,21 @@ export const MovieDisplay = ({
         );
         fetchFeaturesByImdbId(finalMovieData.imdbid);
       }
+
+      // Also fetch parent TV show features if parent_imdb_id exists
+      if (
+        finalMovieData.parent_imdb_id &&
+        !featuresByImdbId[finalMovieData.parent_imdb_id]
+      ) {
+        console.log(
+          `Fetching parent TV show features for IMDb ID: ${formatImdbId(
+            finalMovieData.parent_imdb_id
+          )}`
+        );
+        fetchFeaturesByImdbId(finalMovieData.parent_imdb_id);
+      }
     }
-  }, [finalMovieData?.imdbid, finalMovieData?.kind, fetchFeaturesByImdbId, featuresByImdbId]);
+  }, [finalMovieData?.imdbid, finalMovieData?.kind, finalMovieData?.parent_imdb_id, fetchFeaturesByImdbId, featuresByImdbId]);
 
   // SAFE: useEffect for episode title enhancement (runs after render)
   React.useEffect(() => {
@@ -161,17 +174,31 @@ export const MovieDisplay = ({
     ) {
       const episodeAttrs = featuresData.data[0].attributes;
 
+      // Get parent title from episode attributes or parent_imdb_id lookup
+      let parentTitle = episodeAttrs.parent_title;
+      if (!parentTitle && episodeAttrs.parent_imdb_id) {
+        // If parent_title missing, try to get it from TV show features
+        const parentFeaturesData = featuresByImdbId?.[episodeAttrs.parent_imdb_id];
+        if (parentFeaturesData?.data?.[0]?.attributes?.title) {
+          parentTitle = parentFeaturesData.data[0].attributes.title;
+        } else if (fetchFeaturesByImdbId) {
+          // Fetch TV show features if not already loaded
+          fetchFeaturesByImdbId(episodeAttrs.parent_imdb_id);
+        }
+      }
+      parentTitle = parentTitle || 'Unknown Series';
+
       // Create enhanced episode data from features API response
       const enhancedData = {
         ...movieData,
         imdbid: movieData.imdbid, // Keep the episode IMDB ID for upload
-        title: `${episodeAttrs.parent_title} - S${(episodeAttrs.season_number || 0).toString().padStart(2, '0')}E${(episodeAttrs.episode_number || 0).toString().padStart(2, '0')} - ${episodeAttrs.title}`,
+        title: `${parentTitle} - S${(episodeAttrs.season_number || 0).toString().padStart(2, '0')}E${(episodeAttrs.episode_number || 0).toString().padStart(2, '0')} - ${episodeAttrs.title}`,
         year: episodeAttrs.year || movieData.year,
         kind: 'episode',
         season: episodeAttrs.season_number,
         episode: episodeAttrs.episode_number,
         episode_title: episodeAttrs.title,
-        show_title: episodeAttrs.parent_title,
+        show_title: parentTitle,
         parent_imdb_id: episodeAttrs.parent_imdb_id,
         feature_id: episodeAttrs.feature_id,
         reason: 'User selected episode with features API data',
@@ -237,7 +264,7 @@ export const MovieDisplay = ({
         }
       }
     }
-  }, [movieGuesses, videoPath, featuresByImdbId, guessItData]);
+  }, [movieGuesses, videoPath, featuresByImdbId, guessItData, fetchFeaturesByImdbId]);
 
   // Handle click outside for FPS dropdowns
   React.useEffect(() => {
@@ -583,7 +610,17 @@ export const MovieDisplay = ({
                       // If we have episode-specific features data, use parent_title + season/episode + episode title
                       if (episodeFeaturesData?.data?.[0]?.attributes) {
                         const episodeAttrs = episodeFeaturesData.data[0].attributes;
-                        const parentTitle = episodeAttrs.parent_title || 'Unknown Series';
+                        let parentTitle = episodeAttrs.parent_title;
+
+                        // If parent_title missing, try to get it from parent TV show features
+                        if (!parentTitle && episodeAttrs.parent_imdb_id) {
+                          const parentFeaturesData = featuresByImdbId?.[episodeAttrs.parent_imdb_id];
+                          if (parentFeaturesData?.data?.[0]?.attributes?.title) {
+                            parentTitle = parentFeaturesData.data[0].attributes.title;
+                          }
+                        }
+                        parentTitle = parentTitle || 'Unknown Series';
+
                         const seasonEpisode = `S${(episodeAttrs.season_number || 0).toString().padStart(2, '0')}E${(episodeAttrs.episode_number || 0).toString().padStart(2, '0')}`;
 
                         // Use episode title (original_title if available, otherwise title, otherwise fallback)
