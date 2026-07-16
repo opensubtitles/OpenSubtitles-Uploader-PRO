@@ -380,6 +380,22 @@ export const VideoFile = ({
                                 </span>
                               </div>
                             )}
+                            {movieGuess.season && (
+                              <div>
+                                <span style={{ color: colors?.link || '#2878C0' }}>Season:</span>{' '}
+                                <span style={{ color: colors?.text || '#000' }}>
+                                  {movieGuess.season}
+                                </span>
+                              </div>
+                            )}
+                            {movieGuess.episode && (
+                              <div>
+                                <span style={{ color: colors?.link || '#2878C0' }}>Episode:</span>{' '}
+                                <span style={{ color: colors?.text || '#000' }}>
+                                  {movieGuess.episode}
+                                </span>
+                              </div>
+                            )}
                             {(() => {
                               const mainTitle = movieGuess.title;
                               const originalTitle = features.data[0].attributes.original_title;
