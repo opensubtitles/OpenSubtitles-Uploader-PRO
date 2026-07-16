@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-07-16T00:22:10.495Z",
+  "generated_at": "2026-07-16T13:43:50.452Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.18",
+      "name": "v1.8.18",
+      "published_at": "2026-07-16T00:23:31Z",
+      "body": "## 🐛 Bug Fix: Episode Display\n\nFixed episode numbers not displaying in video details when using the Features API data source.\n\n### What was broken\n- Episodes (Season/Episode numbers) were only visible when using XML-RPC data\n- When REST API (Features) data loaded, episode information disappeared from UI\n- Backend was correctly detecting episodes, but UI wasn't showing them\n\n### What's fixed\n- Added season/episode display to Features API rendering path\n- Episodes now consistently appear for all data sources\n- VideoFile component now merges episode data from GuessIt with Features API data\n\n### Files changed\n- VideoFile.jsx: Added season/episode fields to Features API details section",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.18",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.18/latest.json",
+          "size": 1169
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.18_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.18/OpenSubtitles.Uploader.PRO_1.8.18_amd64.AppImage",
+          "size": 100672704
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.18_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.18/OpenSubtitles.Uploader.PRO_1.8.18_amd64.deb",
+          "size": 15327548
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.18_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.18/OpenSubtitles.Uploader.PRO_1.8.18_universal.dmg",
+          "size": 30078275
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.18_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.18/OpenSubtitles.Uploader.PRO_1.8.18_x64-setup.exe",
+          "size": 13086510
+        }
+      ]
+    },
     {
       "version": "v1.8.17",
       "name": "v1.8.17",
@@ -490,41 +525,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.2_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.2/OpenSubtitles.Uploader.PRO_1.8.2_x64-setup.exe",
           "size": 4689890
-        }
-      ]
-    },
-    {
-      "version": "v1.8.1",
-      "name": "v1.8.1 - Automatic Release Name Cleaning",
-      "published_at": "2025-10-17T20:36:59Z",
-      "body": "Version 1.8.1 - Automatic Release Name Cleaning\n\nNEW FEATURE: Smart Release Name Cleaning\n\nThis release adds automatic cleaning of release names during subtitle uploads, removing language codes and other markers to ensure clean, professional release names on OpenSubtitles.org.\n\nKey Features:\n- Automatically removes language codes (eng, spa, por, fra, etc.)\n- Removes regional language variants (pt-PT, pt-BR, en-US, es-ES, etc.)\n- Removes full language names (English, Spanish, Portuguese, French, etc.)\n- Removes CD markers (CD1, CD I)\n- Removes SDH/HI suffixes\n- Removes addic7ed.com and other custom patterns\n- Maintains quality information (1080p, BluRay, WEB-DL, etc.)\n\nExamples:\n- Before: \"Prisoner.of.War.2025.1080p.AMZN.WEB-DL.DDP5.1.H.264.v2.pt-PT\"\n  After:  \"Prisoner.of.War.2025.1080p.AMZN.WEB-DL.DDP5.1.H.264.v2\"\n\n- Before: \"Movie.Name.2024.1080p.BluRay.x264.eng.sdh\"\n  After:  \"Movie.Name.2024.1080p.BluRay.x264\"\n\n- Before: \"Series.S01E01.CD1.Spanish\"\n  After:  \"Series.S01E01\"\n\nTechnical Details:\n- New utility module: src/utils/releaseNameUtils.js\n- Integrated into subtitle upload service for both paired and orphaned subtitles\n- Uses combined language data from REST API and XML-RPC\n- Comprehensive test coverage: 18 new tests (all passing)\n- Debug logging shows before/after comparison\n\nTest Results: 159 tests passing (100% pass rate)\n- 18 new tests for release name cleaning\n- All existing tests continue to pass\n- Full integration with upload workflow\n\nThis improvement ensures that release names uploaded to OpenSubtitles.org are clean, professional, and free of language-specific markers that belong in other metadata fields.",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.1",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.1/latest.json",
-          "size": 2804
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.1_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_amd64.AppImage",
-          "size": 91759808
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.1_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_amd64.deb",
-          "size": 7282710
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.1_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_universal.dmg",
-          "size": 14092447
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.1_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.1/OpenSubtitles.Uploader.PRO_1.8.1_x64-setup.exe",
-          "size": 4717284
         }
       ]
     }
