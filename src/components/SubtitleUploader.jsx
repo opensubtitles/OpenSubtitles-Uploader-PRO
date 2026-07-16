@@ -500,8 +500,9 @@ function SubtitleUploaderInner() {
     });
 
     // Return subtitles that are not in any paired file
+    // Exclude subtitles already paired with MKV during extraction
     const orphaned = files.filter(
-      file => file.isSubtitle && !file.shouldRemove && !pairedSubtitlePaths.has(file.fullPath)
+      file => file.isSubtitle && !file.shouldRemove && !pairedSubtitlePaths.has(file.fullPath) && !file.pairedWithMkv
     );
 
     return orphaned;
