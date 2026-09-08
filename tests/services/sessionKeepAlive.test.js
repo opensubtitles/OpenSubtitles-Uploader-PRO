@@ -248,9 +248,10 @@ describe('XmlRpcService.escapeXmlContent', () => {
     );
   });
 
-  test('leaves a real OpenSubtitles token untouched', () => {
-    // Real server-issued shape, including the comma and dash.
-    const token = 'bfT8AbVC-EX9vz1XerAvyHeh,1a';
+  test('leaves an OpenSubtitles-shaped token untouched', () => {
+    // Synthetic. Matches the shape of a real token - mixed case, dash, comma -
+    // without being one. Never paste a server-issued session id into a test.
+    const token = 'EXAMPLEnotArealToken-0000000000,1a';
     assert.strictEqual(XmlRpcService.escapeXmlContent(token), token);
   });
 
