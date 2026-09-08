@@ -189,40 +189,62 @@ class AuthService {
 
   /**
    * Check if user is currently authenticated by calling GetUserInfo with session ID
+   *
+   * Distinguishes a rejected session from an unreachable server. GetUserInfo
+   * resolves to null only when the server actually answers "not logged in"
+   * (401), and that is the single case that may discard stored credentials.
+   * A thrown error means we never got a verdict - offline, DNS failure, 5xx,
+   * a Cloudflare or Anubis interstitial - and must leave the stored session
+   * untouched, otherwise one bad startup logs the user out permanently.
+   *
+   * The verdict is returned rather than stashed on the instance, so concurrent
+   * callers (React StrictMode double-invokes the mount effect) cannot read each
+   * other's outcome.
+   *
    * @param {string} sessionId - Optional session ID to check (from URL parameter)
-   * @returns {Promise<Object>} User info if authenticated, null if not
+   * @param {Object} options - Options
+   * @param {boolean} options.forceFresh - Skip the GetUserInfo cache. Required
+   *   when revalidating after a long idle period: the cache lives an hour, so a
+   *   cached hit would happily confirm a session the server has already dropped.
+   * @returns {Promise<{userData: Object|null, unreachable: boolean, error: Error|null}>}
    */
-  async checkAuthStatus(sessionId = null) {
+  async checkAuthStatus(sessionId = null, { forceFresh = false } = {}) {
+    // Use provided sessionId or stored token
+    const tokenToUse = sessionId || this.token || '';
+
     try {
       console.log('🔐 Checking authentication status with GetUserInfo...');
-
-      // Use provided sessionId or stored token
-      const tokenToUse = sessionId || this.token || '';
       logSensitiveData('🔐 Using token', tokenToUse, 'token');
 
       // Use UserService caching for GetUserInfo calls
       const { UserService } = await import('./userService.js');
-      const userData = await UserService.getUserInfo(tokenToUse);
+      const userData = await UserService.getUserInfo(tokenToUse, null, forceFresh);
 
       if (userData) {
         console.log('✅ User is authenticated via session ID');
-        console.log('✅ User data:', userData);
 
         // Store the valid session data
         this.token = tokenToUse;
         this.isAuthenticated = true;
         this.userData = userData;
 
-        return userData;
-      } else {
-        console.log('❌ User is not authenticated');
-        await this.clearAuthData();
-        return null;
+        return { userData, unreachable: false, error: null };
       }
-    } catch (error) {
-      console.log('❌ Authentication check failed:', error.message);
+
+      // Server answered and rejected the session - this is a real logout.
+      console.log('❌ User is not authenticated - session rejected by server');
       await this.clearAuthData();
-      return null;
+      return { userData: null, unreachable: false, error: null };
+    } catch (error) {
+      // No verdict from the server. Keep the stored credentials so the user gets
+      // another chance instead of being silently logged out, but drop the
+      // in-memory "authenticated" flag so service and UI state stay in step.
+      console.warn(
+        `⚠️ Authentication check could not reach the server (${error.message}) - keeping stored session`
+      );
+      this.isAuthenticated = false;
+      this.userData = null;
+      return { userData: null, unreachable: true, error };
     }
   }
 

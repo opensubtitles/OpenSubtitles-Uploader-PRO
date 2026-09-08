@@ -947,6 +947,12 @@ Test completed successfully! ✅`;
       };
     }
 
+    // Declared out here so the catch below can still see them. They used to be
+    // block-scoped to the try, which made the signature-validation fallback
+    // throw ReferenceError instead of running.
+    let downloadPath = null;
+    let totalBytes = 0;
+
     try {
       this.isInstalling = true;
       console.log('📦 Starting update download with progress tracking...');
@@ -985,7 +991,7 @@ Test completed successfully! ✅`;
 
       // Use our custom download approach (same as demo mode) to bypass signature validation
       const fileName = this.getUpdateFileName();
-      const downloadPath = await this.getActualDownloadPath(fileName);
+      downloadPath = await this.getActualDownloadPath(fileName);
 
       console.log('📦 Download details:', {
         url: downloadUrl,
@@ -994,7 +1000,6 @@ Test completed successfully! ✅`;
       });
 
       let downloadedBytes = 0;
-      let totalBytes = 0;
       let lastLoggedMilestone = -1;
 
       // Set up progress event listener

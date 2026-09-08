@@ -3,7 +3,16 @@
  * Handles secure session ID storage and URL cleanup
  */
 
-const SESSION_STORAGE_KEY = 'opensubtitles_session_id';
+import { hideSensitiveData, logSensitiveData } from '../utils/securityUtils.js';
+import { SESSION_TOKEN_KEY } from '../utils/sessionUtils.js';
+
+/**
+ * Legacy key. This used to be the store, but `detectSession` never read it, so
+ * it was write-only: a session id sitting on disk forever that nothing could
+ * use, and that no expiry path ever pruned. Kept only so existing installs get
+ * it deleted.
+ */
+const LEGACY_SESSION_STORAGE_KEY = 'opensubtitles_session_id';
 
 export class SessionManager {
   /**
@@ -11,15 +20,16 @@ export class SessionManager {
    * Then redirect to clean URL without session ID
    */
   static initializeSession() {
+    this.purgeLegacyStorage();
+
     const urlParams = new URLSearchParams(window.location.search);
     const sidParam = urlParams.get('sid');
 
     if (sidParam) {
-      console.log(
-        `🔐 SessionManager: ✅ Capturing session ID from URL: ${sidParam.substring(0, 8)}...`
-      );
+      logSensitiveData('🔐 SessionManager: ✅ Capturing session ID from URL', sidParam, 'session');
 
-      // Store the session ID securely
+      // Store before stripping the URL. This is the handoff: once the `sid` is
+      // gone from the address bar, storage is the only remaining copy.
       this.storeSessionId(sidParam);
 
       // Remove sid parameter from URL and redirect
@@ -36,9 +46,7 @@ export class SessionManager {
       // Silently check for existing session
       const existing = this.getStoredSessionId();
       if (existing) {
-        console.log(
-          `🔐 SessionManager: ✅ Using existing stored session: ${existing.substring(0, 8)}...`
-        );
+        logSensitiveData('🔐 SessionManager: ✅ Using existing stored session', existing, 'session');
       }
     }
 
@@ -46,19 +54,29 @@ export class SessionManager {
   }
 
   /**
-   * Store session ID in localStorage permanently
+   * Delete the orphaned pre-existing key from installs that still carry it.
+   */
+  static purgeLegacyStorage() {
+    try {
+      if (localStorage.getItem(LEGACY_SESSION_STORAGE_KEY) !== null) {
+        localStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
+        console.log('🔐 SessionManager: Removed orphaned legacy session key');
+      }
+    } catch (error) {
+      console.error('🔐 SessionManager: Failed to remove legacy session key:', error);
+    }
+  }
+
+  /**
+   * Store session ID under the key the rest of the app actually reads.
    * @param {string} sessionId - The session ID to store
    */
   static storeSessionId(sessionId) {
     try {
-      console.log(`🔐 SessionManager: Storing session ID: ${sessionId.substring(0, 8)}...`);
-      console.log(`🔐 SessionManager: Storage key: ${SESSION_STORAGE_KEY}`);
-
-      // Store session ID permanently
-      localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+      localStorage.setItem(SESSION_TOKEN_KEY, sessionId);
 
       // Verify storage worked
-      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      const stored = localStorage.getItem(SESSION_TOKEN_KEY);
       console.log(
         `🔐 SessionManager: ✅ Session ID stored successfully - Verification: ${stored === sessionId}`
       );
@@ -73,8 +91,7 @@ export class SessionManager {
    */
   static getStoredSessionId() {
     try {
-      const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
-      return sessionId || null;
+      return localStorage.getItem(SESSION_TOKEN_KEY) || null;
     } catch (error) {
       console.error('🔐 SessionManager: ❌ Failed to retrieve session ID:', error);
       return null;
@@ -86,7 +103,8 @@ export class SessionManager {
    */
   static clearStoredSession() {
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      this.purgeLegacyStorage();
       console.log('SessionManager: Stored session cleared');
     } catch (error) {
       console.error('SessionManager: Failed to clear session:', error);
@@ -98,8 +116,7 @@ export class SessionManager {
    * @returns {boolean} - True if session is valid
    */
   static isSessionValid() {
-    const sessionId = this.getStoredSessionId();
-    return sessionId !== null;
+    return this.getStoredSessionId() !== null;
   }
 
   /**
@@ -107,11 +124,11 @@ export class SessionManager {
    * @returns {Object} - Session information
    */
   static getSessionInfo() {
-    const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+    const sessionId = this.getStoredSessionId();
 
     return {
       hasSessionId: !!sessionId,
-      sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null, // Truncated for security
+      sessionId: hideSensitiveData(sessionId, 'session'),
       isValid: this.isSessionValid(),
     };
   }

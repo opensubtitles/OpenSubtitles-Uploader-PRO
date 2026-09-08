@@ -326,7 +326,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>GuessMovieFromString</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param>
       <value>
         <array>
@@ -413,9 +413,7 @@ export class XmlRpcService {
                     if (guessItStruct) {
                       const guessItData = this.extractStructData(guessItStruct);
                       movieData.guessit = guessItData;
-                    } else {
                     }
-                  } else {
                   }
                 }
               }
@@ -512,7 +510,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>GetUserInfo</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param><value><string>1</string></value></param>
   </params>
 </methodCall>`;
@@ -559,6 +557,59 @@ export class XmlRpcService {
   }
 
   /**
+   * Keep the current session alive via XML-RPC NoOperation.
+   *
+   * The server treats our token as a PHPSESSID and answers with
+   * `Set-Cookie: PHPSESSID=<token>; Max-Age=21600`, so every call slides the
+   * six-hour expiry window forward. The API docs ask for one call per 15
+   * minutes of inactivity.
+   *
+   * Note: NoOperation is NOT a session validity check. The server answers
+   * `200 OK` for any non-empty token - even one it has never issued - and only
+   * returns `406 No session` for an empty token. Never use this result to
+   * decide whether the user is still logged in; that is GetUserInfo's job.
+   *
+   * @param {string} token - Session token to keep alive
+   * @returns {Promise<{status: string, acknowledged: boolean}>} - Server status.
+   *   `acknowledged` means the server answered 200 - NOT that the user is logged in.
+   */
+  static async noOperation(token) {
+    if (!token) {
+      return { status: '406 No session', acknowledged: false };
+    }
+
+    const xmlRpcBody = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>NoOperation</methodName>
+  <params>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
+  </params>
+</methodCall>`;
+
+    const response = await delayedFetch(API_ENDPOINTS.OPENSUBTITLES_XMLRPC, {
+      method: 'POST',
+      headers: getApiHeaders('text/xml'),
+      body: xmlRpcBody,
+    });
+
+    if (!response.ok) {
+      throw new Error(`XML-RPC NoOperation failed: ${response.status} ${response.statusText}`);
+    }
+
+    const xmlDoc = this.parseXmlRpcResponse(await response.text());
+    const responseStruct = xmlDoc.querySelector('methodResponse param value struct');
+
+    if (!responseStruct) {
+      throw new Error('Invalid NoOperation response structure');
+    }
+
+    const result = this.extractStructData(responseStruct);
+    const status = result.status || 'Unknown';
+
+    return { status, acknowledged: status.includes('200') };
+  }
+
+  /**
    * Search for movies using XML-RPC API
    * @param {string} query - Search query
    * @returns {Promise<Array>} - Array of movie results
@@ -571,7 +622,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>SearchMoviesOnIMDB</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param><value><string>${this.escapeXmlContent(query)}</string></value></param>
   </params>
 </methodCall>`;
@@ -803,7 +854,7 @@ export class XmlRpcService {
   <params>
     <param>
       <value>
-        <string>${token}</string>
+        <string>${this.escapeXmlContent(token)}</string>
       </value>
     </param>
     <param>
@@ -852,7 +903,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>SearchSubtitles</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param>
       <value>
         <array>
@@ -974,10 +1025,8 @@ export class XmlRpcService {
         token = this.getAuthToken();
       }
 
-      console.log(
-        `🚀 TryUploadSubtitles: Retrieved token - Length: ${token.length}, Value: ${token ? token.substring(0, 8) + '...' : 'EMPTY'}`
-      );
-      console.log(`🚀 TryUploadSubtitles: Is token empty? ${token === ''}`);
+      logSensitiveData('🚀 TryUploadSubtitles: Retrieved token', token, 'token');
+      console.log(`🚀 TryUploadSubtitles: Is token empty? ${!token}`);
       console.log(`🚀 TryUploadSubtitles: Upload data structure:`, {
         subtitlesCount: uploadData.length,
         firstSubtitle: uploadData[0]
@@ -1076,7 +1125,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>TryUploadSubtitles</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param>
       <value>
         <struct>
@@ -1260,7 +1309,7 @@ export class XmlRpcService {
 <methodCall>
   <methodName>UploadSubtitles</methodName>
   <params>
-    <param><value><string>${token}</string></value></param>
+    <param><value><string>${this.escapeXmlContent(token)}</string></value></param>
     <param>
       <value>
         <struct>
@@ -1427,7 +1476,9 @@ export class XmlRpcService {
    * @returns {string} - Escaped content
    */
   static escapeXmlContent(content) {
-    return content
+    // Coerce: callers pass tokens and API fields that are not always strings,
+    // and a raw .replace on null throws mid-request-build.
+    return String(content ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')

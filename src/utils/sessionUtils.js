@@ -6,7 +6,7 @@
  * between different parts of the application.
  */
 
-import { logSensitiveData } from './securityUtils.js';
+import { hideSensitiveData, logSensitiveData } from './securityUtils.js';
 
 /**
  * Utility to safely read cookies
@@ -58,6 +58,12 @@ export const getUrlParam = param => {
 };
 
 /**
+ * The one localStorage key that counts as "logged in". Exported so other
+ * modules bind to it rather than re-typing the string and drifting apart.
+ */
+export const SESSION_TOKEN_KEY = 'opensubtitles_token';
+
+/**
  * Session Source Types (for tracking where session came from)
  */
 export const SessionSource = {
@@ -94,7 +100,7 @@ export const detectSession = () => {
 
   // 1. Check URL parameter (highest priority)
   const urlSid = getUrlParam('sid');
-  result.debug.urlSid = urlSid ? `${urlSid.substring(0, 8)}...` : null;
+  result.debug.urlSid = hideSensitiveData(urlSid, 'session');
 
   if (urlSid) {
     result.sessionId = urlSid;
@@ -104,8 +110,8 @@ export const detectSession = () => {
   }
 
   // 2. Check stored token in localStorage
-  const storedToken = getStorageItem('opensubtitles_token');
-  result.debug.storedToken = storedToken ? `${storedToken.substring(0, 8)}...` : null;
+  const storedToken = getStorageItem(SESSION_TOKEN_KEY);
+  result.debug.storedToken = hideSensitiveData(storedToken, 'session');
 
   if (storedToken) {
     result.sessionId = storedToken;
@@ -116,7 +122,7 @@ export const detectSession = () => {
 
   // 3. Check remember_sid cookie (persistent login)
   const rememberSid = getCookie('remember_sid');
-  result.debug.rememberSid = rememberSid ? `${rememberSid.substring(0, 8)}...` : null;
+  result.debug.rememberSid = hideSensitiveData(rememberSid, 'session');
 
   if (rememberSid) {
     result.sessionId = rememberSid;
@@ -127,7 +133,7 @@ export const detectSession = () => {
 
   // 4. Check PHPSESSID cookie (active session)
   const phpSessId = getCookie('PHPSESSID');
-  result.debug.phpSessId = phpSessId ? `${phpSessId.substring(0, 8)}...` : null;
+  result.debug.phpSessId = hideSensitiveData(phpSessId, 'session');
 
   if (phpSessId) {
     result.sessionId = phpSessId;
@@ -149,10 +155,10 @@ export const getSessionDebugInfo = () => {
 
   return {
     ...detection,
-    allCookies: document.cookie,
+    hasCookies: document.cookie.length > 0,
     localStorage: {
-      token: getStorageItem('opensubtitles_token'),
-      userData: getStorageItem('opensubtitles_user_data'),
+      token: hideSensitiveData(getStorageItem(SESSION_TOKEN_KEY), 'token'),
+      hasUserData: !!getStorageItem('opensubtitles_user_data'),
       loginTime: getStorageItem('opensubtitles_login_time'),
     },
     url: window.location.href,

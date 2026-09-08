@@ -3,6 +3,7 @@ import { CacheService } from '../services/cache.js';
 import authService from '../services/authService.js';
 import SystemInfo from './SystemInfo.jsx';
 import { getSystemInfo } from '../utils/systemInfo.js';
+import { hideSensitiveData } from '../utils/securityUtils.js';
 import '../styles/SystemInfo.css';
 
 export const DebugPanel = ({
@@ -32,7 +33,9 @@ export const DebugPanel = ({
       setCacheInfo(CacheService.getCacheSize());
       setSessionInfo({
         hasSessionId: !!authService.getToken(),
-        sessionId: authService.getToken() ? `${authService.getToken().substring(0, 8)}...` : null,
+        // Never the value, not even a prefix - this object is rendered on screen
+        // and pasted verbatim into bug reports by the copy button below.
+        sessionId: hideSensitiveData(authService.getToken(), 'session'),
         isValid: authService.isLoggedIn(),
       });
 
@@ -54,8 +57,11 @@ export const DebugPanel = ({
 
   // Copy debug content to clipboard
   const copyToClipboard = async () => {
+    // Declared out here so the catch below can still reach it - the textarea
+    // fallback used to throw ReferenceError instead of copying.
+    let content = '=== DEBUG INFORMATION ===\n\n';
+
     try {
-      let content = '=== DEBUG INFORMATION ===\n\n';
 
       // Add verbose log status
       content += `Verbose log: ${debugMode ? 'ON' : 'OFF'}\n`;

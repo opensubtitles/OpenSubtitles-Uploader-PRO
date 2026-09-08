@@ -1,8 +1,43 @@
 {
-  "generated_at": "2026-07-30T23:55:13.185Z",
+  "generated_at": "2026-09-08T04:29:03.378Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.21",
+      "name": "v1.8.21",
+      "published_at": "2026-07-30T23:56:04Z",
+      "body": "Version 1.8.21 - Fix Upload button staying disabled after Clear All",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.21",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.21/latest.json",
+          "size": 1183
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.21_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.21/OpenSubtitles.Uploader.PRO_1.8.21_amd64.AppImage",
+          "size": 100676800
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.21_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.21/OpenSubtitles.Uploader.PRO_1.8.21_amd64.deb",
+          "size": 15329546
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.21_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.21/OpenSubtitles.Uploader.PRO_1.8.21_universal.dmg",
+          "size": 30066805
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.21_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.21/OpenSubtitles.Uploader.PRO_1.8.21_x64-setup.exe",
+          "size": 13098960
+        }
+      ]
+    },
     {
       "version": "v1.8.20",
       "name": "v1.8.20",
@@ -490,41 +525,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.6_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/OpenSubtitles.Uploader.PRO_1.8.6_x64-setup.exe",
           "size": 13095868
-        }
-      ]
-    },
-    {
-      "version": "v1.8.5",
-      "name": "v1.8.5",
-      "published_at": "2025-11-22T12:29:57Z",
-      "body": "Version 1.8.5 - Validation UX Improvements & Bug Fixes\n\n- Scroll directly to problematic subtitle when clicking validation errors\n- Highlight subtitles with validation errors (red border/background)\n- Fixed \"Login to Upload\" button not opening login dialog\n- Fixed language filter double-counting orphaned subtitles\n- Only show language validation errors after detection completes\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.5",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.5/latest.json",
-          "size": 1612
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.5_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.5/OpenSubtitles.Uploader.PRO_1.8.5_amd64.AppImage",
-          "size": 91747520
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.5_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.5/OpenSubtitles.Uploader.PRO_1.8.5_amd64.deb",
-          "size": 7268410
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.5_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.5/OpenSubtitles.Uploader.PRO_1.8.5_universal.dmg",
-          "size": 14036932
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.5_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.5/OpenSubtitles.Uploader.PRO_1.8.5_x64-setup.exe",
-          "size": 4697035
         }
       ]
     }

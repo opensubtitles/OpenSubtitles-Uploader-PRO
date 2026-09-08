@@ -12,7 +12,10 @@ export default [
       'react-hooks': reactHooks,
     },
     languageOptions: {
-      ecmaVersion: 2021,
+      // 2022 or newer is required to parse static class fields
+      // (`static activeRequests = new Map()`), which several services use.
+      // At 2021 the parser bailed on the whole file, so it was never linted.
+      ecmaVersion: 2022,
       sourceType: 'module',
       parserOptions: {
         ecmaFeatures: {
@@ -49,6 +52,8 @@ export default [
         prompt: 'readonly',
         Event: 'readonly',
         CustomEvent: 'readonly',
+        DOMParser: 'readonly',
+        getComputedStyle: 'readonly',
         // Encoding APIs
         TextEncoder: 'readonly',
         TextDecoder: 'readonly',
