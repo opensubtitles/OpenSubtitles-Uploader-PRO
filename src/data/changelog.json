@@ -1,8 +1,53 @@
 {
-  "generated_at": "2026-09-08T04:29:03.378Z",
+  "generated_at": "2026-09-20T15:11:48.605Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.22",
+      "name": "v1.8.22",
+      "published_at": "2026-09-08T04:30:50Z",
+      "body": "Version 1.8.22 - Session keep-alive and auth robustness\n\nKeep the OpenSubtitles session alive while the app is open, and stop\ntransient network failures from logging users out.\n\nThe app stores a server-issued PHPSESSID as its session token. The server\nexpires it six hours after the last request (Set-Cookie Max-Age=21600),\nand nothing was refreshing it.\n\nSession keep-alive:\n- Add XmlRpcService.noOperation() and an hourly keep-alive ping\n- Ping is best-effort: it never mutates authentication state, because\n  NoOperation answers 200 OK even for tokens the server never issued\n- Guard against timer stacking, stale in-flight state, and hung sockets\n- Revalidate with a fresh GetUserInfo on wake/refocus after an idle gap,\n  bypassing the one-hour user-info cache\n\nAuthentication fixes:\n- checkAuthStatus no longer discards stored credentials when the server\n  is simply unreachable; only an actual rejection logs the user out\n- Return the verdict instead of stashing it on the service singleton,\n  which two concurrent StrictMode inits could clobber\n- Retry an unverified session when connectivity returns\n- Await restoreAuthFromStorage; a promise is always truthy\n\nLatent bugs found by fixing the ESLint parser:\n- updateService: downloadPath/totalBytes were block-scoped to the try but\n  read in the catch, so the signature-validation download fallback threw\n  ReferenceError instead of running\n- DebugPanel: same pattern left the older-browser clipboard fallback dead\n\nSecurity:\n- Stop logging partial session ids and tokens in SessionManager,\n  sessionUtils, DebugPanel and TryUploadSubtitles\n- DebugPanel no longer copies a token prefix into the clipboard blob\n- Escape the token in every XML-RPC request body\n\nHousekeeping:\n- ESLint ecmaVersion 2021 -> 2022; static class fields broke the parser,\n  leaving eight service files silently unlinted\n- Store the session under the key detectSession actually reads, and purge\n  the orphaned write-only opensubtitles_session_id\n- Collapse two XML escapers into one, and make it null-safe\n- Sync Cargo.lock, stale since 1.8.18",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.22",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/latest.json",
+          "size": 4121
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_amd64.AppImage",
+          "size": 100684992
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_amd64.AppImage.sig",
+          "size": 444
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_amd64.deb",
+          "size": 15336938
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_universal.dmg",
+          "size": 30079075
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_x64-setup.exe",
+          "size": 13095306
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.22_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.22/OpenSubtitles.Uploader.PRO_1.8.22_x64-setup.exe.sig",
+          "size": 444
+        }
+      ]
+    },
     {
       "version": "v1.8.21",
       "name": "v1.8.21",
@@ -490,41 +535,6 @@
           "name": "OpenSubtitles.Uploader.PRO_macos.tar.gz",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/OpenSubtitles.Uploader.PRO_macos.tar.gz",
           "size": 30683009
-        }
-      ]
-    },
-    {
-      "version": "v1.8.6",
-      "name": "v1.8.6",
-      "published_at": "2026-01-21T03:31:08Z",
-      "body": "Version 1.8.6 - Translator Field Validation Fix",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.6",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/latest.json",
-          "size": 1152
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.6_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/OpenSubtitles.Uploader.PRO_1.8.6_amd64.AppImage",
-          "size": 100897984
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.6_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/OpenSubtitles.Uploader.PRO_1.8.6_amd64.deb",
-          "size": 15562764
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.6_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/OpenSubtitles.Uploader.PRO_1.8.6_universal.dmg",
-          "size": 30732695
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.6_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.6/OpenSubtitles.Uploader.PRO_1.8.6_x64-setup.exe",
-          "size": 13095868
         }
       ]
     }
