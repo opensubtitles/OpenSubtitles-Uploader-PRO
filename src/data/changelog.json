@@ -1,8 +1,53 @@
 {
-  "generated_at": "2026-09-20T16:10:05.863Z",
+  "generated_at": "2026-09-20T16:29:32.404Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.23",
+      "name": "v1.8.23",
+      "published_at": "2026-09-20T16:11:25Z",
+      "body": "Version 1.8.23 - Tauri 2.11 upgrade\n\nUpgrades the desktop runtime from Tauri 2.7.0 to 2.11.6 and every Tauri\nplugin to its latest compatible 2.x release. No application behaviour\nchanges; main.rs and the React sources are untouched.\n\nRuntime:\n  tauri                2.7.0  -> 2.11.6\n  tauri-build          2.3.1  -> 2.6.3\n  wry                  0.52.1 -> 0.55.1\n  tao                  0.34   -> 0.35.3\n\nPlugins (Rust / npm):\n  dialog   2.3.2 -> 2.7.3   / 2.3.0 -> 2.7.3\n  fs       2.4.1 -> 2.5.2   / 2.4.0 -> 2.5.2\n  http     2.5.1 -> 2.6.1   / 2.5.0 -> 2.6.1\n  process  2.3.0 -> 2.3.1   / 2.3.0 -> 2.3.1\n  shell    2.3.0 -> 2.3.6   / 2.3.0 -> 2.3.6\n  updater  2.9.0 -> 2.12.0  / 2.9.0 -> 2.12.0\n  api                        / 2.6.0 -> 2.11.1\n  cli                        / 2.6.2 -> 2.11.5\n\nSecurity: Tauri 2.11.1 enforces ACL checks for IPC requests from remote\norigins even when no AppManifest is configured. Previously custom commands\nbypassed ACL entirely, letting any origin invoke them. It also corrects\n.localhost suffix handling in local-origin detection on Windows and Android,\nwhich classified remote hosts such as app.evil.com as local.\n\nVerified building on ubuntu-22.04, macos-14 and windows-2022 with\ncargo build --release --locked, which also proves the committed lockfile is\ncomplete on every target. Locally on macOS: zero compiler warnings, .app /\n.dmg / .app.tar.gz bundles produced, app launches and renders its window,\n225/225 tests pass, ESLint and TypeScript error counts unchanged from the\npre-upgrade baseline.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.23",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/latest.json",
+          "size": 3612
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_amd64.AppImage",
+          "size": 93755896
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_amd64.AppImage.sig",
+          "size": 464
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_amd64.deb",
+          "size": 16069416
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_universal.dmg",
+          "size": 31289325
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_x64-setup.exe",
+          "size": 13361109
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.23_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.23/OpenSubtitles.Uploader.PRO_1.8.23_x64-setup.exe.sig",
+          "size": 464
+        }
+      ]
+    },
     {
       "version": "v1.8.22",
       "name": "v1.8.22",
@@ -500,41 +545,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.9_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.9/OpenSubtitles.Uploader.PRO_1.8.9_x64-setup.exe",
           "size": 13089596
-        }
-      ]
-    },
-    {
-      "version": "v1.8.8",
-      "name": "v1.8.8",
-      "published_at": "2026-01-29T05:18:22Z",
-      "body": "Version 1.8.8 - Upload Order & Anonymous Features\n\n- HI subtitles now upload before non-HI for same movie/language\n- Added 'Upload as Anonymous' feature for OS Legend rank users\n- Anonymous login implemented with proper error handling\n- Added 'Check for Updates' button in app footer\n- Fixed Tauri dev server port configuration",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.8",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/latest.json",
-          "size": 1417
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.8_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/OpenSubtitles.Uploader.PRO_1.8.8_amd64.AppImage",
-          "size": 100873408
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.8_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/OpenSubtitles.Uploader.PRO_1.8.8_amd64.deb",
-          "size": 15535762
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.8_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/OpenSubtitles.Uploader.PRO_1.8.8_x64-setup.exe",
-          "size": 13086050
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_macos.tar.gz",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.8/OpenSubtitles.Uploader.PRO_macos.tar.gz",
-          "size": 30683009
         }
       ]
     }
