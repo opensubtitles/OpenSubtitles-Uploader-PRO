@@ -10,16 +10,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2.3", features = [] }
+tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.6", features = [ "devtools"] }
+tauri = { version = "2.11", features = [ "devtools"] }
 tauri-plugin-shell = "2.3"
-tauri-plugin-fs = "2.4"
-tauri-plugin-dialog = "2.3"
-tauri-plugin-http = "2.5"
-tauri-plugin-updater = "2.9"
+tauri-plugin-fs = "2.5"
+tauri-plugin-dialog = "2.7"
+# Pinned to 2.6 to match @tauri-apps/plugin-http 2.6.1; the Tauri CLI requires the
+# Rust crate and npm package to share a major/minor. Rust 2.7.0 shipped ahead of the
+# npm side. Raise both together once @tauri-apps/plugin-http 2.7.x is published.
+tauri-plugin-http = "2.6"
+tauri-plugin-updater = "2.12"
 tauri-plugin-process = "2.3"
+# main.rs calls `response.bytes_stream()` on the reqwest type re-exported by
+# tauri-plugin-http, which requires reqwest's "stream" feature. Until this upgrade
+# another crate in the graph happened to enable it; nothing does now. Declaring
+# reqwest directly re-enables it through feature unification, keeping the version
+# in lockstep with whatever tauri-plugin-http resolves to (currently 0.12.28).
+# default-features = false so this adds only "stream" and no extra TLS backend.
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dirs = "5.0"

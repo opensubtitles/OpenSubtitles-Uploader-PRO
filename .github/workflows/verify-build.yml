@@ -1,0 +1,104 @@
+name: Verify Build (no release)
+
+# Build-only verification across all three platforms. Uploads nothing and
+# touches no release, so it is safe to run on a branch before a version bump.
+#
+# This exists because there was no safe pre-release check:
+#   - "Build Desktop Apps" runs its release steps on any workflow_dispatch, and
+#     on a non-tag run it resolves VERSION from package.json. Dispatching it on
+#     a branch therefore uploads to the already-published release of that
+#     version with --clobber.
+#   - "Test Desktop Build" is stale: ubuntu-20.04 is a retired runner image and
+#     it installs libwebkit2gtk-4.0-dev, which is a Tauri 1.x dependency.
+#
+# Linux deps below intentionally mirror build-desktop-apps.yml so a green run
+# here means the same toolchain the release build uses.
+
+# The push trigger is scoped to chore/** because GitHub only allows
+# workflow_dispatch from the default branch, and the point of this workflow is
+# to verify a branch *before* anything reaches main. It never uploads or
+# releases, so running it automatically on these branches is free of side
+# effects beyond CI minutes.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'chore/**'
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+          - platform: 'macos-14'
+            target: 'aarch64-apple-darwin'
+          - platform: 'windows-2022'
+            target: 'x86_64-pc-windows-msvc'
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: verify-${{ matrix.platform }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Report resolved Tauri versions
+        shell: bash
+        run: npx tauri info || true
+
+      # --locked makes the build fail if Cargo.lock would need to change,
+      # which is what proves the committed lockfile is complete and correct
+      # on this platform rather than only on the machine that wrote it.
+      - name: Build (no bundle, no upload)
+        shell: bash
+        run: |
+          npm run build
+          cd src-tauri
+          cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Confirm binary exists
+        shell: bash
+        run: |
+          cd src-tauri
+          if [ "${{ matrix.platform }}" = "windows-2022" ]; then
+            BIN="target/${{ matrix.target }}/release/opensubtitles-uploader-pro.exe"
+          else
+            BIN="target/${{ matrix.target }}/release/opensubtitles-uploader-pro"
+          fi
+          test -f "$BIN" || { echo "::error::binary not found at $BIN"; exit 1; }
+          ls -la "$BIN"
