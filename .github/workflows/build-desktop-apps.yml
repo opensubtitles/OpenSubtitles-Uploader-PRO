@@ -129,7 +129,13 @@ jobs:
           echo "Available disk space: $(df -h . | tail -1)"
           
           echo "🔧 Trying basic macOS build..."
-          if npm run tauri build -- --bundles dmg --target universal-apple-darwin --verbose 2>&1 | tee macos-build.log; then
+          # "app" must be listed alongside "dmg". createUpdaterArtifacts only emits
+          # the .app.tar.gz and .app.tar.gz.sig that the updater needs when the app
+          # bundle is built, and passing --bundles overrides "targets": "all" from
+          # tauri.conf.json. With dmg alone the manifest falls back to pointing
+          # macOS users at a .dmg, which the updater cannot install, with an empty
+          # signature — which is how macOS auto-update was broken through v1.8.23.
+          if npm run tauri build -- --bundles app,dmg --target universal-apple-darwin --verbose 2>&1 | tee macos-build.log; then
             echo "✅ macOS build successful"
             echo "🔍 Generated files:"
             find src-tauri/target -name "*.dmg" -o -name "*.app" | head -10
@@ -487,6 +493,29 @@ jobs:
           MAC_SIG=$(get_sig '\.app\.tar\.gz\.sig$')
           LINUX_SIG=$(get_sig '\.AppImage\.sig$')
           echo "Signatures found — win: ${#WIN_SIG} chars, mac: ${#MAC_SIG} chars, linux: ${#LINUX_SIG} chars"
+
+          # Fail loudly rather than publishing a manifest that silently disables
+          # auto-update. An empty signature makes the updater reject the release,
+          # and a macOS URL pointing at a .dmg cannot be installed by the updater
+          # even when the signature is valid. Both conditions shipped unnoticed
+          # through v1.8.23 because this job only warned.
+          MANIFEST_ERRORS=0
+          for entry in "windows:$WIN_SIG" "macos:$MAC_SIG" "linux:$LINUX_SIG"; do
+            if [ -z "${entry#*:}" ]; then
+              echo "::error::Empty updater signature for ${entry%%:*} — auto-update would be broken for that platform"
+              MANIFEST_ERRORS=$((MANIFEST_ERRORS + 1))
+            fi
+          done
+          case "$MACOS_URL" in
+            *.app.tar.gz) ;;
+            *) echo "::error::macOS updater URL is not a .app.tar.gz ($MACOS_URL) — the updater cannot install this artifact"
+               MANIFEST_ERRORS=$((MANIFEST_ERRORS + 1)) ;;
+          esac
+          if [ "$MANIFEST_ERRORS" -gt 0 ]; then
+            echo "❌ Refusing to publish a broken updater manifest ($MANIFEST_ERRORS problem(s))"
+            exit 1
+          fi
+          echo "✅ Manifest preflight passed: all platforms signed, macOS points at an installable artifact"
           
           # Fetch actual release notes from GitHub
           echo "📝 Fetching release notes for $VERSION..."
