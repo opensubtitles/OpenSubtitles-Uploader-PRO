@@ -250,6 +250,30 @@ jobs:
           
           echo "✅ macOS artifacts upload attempt completed"
 
+      # Tauri's AppImage bundler caches the upstream AppRun binary at
+      # $XDG_CACHE_HOME/tauri (i.e. ~/.cache/tauri) and writes it with mode 0770
+      # in write_and_make_executable(). It then fs::copy's that file into the
+      # AppDir, where linuxdeploy-plugin-gtk renames it to AppRun.wrapped and
+      # puts a shell AppRun in front of it. 0770 leaves "other" with no execute
+      # bit, so running the AppImage as any user but the builder fails with
+      # "AppRun.wrapped: Permission denied" before a window ever appears — which
+      # is how the appimage.github.io catalog test (it runs candidates under
+      # firejail) rejected 1.8.24.
+      #
+      # The bundler only downloads this file when it is missing, so seeding it
+      # ourselves with 0755 is enough: the correct mode is what ends up in the
+      # squashfs. Verified against tauri-bundler at @tauri-apps/cli-v2.11.5.
+      - name: Pre-seed AppRun with mode 0755 (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          set -euo pipefail
+          TOOLS_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+          mkdir -p "$TOOLS_DIR"
+          curl -fsSL --retry 3 -o "$TOOLS_DIR/AppRun-x86_64" \
+            https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          chmod 0755 "$TOOLS_DIR/AppRun-x86_64"
+          ls -l "$TOOLS_DIR/AppRun-x86_64"
+
       - name: Build the app (Linux AppImage only)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env:
@@ -279,6 +303,19 @@ jobs:
             grep -i "error\|failed\|panic" linux-build.log | tail -10 || echo "No obvious errors found"
             exit 1
           fi
+
+      # Guard for the permission fix above: a release must never ship an
+      # AppImage whose contents another user cannot read or execute.
+      - name: Verify AppImage permissions (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          set -euo pipefail
+          APPIMAGE=$(find src-tauri/target -name "*.AppImage" | head -1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "::error::no AppImage found to verify"
+            exit 1
+          fi
+          bash scripts/verify-appimage-permissions.sh "$APPIMAGE"
 
       - name: Build the app (Windows)
         if: matrix.target == 'x86_64-pc-windows-msvc'
