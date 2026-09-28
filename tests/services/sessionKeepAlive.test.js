@@ -32,6 +32,18 @@ const {
 
 const originalNoOperation = XmlRpcService.noOperation;
 
+// Keep-alive narrates every ping on console, and most of those writes come from
+// timers rather than from the awaited body of a test. Under `node --test` the
+// child speaks a V8-serialized protocol to the runner over stdout, and a write
+// that lands mid-frame corrupts it - the runner then fails the whole file with
+// "Unable to deserialize cloned data due to invalid or unsupported version."
+// thrown from #proccessRawBuffer, while every assertion in the file passes.
+// Nothing here asserts on log output, so the quietest fix is to not write at
+// all. Suppressed for the file's lifetime, timers included; restoring per-test
+// would reopen the window these logs race through.
+console.log = () => {};
+console.warn = () => {};
+
 describe('sessionKeepAlive', () => {
   beforeEach(() => {
     stopSessionKeepAlive();
