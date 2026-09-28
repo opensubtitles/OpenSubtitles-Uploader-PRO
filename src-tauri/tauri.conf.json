@@ -1,6 +1,6 @@
 {
   "productName": "OpenSubtitles Uploader PRO",
-  "version": "1.8.25",
+  "version": "1.8.26",
   "identifier": "com.opensubtitles.uploader.pro.v2",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -93,7 +93,7 @@
       "icons/icon.ico"
     ],
     "publisher": "OpenSubtitles",
-    "copyright": "Copyright \u00a9 2025 OpenSubtitles",
+    "copyright": "Copyright © 2025 OpenSubtitles",
     "category": "Productivity",
     "shortDescription": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
     "longDescription": "OpenSubtitles Uploader PRO is a professional React-based subtitle uploader application that integrates with both OpenSubtitles APIs for seamless subtitle management and upload. Features include drag-and-drop support, automatic video/subtitle pairing, language detection, movie hash calculation, and comprehensive metadata enrichment.",

@@ -1,8 +1,63 @@
 {
-  "generated_at": "2026-09-28T05:38:46.341Z",
+  "generated_at": "2026-09-28T19:20:38.270Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.8.25",
+      "name": "v1.8.25",
+      "published_at": "2026-09-28T05:40:05Z",
+      "body": "Version 1.8.25 - Fix Linux AppImage startup for other users",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.25",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/latest.json",
+          "size": 3429
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "size": 31684171
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "size": 452
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_amd64.AppImage",
+          "size": 93764088
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_amd64.AppImage.sig",
+          "size": 464
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_amd64.deb",
+          "size": 16069894
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_universal.dmg",
+          "size": 31299885
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_x64-setup.exe",
+          "size": 13357988
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.8.25_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.25/OpenSubtitles.Uploader.PRO_1.8.25_x64-setup.exe.sig",
+          "size": 464
+        }
+      ]
+    },
     {
       "version": "v1.8.24",
       "name": "v1.8.24",
@@ -530,41 +585,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.11_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.11/OpenSubtitles.Uploader.PRO_1.8.11_x64-setup.exe",
           "size": 13132094
-        }
-      ]
-    },
-    {
-      "version": "v1.8.10",
-      "name": "v1.8.10",
-      "published_at": "2026-06-07T20:48:40Z",
-      "body": "🔧 FIX: Bump guessit-js 1.0.1 → ^4.0.0 (v1.0.1 unpublished from npm registry)\n\nCI builds for v1.8.10 failed with:\n  npm error 404 Not Found - GET https://registry.npmjs.org/guessit-js/-/guessit-js-1.0.1.tgz\n\nguessit-js@1.0.1 has been unpublished from npm. The package now starts at 3.8.1\nwith 4.0.0 as latest (same publisher: opensubtitles). Earlier builds worked off\nGitHub Actions' cache; fresh `npm ci` can no longer fetch v1.0.1.\n\nAPI surface in src/services/offlineGuessItService.js (`import { guessit }`,\n`guessit(filename)`, `guessit(filename, options)`) is unchanged between 1.x and\n4.x. Verified end-to-end locally:\n  - npm test → 197/197 pass\n  - OfflineGuessItService.guessFromFilename('The.Man.In.The.High.Castle.S01E01.1080p.mkv')\n    → {title: 'The Man In The High Castle', season: 1, episode: 1}\n  - npm run build → clean vite build",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.10",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/latest.json",
-          "size": 1988
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.10_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_amd64.AppImage",
-          "size": 100881600
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.10_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_amd64.deb",
-          "size": 15532978
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.10_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_universal.dmg",
-          "size": 30660455
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.10_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.10/OpenSubtitles.Uploader.PRO_1.8.10_x64-setup.exe",
-          "size": 13133778
         }
       ]
     }
