@@ -56,7 +56,19 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      # bundle.createUpdaterArtifacts is true, so the bundler refuses to finish
+      # without a signing key — it built every bundle and then failed on
+      # "A public key has been found, but no private key". This job publishes
+      # nothing, so a throwaway key is enough; the real secret stays in the
+      # release workflow. TAURI_SIGNING_PRIVATE_KEY is read as a file path when
+      # the value points at an existing file (tauri-cli bundle.rs).
+      - name: Generate throwaway signing key
+        run: npx tauri signer generate -w "$RUNNER_TEMP/ci.key" -p "" --force
+
       - name: Build Tauri app (Linux)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ runner.temp }}/ci.key
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: npm run tauri:build
 
       - name: Check build artifacts
