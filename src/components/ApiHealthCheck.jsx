@@ -389,33 +389,41 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
     };
 
     return (
+      // `sticky` rather than `fixed`: a fixed banner is out of flow, so it painted
+      // on top of the header below it and hid the logo and application name
+      // entirely — on an 800x600 window this banner is most of the viewport. In
+      // flow it pushes the page down instead, and still stays put while
+      // scrolling. Negative margins cancel the p-6 of the parent so it keeps the
+      // edge-to-edge look.
       <div
-        className={`fixed top-0 left-0 right-0 ${status.color} text-white px-4 py-3 shadow-lg z-50`}
+        className={`sticky top-0 z-50 -mx-6 -mt-6 mb-6 ${status.color} text-white px-4 py-3 shadow-lg`}
       >
-        <div className="max-w-4xl mx-auto flex items-start justify-between">
-          <div className="flex items-start space-x-3">
-            <span className="text-2xl">{status.icon}</span>
-            <div>
-              <h3 className="font-bold text-lg mb-1">
+        <div className="max-w-4xl mx-auto flex items-start justify-between gap-4">
+          <div className="flex items-start space-x-3 min-w-0">
+            <span className="text-xl leading-6">{status.icon}</span>
+            <div className="min-w-0">
+              <h3 className="font-bold">
                 {isBraveShield ? '🛡️ ' : ''}
                 {status.title}
               </h3>
-              <p
-                className={`${isBraveShield ? 'text-orange-100' : 'text-red-100'} mb-2 font-medium`}
-              >
+              <p className={`${isBraveShield ? 'text-orange-100' : 'text-red-100'} text-sm`}>
                 {isBraveShield ? '⚠️ ' : ''}
                 {status.message}
               </p>
-              <div className={`text-sm ${isBraveShield ? 'text-orange-100' : 'text-red-100'}`}>
-                <p className="font-semibold mb-1">
+              {/* Collapsed by default. The steps are reference material once the
+                  headline has been read, and expanded they pushed the banner to
+                  roughly 250px. */}
+              <details
+                className={`mt-1 text-sm ${isBraveShield ? 'text-orange-100' : 'text-red-100'}`}
+              >
+                <summary className="cursor-pointer font-semibold">
                   {isTauriDetected
-                    ? 'Troubleshooting Steps'
+                    ? 'Troubleshooting steps'
                     : isBraveShield
-                      ? 'Disable Brave Shield'
-                      : 'Disable Ad Blocker'}
-                  :
-                </p>
-                <ul className="list-none space-y-1">
+                      ? 'How to disable Brave Shield'
+                      : 'How to disable your ad blocker'}
+                </summary>
+                <ul className="list-none space-y-1 mt-1">
                   {getDisableInstructions().map((step, index) => (
                     <li key={index} className="flex items-start">
                       <span className="mr-2">▶</span>
@@ -429,7 +437,7 @@ export const ApiHealthCheck = ({ onApiBlocked }) => {
                     exceptions.
                   </p>
                 )}
-              </div>
+              </details>
             </div>
           </div>
 
