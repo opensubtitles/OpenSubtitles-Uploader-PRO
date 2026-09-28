@@ -86,6 +86,14 @@ function withTimeout(promise, ms) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
 
+    // A best-effort keep-alive ping must never be the reason a process stays
+    // alive. In the app this is a no-op - browser and webview timers have no
+    // unref - but under `node --test` an abandoned ping (see the hung-socket
+    // tests) otherwise holds the event loop for the full 30s and then logs
+    // into the runner's serialized output stream after the file has reported
+    // its plan, which corrupts it: "Unable to deserialize cloned data".
+    timer.unref?.();
+
     promise.then(
       value => {
         clearTimeout(timer);
