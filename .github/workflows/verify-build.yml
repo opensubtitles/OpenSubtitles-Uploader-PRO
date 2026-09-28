@@ -178,7 +178,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: npm run tauri build -- --bundles appimage
 
-      - name: Verify AppImage permissions
+      - name: Verify AppImage permissions and metadata
         run: |
           set -euo pipefail
           APPIMAGE=$(find src-tauri/target -name "*.AppImage" | head -1)
@@ -187,3 +187,4 @@ jobs:
             exit 1
           fi
           bash scripts/verify-appimage-permissions.sh "$APPIMAGE"
+          bash scripts/verify-appimage-metainfo.sh "$APPIMAGE"

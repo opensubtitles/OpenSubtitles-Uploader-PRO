@@ -304,9 +304,10 @@ jobs:
             exit 1
           fi
 
-      # Guard for the permission fix above: a release must never ship an
-      # AppImage whose contents another user cannot read or execute.
-      - name: Verify AppImage permissions (Linux)
+      # Guards for the two things that are invisible in a green build: an
+      # AppImage whose contents another user cannot read or execute, and one
+      # that silently shipped without its AppStream metadata.
+      - name: Verify AppImage permissions and metadata (Linux)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           set -euo pipefail
@@ -316,6 +317,7 @@ jobs:
             exit 1
           fi
           bash scripts/verify-appimage-permissions.sh "$APPIMAGE"
+          bash scripts/verify-appimage-metainfo.sh "$APPIMAGE"
 
       - name: Build the app (Windows)
         if: matrix.target == 'x86_64-pc-windows-msvc'
