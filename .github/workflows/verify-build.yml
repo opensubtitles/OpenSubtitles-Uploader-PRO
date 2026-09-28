@@ -163,18 +163,19 @@ jobs:
           chmod 0755 "$TOOLS_DIR/AppRun-x86_64"
           ls -l "$TOOLS_DIR/AppRun-x86_64"
 
+      # TAURI_SIGNING_PRIVATE_KEY is read as a file path when the value points at
+      # an existing file (tauri-cli bundle.rs), so the key never has to be piped
+      # through GITHUB_ENV. The pubkey in tauri.conf.json will not match this
+      # key; the bundler only warns, and nothing built here is published.
       - name: Generate throwaway signing key
         run: |
           set -euo pipefail
           npx tauri signer generate -w "$RUNNER_TEMP/verify.key" -p "" --force
-          {
-            echo 'TAURI_SIGNING_PRIVATE_KEY<<EOF'
-            cat "$RUNNER_TEMP/verify.key"
-            echo 'EOF'
-          } >> "$GITHUB_ENV"
-          echo 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD=' >> "$GITHUB_ENV"
 
       - name: Bundle AppImage
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ runner.temp }}/verify.key
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: npm run tauri build -- --bundles appimage
 
       - name: Verify AppImage permissions
