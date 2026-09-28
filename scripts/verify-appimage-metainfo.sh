@@ -4,12 +4,10 @@
 #
 # Why this check exists: the file is placed by `bundle.linux.appimage.files` in
 # tauri.conf.json, whose source paths are resolved against the bundler's working
-# directory. Tauri's schema does not document what that directory is, and
-# copy_custom_files() in tauri-bundler falls through to copy_dir() when the
-# source does not resolve as a file — so a wrong path does not necessarily fail
-# the build, it just silently produces an AppImage with no metadata. Without
-# metainfo the appimage.github.io catalog page falls back to an auto-generated
-# name and its own screenshot of the app.
+# directory, which Tauri's schema does not document. Without metainfo the
+# appimage.github.io catalog page falls back to an auto-generated name and to
+# the screenshot the test harness takes itself - which, since the test sandbox
+# has no network, is a window full of the app's connectivity error.
 #
 # Usage: scripts/verify-appimage-metainfo.sh <path-to-.AppImage>
 
@@ -21,6 +19,11 @@ if [ -z "$APPIMAGE" ] || [ ! -f "$APPIMAGE" ]; then
   exit 2
 fi
 
+if ! command -v unsquashfs >/dev/null 2>&1; then
+  echo "::error::unsquashfs not found; install squashfs-tools" >&2
+  exit 2
+fi
+
 EXPECTED="usr/share/metainfo/com.opensubtitles.uploader.pro.v2.metainfo.xml"
 
 WORK="$(mktemp -d)"
@@ -28,13 +31,16 @@ trap 'rm -rf "$WORK"' EXIT
 
 cp "$APPIMAGE" "$WORK/candidate.AppImage"
 chmod +x "$WORK/candidate.AppImage"
-( cd "$WORK" && ./candidate.AppImage --appimage-extract >/dev/null )
 
-FOUND="$WORK/squashfs-root/$EXPECTED"
+OFFSET="$("$WORK/candidate.AppImage" --appimage-offset)"
+unsquashfs -q -o "$OFFSET" -d "$WORK/out" "$WORK/candidate.AppImage" "$EXPECTED" >/dev/null 2>&1 || true
+
+FOUND="$WORK/out/$EXPECTED"
 if [ ! -f "$FOUND" ]; then
   echo "::error::AppImage is missing $EXPECTED"
-  echo "Contents of usr/share/metainfo (if any):"
-  ls -la "$WORK/squashfs-root/usr/share/metainfo" 2>/dev/null || echo "   (no metainfo directory at all)"
+  echo "Metainfo entries actually present in the image:"
+  unsquashfs -lln -o "$OFFSET" "$WORK/candidate.AppImage" 2>/dev/null \
+    | grep -i metainfo || echo "   (none)"
   echo
   echo "Check the source path in bundle.linux.appimage.files in src-tauri/tauri.conf.json;"
   echo "it is resolved against the bundler's working directory, not the repo root."
