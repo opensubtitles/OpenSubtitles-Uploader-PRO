@@ -1,6 +1,6 @@
 {
   "name": "opensubtitles-uploader-pro",
-  "version": "1.8.26",
+  "version": "1.9.0",
   "description": "OpenSubtitles Uploader PRO - Professional subtitle uploader",
   "keywords": [
     "opensubtitles",
@@ -42,7 +42,8 @@
     "prepublishOnly": "npm run build",
     "tauri": "npx tauri",
     "tauri:dev": "npx tauri dev",
-    "tauri:build": "npx tauri build"
+    "tauri:build": "npx tauri build",
+    "generate-tlds": "node scripts/generate-tlds.js"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

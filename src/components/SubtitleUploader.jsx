@@ -72,6 +72,7 @@ if (typeof window !== 'undefined') {
 
 import { useDebugMode } from '../hooks/useDebugMode.js';
 import { useFileHandling } from '../hooks/useFileHandling.js';
+import { useLinkSanitizer } from '../hooks/useLinkSanitizer.js';
 import { useLanguageData } from '../hooks/useLanguageData.js';
 import { useLanguageDetection } from '../hooks/useLanguageDetection.js';
 import { useMovieGuess } from '../hooks/useMovieGuess.js';
@@ -97,6 +98,7 @@ import { OrphanedSubtitles } from './OrphanedSubtitles.jsx';
 import { LanguageFilter } from './LanguageFilter.jsx';
 import { StatsPanel } from './StatsPanel.jsx';
 import { SubtitlePreview } from './SubtitlePreview.jsx';
+import { LinkSanitizePreview } from './LinkSanitizePreview.jsx';
 import { UploadButton } from './UploadButton.jsx';
 import { ApiHealthCheck } from './ApiHealthCheck.jsx';
 import { ConfigOverlay } from './ConfigOverlay.jsx';
@@ -122,7 +124,8 @@ function SubtitleUploaderInner() {
   const { colors, isDark, toggleTheme } = useTheme();
   const styles = getThemeStyles(colors);
   const { isAuthenticated, user, isAnonymous } = useAuth();
-  const { isStandalone, startAutoUpdates, checkForUpdates, isChecking, updateAvailable } = useAppUpdate();
+  const { isStandalone, startAutoUpdates, checkForUpdates, isChecking, updateAvailable } =
+    useAppUpdate();
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null); // For temporary info messages
   const [showChangelogOverlay, setShowChangelogOverlay] = useState(false);
@@ -188,6 +191,7 @@ function SubtitleUploaderInner() {
     defaultTranslator: '', // Default translator for all subtitles (empty = no default)
     uploadMovieHashOnly: false, // Only update movie hashes, don't upload subtitles (default = false)
     extractMkvSubtitles: true, // Enable MKV subtitle extraction by default (v1.8.1 API)
+    stripUrls: false, // Offer to remove URLs/emails/handles from subtitles (opt-in)
   };
 
   // Config state - initialize with defaults and immediately load from localStorage
@@ -313,6 +317,17 @@ function SubtitleUploaderInner() {
     setFiles,
   } = useFileHandling(addDebugInfo, config);
 
+  // Offer to strip URLs/emails/handles from dropped subtitles (opt-in, never silent)
+  const {
+    reports: linkReports,
+    isReviewOpen: isLinkReviewOpen,
+    toggleMatch: toggleLinkMatch,
+    toggleFile: toggleLinkFile,
+    applyChanges: applyLinkChanges,
+    dismiss: dismissLinkReview,
+    resetScanState: resetLinkScanState,
+  } = useLinkSanitizer(files, config.stripUrls === true, updateFile, addDebugInfo);
+
   // Override drag handlers to prevent default behavior when files already dropped
   const handleDragOver = useCallback(
     e => {
@@ -413,10 +428,7 @@ function SubtitleUploaderInner() {
   } = useCheckSubHash(addDebugInfo);
 
   // OS duplicate count per (imdbid, sublanguageid) — surfaced as "N on OS" badge
-  const {
-    osDuplicateCounts,
-    clearOsDuplicateCounts,
-  } = useAutoOsDuplicateCount({
+  const { osDuplicateCounts, clearOsDuplicateCounts } = useAutoOsDuplicateCount({
     pairedFiles,
     movieGuesses,
     getSubtitleLanguage,
@@ -503,7 +515,11 @@ function SubtitleUploaderInner() {
     // Return subtitles that are not in any paired file
     // Exclude subtitles already paired with MKV during extraction
     const orphaned = files.filter(
-      file => file.isSubtitle && !file.shouldRemove && !pairedSubtitlePaths.has(file.fullPath) && !file.pairedWithMkv
+      file =>
+        file.isSubtitle &&
+        !file.shouldRemove &&
+        !pairedSubtitlePaths.has(file.fullPath) &&
+        !file.pairedWithMkv
     );
 
     return orphaned;
@@ -797,9 +813,7 @@ function SubtitleUploaderInner() {
   const handleLanguageToggle = useCallback(
     newSelectedLanguages => {
       setSelectedLanguages(newSelectedLanguages);
-      addDebugInfo(
-        `Language filter updated: ${newSelectedLanguages.size} language(s) selected`
-      );
+      addDebugInfo(`Language filter updated: ${newSelectedLanguages.size} language(s) selected`);
     },
     [addDebugInfo]
   );
@@ -1366,9 +1380,7 @@ function SubtitleUploaderInner() {
             }
 
             const extractedFiles = await ZipProcessingService.processArchiveFile(file);
-            addDebugInfo(
-              `✅ Extracted ${extractedFiles.length} files from ${file.name}`
-            );
+            addDebugInfo(`✅ Extracted ${extractedFiles.length} files from ${file.name}`);
             processedFiles.push(...extractedFiles);
             continue;
           } catch (error) {
@@ -1426,7 +1438,9 @@ function SubtitleUploaderInner() {
         }
       }
 
-      addDebugInfo(`📁 Processed ${processedFiles.length} valid media files from directory selection`);
+      addDebugInfo(
+        `📁 Processed ${processedFiles.length} valid media files from directory selection`
+      );
 
       if (processedFiles.length > 0) {
         setFiles(prevFiles => {
@@ -1437,9 +1451,7 @@ function SubtitleUploaderInner() {
           const duplicateCount = processedFiles.length - newFiles.length;
 
           if (duplicateCount > 0) {
-            addDebugInfo(
-              `ℹ️ Skipped ${duplicateCount} duplicate file(s) already in the list`
-            );
+            addDebugInfo(`ℹ️ Skipped ${duplicateCount} duplicate file(s) already in the list`);
           }
 
           if (newFiles.length === 0) {
@@ -2178,6 +2190,7 @@ function SubtitleUploaderInner() {
 
     // Clear files and UI state
     clearFiles();
+    resetLinkScanState(); // Let a re-drop of the same path be scanned again
     clearDebugInfo();
     setError(null);
     setPreviewSubtitle(null);
@@ -2339,9 +2352,7 @@ function SubtitleUploaderInner() {
       // Add only genuinely new languages (user changed a subtitle to a new language)
       newLanguages.forEach(lang => newSelectedLanguages.add(lang));
       hasChanges = true;
-      console.log(
-        `➕ Auto-added new language(s): ${Array.from(newLanguages).join(', ')}`
-      );
+      console.log(`➕ Auto-added new language(s): ${Array.from(newLanguages).join(', ')}`);
       addDebugInfo(`Auto-added new language(s): ${Array.from(newLanguages).join(', ')}`);
     } else {
       console.log('⏭️ No changes needed - respecting user selection');
@@ -2349,9 +2360,7 @@ function SubtitleUploaderInner() {
 
     // Update selection if there are changes
     if (hasChanges) {
-      console.log(
-        `💾 Updating selection to: ${Array.from(newSelectedLanguages).join(', ')}`
-      );
+      console.log(`💾 Updating selection to: ${Array.from(newSelectedLanguages).join(', ')}`);
       setSelectedLanguages(newSelectedLanguages);
     }
 
@@ -2895,6 +2904,19 @@ function SubtitleUploaderInner() {
           />
         )}
 
+        {/* Link Removal Review Modal */}
+        {isLinkReviewOpen && linkReports.length > 0 && (
+          <LinkSanitizePreview
+            reports={linkReports}
+            onToggleMatch={toggleLinkMatch}
+            onToggleFile={toggleLinkFile}
+            onApply={applyLinkChanges}
+            onCancel={dismissLinkReview}
+            colors={colors}
+            isDark={isDark}
+          />
+        )}
+
         {/* Config Overlay */}
         <ConfigOverlay
           isOpen={isConfigOpen}
@@ -2916,10 +2938,7 @@ function SubtitleUploaderInner() {
         />
 
         {/* Login Dialog for "Login to Upload" button */}
-        <LoginDialog
-          isOpen={showLoginDialog}
-          onClose={() => setShowLoginDialog(false)}
-        />
+        <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} />
 
         {/* Progress Overlay */}
         <ProgressOverlay
