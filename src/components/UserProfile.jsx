@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+import { UploadLedgerService } from '../services/uploadLedgerService.js';
+import { formatTimeUntil } from '../utils/uploadLimitPolicy.js';
 import LoginDialog from './LoginDialog.jsx';
 
 /**
  * User profile component showing login status and providing logout functionality
+ *
+ * @param {object} props
+ * @param {Function} [props.onShowUploadHistory] - opens the upload history overlay
  */
-const UserProfile = () => {
+const UserProfile = ({ onShowUploadHistory }) => {
   const {
     isAuthenticated,
     user,
@@ -58,6 +63,22 @@ const UserProfile = () => {
     };
   };
 
+  /**
+   * Upload allowance for the dropdown. Read from the local ledger only while the
+   * menu is open, so a closed menu costs nothing and an open one always shows
+   * current numbers rather than a stale snapshot.
+   */
+  const limitState = useMemo(() => {
+    if (!showUserMenu || !user) return null;
+    if (isAnonymous && isAnonymous()) return null;
+    try {
+      return UploadLedgerService.getLimitState(user);
+    } catch (err) {
+      console.warn('📒 Could not read upload limits:', err.message);
+      return null;
+    }
+  }, [showUserMenu, user, isAnonymous]);
+
   // Loading state
   if (loading) {
     return (
@@ -68,36 +89,49 @@ const UserProfile = () => {
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="flex items-center space-x-2" title={error}>
-        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-        <span className="text-sm text-red-600 dark:text-red-400">
-          Auth Error: {error.length > 30 ? error.substring(0, 30) + '...' : error}
-        </span>
-        <button
-          onClick={() => {
-            console.log('🔐 Full error details:', error);
-            clearError();
-          }}
-          className="text-xs text-red-500 hover:text-red-700 underline"
-        >
-          Debug
-        </button>
-      </div>
-    );
-  }
+  /**
+   * Auth error banner.
+   *
+   * Rendered alongside the login/profile button, never instead of it — an early
+   * return here used to swallow the Login button, leaving a failed login with no
+   * way to retry.
+   */
+  const errorBanner = error ? (
+    <div className="flex items-center space-x-2" title={error}>
+      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
+      <span className="text-sm text-red-600 dark:text-red-400">
+        Auth Error: {error.length > 30 ? error.substring(0, 30) + '...' : error}
+      </span>
+      <button
+        onClick={() => {
+          console.log('🔐 Full error details:', error);
+          clearError();
+        }}
+        className="text-xs text-red-500 hover:text-red-700 underline"
+      >
+        Debug
+      </button>
+      <button
+        onClick={clearError}
+        title="Dismiss"
+        aria-label="Dismiss authentication error"
+        className="text-xs text-red-500 hover:text-red-700 px-1"
+      >
+        ✕
+      </button>
+    </div>
+  ) : null;
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center space-x-3">
+      {errorBanner}
       {!isAuthenticated ? (
         /* Login Link for Non-Authenticated Users */
         <button
@@ -181,7 +215,7 @@ const UserProfile = () => {
       {/* User Menu Dropdown */}
       {showUserMenu && (
         <div
-          className={`absolute right-0 mt-2 w-64 rounded-lg shadow-lg border z-50 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+          className={`absolute right-0 top-full mt-2 w-72 rounded-lg shadow-lg border z-50 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
         >
           <div className="p-2">
             {/* Anonymous User Notice */}
@@ -197,6 +231,78 @@ const UserProfile = () => {
                 <div className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
                   Login with your account for full features and personal statistics.
                 </div>
+              </div>
+            )}
+
+            {/* Upload allowance — local ledger, same numbers the upload button enforces */}
+            {limitState && (
+              <div
+                className={`mb-2 p-2 border rounded-lg ${
+                  limitState.blocked
+                    ? isDark
+                      ? 'bg-red-900/20 border-red-800'
+                      : 'bg-red-50 border-red-200'
+                    : isDark
+                      ? 'bg-gray-900/40 border-gray-700'
+                      : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                {limitState.enforced ? (
+                  <>
+                    <div
+                      className={`font-medium mb-1 text-sm flex items-center gap-1 ${
+                        limitState.blocked
+                          ? isDark
+                            ? 'text-red-300'
+                            : 'text-red-700'
+                          : isDark
+                            ? 'text-gray-100'
+                            : 'text-gray-900'
+                      }`}
+                    >
+                      <span>{limitState.blocked ? '⛔' : '📒'}</span>
+                      <span>
+                        {limitState.blocked
+                          ? 'Upload limit reached'
+                          : `${limitState.allowance} uploads left`}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      {limitState.windows.map(window => (
+                        <div
+                          key={window.key}
+                          className={`flex justify-between text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                        >
+                          <span>Per {window.label}</span>
+                          <span
+                            className={
+                              window.remaining === 0
+                                ? isDark
+                                  ? 'text-red-400'
+                                  : 'text-red-600'
+                                : ''
+                            }
+                          >
+                            {window.used} / {window.limit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {limitState.blocked && limitState.nextSlotAt && (
+                      <div className={`mt-1 text-xs ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                        Next slot in {formatTimeUntil(limitState.nextSlotAt)}
+                      </div>
+                    )}
+                  </>
+                ) : limitState.status === 'exempt' ? (
+                  <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    ♾️ No upload limits for your rank.
+                  </div>
+                ) : (
+                  <div className={`text-xs ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                    🚫 Your rank cannot upload subtitles, so no allowance applies.
+                  </div>
+                )}
               </div>
             )}
 
@@ -247,6 +353,32 @@ const UserProfile = () => {
                       </svg>
                       View Profile
                     </a>
+                  )}
+
+                  {/* My Uploads — local ledger history and allowance detail */}
+                  {onShowUploadHistory && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onShowUploadHistory();
+                      }}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 17v-6h13M9 7h13M4 7h.01M4 12h.01M4 17h.01"
+                        />
+                      </svg>
+                      My Uploads
+                    </button>
                   )}
 
                   {/* Logout Button */}

@@ -83,10 +83,8 @@ export const resolveEpisodeImdbId = (movie, featuresByImdbId, guessItForPath) =>
   // TV series with season/episode info — drill into seasons for episode imdb
   const isSeries = attrs?.feature_type === 'Tvshow' || attrs?.feature_type === 'tv_series';
   const seasons = Array.isArray(attrs?.seasons) ? attrs.seasons : null;
-  const season =
-    guessItForPath?.season ?? guessItForPath?.episode_info?.season ?? movie?.season;
-  const episode =
-    guessItForPath?.episode ?? guessItForPath?.episode_info?.episode ?? movie?.episode;
+  const season = getEffectiveSeason(movie, guessItForPath);
+  const episode = getEffectiveEpisode(movie, guessItForPath);
 
   if (isSeries && seasons && season != null && episode != null) {
     const sNum = parseInt(season, 10);
@@ -98,7 +96,90 @@ export const resolveEpisodeImdbId = (movie, featuresByImdbId, guessItForPath) =>
     }
   }
 
+  // Features-API fallback: the .com features endpoint only lists episodes that
+  // already exist as features, so gap episodes (the ones most worth uploading)
+  // never resolve through `seasons`. XML-RPC BestGuess.IMDBEpisode resolves them
+  // server-side, which is what opensubtitles.org itself uses.
+  const xmlRpcEpisodeImdb = resolveXmlRpcEpisodeImdbId(movie, guessItForPath);
+  if (xmlRpcEpisodeImdb) return xmlRpcEpisodeImdb;
+
   return baseImdb;
+};
+
+export const getEffectiveSeason = (movie, guessItForPath) =>
+  guessItForPath?.season ??
+  guessItForPath?.episode_info?.season ??
+  movie?.season ??
+  movie?.best_guess_season;
+
+export const getEffectiveEpisode = (movie, guessItForPath) =>
+  guessItForPath?.episode ??
+  guessItForPath?.episode_info?.episode ??
+  movie?.episode ??
+  movie?.best_guess_episode;
+
+/**
+ * Episode IMDb ID carried by XML-RPC BestGuess.IMDBEpisode, validated against
+ * the season/episode the filename actually claims. The guard matters because
+ * movieGuesses entries are reused across files in the same directory
+ * (see getMovieKey in useMovieGuess) — without it, S01E05's episode ID could
+ * leak onto S01E06.
+ *
+ * @param {object} movie - movieGuesses[videoPath] entry
+ * @param {object} guessItForPath - guessItData[videoPath] (may carry season/episode)
+ * @returns {string|null} - episode-level IMDb ID, or null when unavailable/mismatched
+ */
+export const resolveXmlRpcEpisodeImdbId = (movie, guessItForPath) => {
+  const episodeImdb = movie?.imdb_episode_id;
+  if (!episodeImdb) return null;
+
+  const bgSeason = movie?.best_guess_season;
+  const bgEpisode = movie?.best_guess_episode;
+  if (bgSeason == null || bgEpisode == null) return null;
+
+  const season = parseInt(getEffectiveSeason(movie, guessItForPath), 10);
+  const episode = parseInt(getEffectiveEpisode(movie, guessItForPath), 10);
+  if (isNaN(season) || isNaN(episode)) return null;
+  if (season !== bgSeason || episode !== bgEpisode) return null;
+
+  return String(episodeImdb);
+};
+
+/**
+ * Build episode-level movie data from XML-RPC BestGuess when the features API
+ * has no feature row for this episode. Returns null when BestGuess carries no
+ * usable episode IMDb ID, so callers can keep their existing fallback.
+ *
+ * @param {object} movieData - movieGuesses[videoPath] entry
+ * @param {object} guessItVideoData - guessItData[videoPath]
+ * @returns {object|null} - episode movie data, or null
+ */
+export const buildXmlRpcEpisodeData = (movieData, guessItVideoData) => {
+  const episodeImdb = resolveXmlRpcEpisodeImdbId(movieData, guessItVideoData);
+  if (!episodeImdb) return null;
+
+  const season = movieData.best_guess_season;
+  const episode = movieData.best_guess_episode;
+  const showTitle = movieData.show_title || movieData.title;
+  const episodeTitle =
+    guessItVideoData?.episode_title ||
+    guessItVideoData?.episode_info?.episode_title ||
+    `Episode ${episode}`;
+  const sPad = String(season).padStart(2, '0');
+  const ePad = String(episode).padStart(2, '0');
+
+  return {
+    imdbid: episodeImdb,
+    series_imdb_id: movieData.imdbid,
+    title: `${showTitle} - S${sPad}E${ePad} - ${episodeTitle}`,
+    year: movieData.year,
+    kind: 'episode',
+    season,
+    episode,
+    episode_title: episodeTitle,
+    show_title: showTitle,
+    reason: 'Episode matched from XML-RPC BestGuess',
+  };
 };
 
 /**

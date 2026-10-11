@@ -400,6 +400,20 @@ export class XmlRpcService {
                       if (bestGuessData.MovieYear) movieData.year = bestGuessData.MovieYear;
                       if (bestGuessData.MovieKind) movieData.kind = bestGuessData.MovieKind;
                       if (bestGuessData.Reason) movieData.reason = bestGuessData.Reason;
+
+                      // BestGuess.IMDBEpisode is the per-episode IMDb ID resolved
+                      // server-side. The .com features API only knows episodes that
+                      // already have subtitles, so this is the only source that works
+                      // for gap episodes. Keep it separate from imdbid (the series).
+                      if (bestGuessData.IMDBEpisode) {
+                        movieData.imdb_episode_id = String(bestGuessData.IMDBEpisode);
+                      }
+                      if (bestGuessData.Season != null) {
+                        movieData.best_guess_season = parseInt(bestGuessData.Season, 10);
+                      }
+                      if (bestGuessData.Episode != null) {
+                        movieData.best_guess_episode = parseInt(bestGuessData.Episode, 10);
+                      }
                     }
                   }
 

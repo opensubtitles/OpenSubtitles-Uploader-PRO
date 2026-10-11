@@ -1,5 +1,5 @@
 // Application version - updated manually to match package.json
-export const APP_VERSION = '1.9.0';
+export const APP_VERSION = '1.10.0';
 
 // API Configuration - embedded keys take priority over environment variables
 // Global __EMBEDDED_OPENSUBTITLES_API_KEY__ is defined by Vite at build time
@@ -53,8 +53,10 @@ export const CACHE_KEYS = {
   XMLRPC_LANGUAGES_EXPIRY: 'opensubtitles_xmlrpc_languages_cache_expiry',
   GUESSIT_CACHE: 'opensubtitles_guessit_cache',
   GUESSIT_CACHE_EXPIRY: 'opensubtitles_guessit_cache_expiry',
-  MOVIE_GUESS_CACHE: 'opensubtitles_movie_guess_cache',
-  MOVIE_GUESS_CACHE_EXPIRY: 'opensubtitles_movie_guess_cache_expiry',
+  // v2 namespace: v1 entries predate imdb_episode_id capture from BestGuess and
+  // would keep serving series-level IMDb IDs for up to 72h after an upgrade.
+  MOVIE_GUESS_CACHE: 'opensubtitles_movie_guess_cache_v2',
+  MOVIE_GUESS_CACHE_EXPIRY: 'opensubtitles_movie_guess_cache_v2_expiry',
   LANGUAGE_DETECTION_CACHE: 'opensubtitles_language_detection_cache',
   LANGUAGE_DETECTION_CACHE_EXPIRY: 'opensubtitles_language_detection_cache_expiry',
   FEATURES_CACHE: 'opensubtitles_features_cache',

@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { UserService } from '../services/userService.js';
+import { buildXmlRpcEpisodeData } from '../utils/fileUtils.js';
+import { UploadLedgerService } from '../services/uploadLedgerService.js';
+import { formatTimeUntil } from '../utils/uploadLimitPolicy.js';
 
 export const UploadButton = ({
   pairedFiles,
@@ -19,6 +22,7 @@ export const UploadButton = ({
   isDark,
   userInfo,
   onValidationChange, // New callback to report validation errors to parent
+  onShowUploadHistory, // Opens the local upload ledger overlay
 }) => {
   // Default to light theme colors if not provided
   const themeColors = colors || {
@@ -336,12 +340,26 @@ export const UploadButton = ({
       );
     }
 
+    // Local rate limit. Checked last so genuine validation errors surface
+    // first — being over the limit is not the user's most urgent problem if
+    // their files are also unmatched.
+    const limitCheck = UploadLedgerService.checkUploadAllowed(userInfo, readySubtitlesCount);
+    if (!limitCheck.allowed) {
+      errors.push({
+        type: 'upload_limit',
+        message: limitCheck.reason,
+        // Not tied to any one file, but the parent filters errors by this key.
+        subtitlePath: null,
+      });
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
       readySubtitlesCount,
       totalSubtitles,
+      limitState: limitCheck.limitState,
     };
   };
 
@@ -387,19 +405,34 @@ export const UploadButton = ({
       }
     }
 
+    // Features API has no row for this episode (common for gap episodes) —
+    // fall back to the episode IMDb ID XML-RPC BestGuess already resolved.
+    const xmlRpcEpisode = buildXmlRpcEpisodeData(movieData, guessItVideoData);
+    if (xmlRpcEpisode) return xmlRpcEpisode;
+
     return movieData;
   };
 
   const validation = validateUpload();
-  const { isValid, errors, warnings, readySubtitlesCount, totalSubtitles } = validation;
+  const { isValid, errors, warnings, readySubtitlesCount, totalSubtitles, limitState } =
+    validation;
+  const limitBlocked = errors.some(error => error.type === 'upload_limit');
 
   // Report validation errors to parent component for highlighting subtitles
   const prevErrorsRef = useRef([]);
   useEffect(() => {
     if (onValidationChange) {
-      // Only report if errors have changed (compare by subtitlePath)
-      const currentPaths = errors.filter(e => e.subtitlePath).map(e => e.subtitlePath).sort().join(',');
-      const prevPaths = prevErrorsRef.current.filter(e => e.subtitlePath).map(e => e.subtitlePath).sort().join(',');
+      // Only report if errors have changed (compare by subtitlePath).
+      // The errors array mixes plain strings with objects, so read the key
+      // defensively rather than assuming every entry has one.
+      const pathsOf = list =>
+        list
+          .map(e => (e && typeof e === 'object' ? e.subtitlePath : null))
+          .filter(Boolean)
+          .sort()
+          .join(',');
+      const currentPaths = pathsOf(errors);
+      const prevPaths = pathsOf(prevErrorsRef.current);
 
       if (currentPaths !== prevPaths) {
         onValidationChange(errors);
@@ -462,6 +495,46 @@ export const UploadButton = ({
                 <div className="flex items-center gap-2" style={{ color: themeColors.success }}>
                   <span>✅</span>
                   <span>All requirements met!</span>
+                </div>
+              )}
+              {limitState?.enforced && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span style={{ color: limitBlocked ? themeColors.error : themeColors.textMuted }}>
+                    {limitBlocked ? '⛔' : '📒'}
+                  </span>
+                  <span style={{ color: limitBlocked ? themeColors.error : themeColors.textMuted }}>
+                    {limitState.windows
+                      .map(w => `${w.used}/${w.limit} per ${w.label}`)
+                      .join(' · ')}
+                  </span>
+                  {limitBlocked && limitState.nextSlotAt && (
+                    <span style={{ color: themeColors.error }}>
+                      — next slot in {formatTimeUntil(limitState.nextSlotAt)}
+                    </span>
+                  )}
+                  {onShowUploadHistory && (
+                    <button
+                      onClick={onShowUploadHistory}
+                      className="underline hover:opacity-80"
+                      style={{ color: themeColors.link }}
+                    >
+                      view my uploads
+                    </button>
+                  )}
+                </div>
+              )}
+              {!limitState?.enforced && onShowUploadHistory && (
+                <div style={{ color: themeColors.textMuted }}>
+                  {limitState?.status === 'unranked'
+                    ? 'Your rank cannot upload subtitles — '
+                    : 'No upload limits for your rank — '}
+                  <button
+                    onClick={onShowUploadHistory}
+                    className="underline hover:opacity-80"
+                    style={{ color: themeColors.link }}
+                  >
+                    view my uploads
+                  </button>
                 </div>
               )}
             </div>

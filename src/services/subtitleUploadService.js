@@ -2,6 +2,8 @@ import { XmlRpcService } from './api/xmlrpc.js';
 import { SubtitleHashService } from './subtitleHash.js';
 import { HD_DETECTION_REGEX } from '../utils/constants.js';
 import { cleanReleaseName } from '../utils/releaseNameUtils.js';
+import { buildXmlRpcEpisodeData } from '../utils/fileUtils.js';
+import { UploadLedgerService } from './uploadLedgerService.js';
 
 /**
  * Service for uploading subtitles to OpenSubtitles
@@ -36,6 +38,7 @@ export class SubtitleUploadService {
     getVideoMetadata, // Add video metadata getter
     orphanedSubtitlesFps = {}, // Add FPS settings for orphaned subtitles
     config = {}, // Add config object for settings
+    userInfo = null, // Account behind the upload — drives the local ledger and limits
   }) {
     const results = {
       success: [],
@@ -46,6 +49,29 @@ export class SubtitleUploadService {
       alreadyExists: 0,
       failed: 0,
       detailedResults: [],
+      limitBlocked: false,
+      limitReason: null,
+    };
+
+    const uploadedAnonymously = config.uploadAsAnonymous === true;
+
+    /**
+     * Record an outcome in the local ledger. Never allowed to break an upload:
+     * a storage failure must not lose a subtitle that already reached the server.
+     */
+    const recordInLedger = (subtitleName, status, url, movieData) => {
+      try {
+        UploadLedgerService.recordUpload(userInfo, {
+          filename: subtitleName,
+          status,
+          url,
+          anonymous: uploadedAnonymously,
+          movieName: movieData?.title || movieData?.show_title || null,
+          imdbid: movieData?.imdbid || null,
+        });
+      } catch (error) {
+        addDebugInfo(`⚠️ Upload ledger write failed (upload itself unaffected): ${error.message}`);
+      }
     };
 
     addDebugInfo('🚀 Starting subtitle upload process...');
@@ -80,8 +106,30 @@ export class SubtitleUploadService {
         `📊 Found ${results.totalSubtitles} subtitles to upload across ${videoGroups.size} video files + ${enabledOrphanedSubtitles.length} orphaned subtitles`
       );
 
+      // Rate-limit gate. The UI disables the button before this point; this is
+      // the authoritative client-side check, so a stale UI cannot push a batch
+      // through.
+      const batchCheck = UploadLedgerService.checkUploadAllowed(
+        userInfo,
+        results.totalSubtitles
+      );
+      if (!batchCheck.allowed) {
+        results.limitBlocked = true;
+        results.limitReason = batchCheck.reason;
+        addDebugInfo(`⛔ Upload blocked by local rate limit: ${batchCheck.reason}`);
+        return results;
+      }
+      if (batchCheck.limitState.enforced) {
+        addDebugInfo(
+          `📒 Upload allowance: ${batchCheck.limitState.allowance} remaining (${batchCheck.limitState.reason})`
+        );
+      } else {
+        addDebugInfo(`📒 Upload limits not enforced: ${batchCheck.limitState.reason}`);
+      }
+
       // Process each video group
       for (const [videoPath, { video, subtitles, movieData }] of videoGroups) {
+        if (results.limitBlocked) break;
         addDebugInfo(`🎬 Processing video: ${video.name}`);
 
         try {
@@ -229,6 +277,8 @@ export class SubtitleUploadService {
               message = 'Upload completed';
             }
 
+            recordInLedger(subtitle.name, status, url, movieData);
+
             // Add to detailed results
             results.detailedResults.push({
               filename: subtitle.name,
@@ -246,6 +296,17 @@ export class SubtitleUploadService {
                 failed: results.failed,
                 results: results.detailedResults,
               });
+            }
+
+            // Re-check after each counted upload. The batch gate above used the
+            // allowance at start; this stops a long batch the moment it would
+            // cross the limit, instead of overshooting by the rest of the queue.
+            const midBatchCheck = UploadLedgerService.checkUploadAllowed(userInfo, 1);
+            if (!midBatchCheck.allowed) {
+              results.limitBlocked = true;
+              results.limitReason = midBatchCheck.reason;
+              addDebugInfo(`⛔ Upload limit reached mid-batch: ${midBatchCheck.reason}`);
+              break;
             }
           }
 
@@ -277,6 +338,8 @@ export class SubtitleUploadService {
           subtitles.forEach(subtitle => {
             results.processedSubtitles++;
             results.failed++;
+
+            recordInLedger(subtitle.name, 'failed', null, movieData);
 
             // Add to detailed results
             results.detailedResults.push({
@@ -327,6 +390,7 @@ export class SubtitleUploadService {
       }
 
       for (const subtitle of sortedOrphanedSubtitles) {
+        if (results.limitBlocked) break;
         addDebugInfo(`📝 Processing orphaned subtitle: ${subtitle.name}`);
 
         try {
@@ -467,6 +531,8 @@ export class SubtitleUploadService {
             message = 'Upload completed';
           }
 
+          recordInLedger(subtitle.name, status, url, movieData);
+
           // Add to detailed results
           results.detailedResults.push({
             filename: subtitle.name,
@@ -484,6 +550,14 @@ export class SubtitleUploadService {
               failed: results.failed,
               results: results.detailedResults,
             });
+          }
+
+          // See the paired-upload loop for why this re-check exists.
+          const midBatchCheck = UploadLedgerService.checkUploadAllowed(userInfo, 1);
+          if (!midBatchCheck.allowed) {
+            results.limitBlocked = true;
+            results.limitReason = midBatchCheck.reason;
+            addDebugInfo(`⛔ Upload limit reached mid-batch: ${midBatchCheck.reason}`);
           }
         } catch (error) {
           // Enhanced error logging for NetworkError
@@ -510,6 +584,8 @@ export class SubtitleUploadService {
 
           results.processedSubtitles++;
           results.failed++;
+
+          recordInLedger(subtitle.name, 'failed', null, movieGuesses[subtitle.fullPath]);
 
           // Add to detailed results
           results.detailedResults.push({
@@ -1331,6 +1407,11 @@ export class SubtitleUploadService {
         }
       }
     }
+
+    // Features API has no row for this episode (common for gap episodes) —
+    // fall back to the episode IMDb ID XML-RPC BestGuess already resolved.
+    const xmlRpcEpisode = buildXmlRpcEpisodeData(movieData, guessItVideoData);
+    if (xmlRpcEpisode) return xmlRpcEpisode;
 
     return movieData;
   }

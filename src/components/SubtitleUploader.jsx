@@ -119,6 +119,7 @@ const DebugPanel = lazy(() =>
   import('./DebugPanel.jsx').then(module => ({ default: module.DebugPanel }))
 );
 const ChangelogOverlay = lazy(() => import('./ChangelogOverlay.jsx'));
+const UploadHistoryOverlay = lazy(() => import('./UploadHistoryOverlay.jsx'));
 
 function SubtitleUploaderInner() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -129,6 +130,7 @@ function SubtitleUploaderInner() {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null); // For temporary info messages
   const [showChangelogOverlay, setShowChangelogOverlay] = useState(false);
+  const [showUploadHistoryOverlay, setShowUploadHistoryOverlay] = useState(false);
 
   // Ref for auto-scrolling to matched pairs section
   const matchedPairsRef = useRef(null);
@@ -940,7 +942,19 @@ function SubtitleUploaderInner() {
           },
           getVideoMetadata,
           config,
+          userInfo,
         });
+
+        // Surface a rate-limit stop. The UI gate normally catches this first,
+        // so reaching here means the limit ran out partway through the batch.
+        if (uploadResults.limitBlocked) {
+          addDebugInfo(`⛔ Upload stopped by local rate limit: ${uploadResults.limitReason}`);
+          showNotification(
+            `${uploadResults.limitReason} ${uploadResults.successful} uploaded before the limit was reached.`,
+            'warning',
+            12000
+          );
+        }
 
         // Process upload results and update state
         const newUploadResults = {};
@@ -2499,7 +2513,7 @@ function SubtitleUploaderInner() {
             {/* User Info and Theme Toggle - Right Side */}
             <div className="flex flex-col items-end gap-1">
               {/* User Profile */}
-              <UserProfile />
+              <UserProfile onShowUploadHistory={() => setShowUploadHistoryOverlay(true)} />
 
               {/* Action Buttons Row */}
               <div className="flex items-center gap-2">
@@ -2814,6 +2828,7 @@ function SubtitleUploaderInner() {
               isDark={isDark}
               userInfo={userInfo}
               onValidationChange={setValidationErrors}
+              onShowUploadHistory={() => setShowUploadHistoryOverlay(true)}
             />
           </div>
         )}
@@ -3090,6 +3105,17 @@ function SubtitleUploaderInner() {
         <ChangelogOverlay
           isOpen={showChangelogOverlay}
           onClose={() => setShowChangelogOverlay(false)}
+          colors={colors}
+          isDark={isDark}
+        />
+      </Suspense>
+
+      {/* Local upload ledger — how many uploads, when, and current allowance */}
+      <Suspense fallback={null}>
+        <UploadHistoryOverlay
+          isOpen={showUploadHistoryOverlay}
+          onClose={() => setShowUploadHistoryOverlay(false)}
+          userInfo={userInfo}
           colors={colors}
           isDark={isDark}
         />

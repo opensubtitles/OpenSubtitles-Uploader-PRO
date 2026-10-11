@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   areTitlesSimilar,
+  buildXmlRpcEpisodeData,
   formatImdbId,
   getImdbUrl,
   getOsImdbSearchUrl,
@@ -292,9 +293,19 @@ export const MovieDisplay = ({
               };
 
               setEnhancedEpisodeData(enhancedData);
+              return;
             }
           }
         }
+      }
+    }
+
+    // Features API has no row for this episode (common for gap episodes) —
+    // fall back to the episode IMDb ID XML-RPC BestGuess already resolved.
+    if (movieData && movieData.reason !== 'User selected') {
+      const xmlRpcEpisode = buildXmlRpcEpisodeData(movieData, guessItVideoData);
+      if (xmlRpcEpisode) {
+        setEnhancedEpisodeData({ ...movieData, ...xmlRpcEpisode });
       }
     }
   }, [movieGuesses, videoPath, featuresByImdbId, guessItData, fetchFeaturesByImdbId]);
