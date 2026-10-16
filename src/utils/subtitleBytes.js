@@ -7,18 +7,35 @@
  * instead: latin1 is a bijection between bytes 0-255 and code points 0-255, so
  * every byte we do not touch round-trips exactly. The sanitizer only matches
  * ASCII, so matching works unchanged on that view.
+ *
+ * The view is built by hand rather than with `TextDecoder('iso-8859-1')`. In
+ * the WHATWG Encoding Standard every ISO-8859-1 label is an alias for the
+ * windows-1252 decoder, so a browser or WebView maps 0x80-0x9F to code points
+ * above U+00FF (0x87 -> U+2021, 0x8B -> U+2039, ...). Re-encoding those with
+ * `& 0xff` writes back the wrong byte and corrupts every multi-byte character
+ * whose encoding contains one, which is most of UTF-8 Devanagari, Cyrillic and
+ * CJK. Node's ICU-backed TextDecoder returns true latin1 for the same label,
+ * so the bug is invisible to `node --test` and only appears in the app.
  */
 
-const LATIN1_DECODER = new TextDecoder('iso-8859-1');
 const UTF8_DECODER = new TextDecoder('utf-8', { fatal: false });
+
+// Bounded so String.fromCharCode never overflows the call stack on big files.
+const DECODE_CHUNK = 0x8000;
 
 /**
  * Byte-preserving view of a file's contents: one code point per byte.
  * @param {Uint8Array|ArrayBuffer} bytes
  * @returns {string}
  */
-export const decodeLatin1 = bytes =>
-  LATIN1_DECODER.decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+export const decodeLatin1 = bytes => {
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let text = '';
+  for (let offset = 0; offset < view.length; offset += DECODE_CHUNK) {
+    text += String.fromCharCode(...view.subarray(offset, offset + DECODE_CHUNK));
+  }
+  return text;
+};
 
 /**
  * Converts a latin1 view back to the exact bytes it came from.
