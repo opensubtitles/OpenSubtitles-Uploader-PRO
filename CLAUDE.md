@@ -12,18 +12,30 @@
 
 - **ALWAYS** use GitHub Actions for building
 - **NEVER** build locally unless specifically requested
-- Use `gh workflow run "Build Desktop Apps" --field create_release=true` to trigger GitHub builds
-- GitHub builds create releases for all platforms (Windows, macOS, Linux)
+- **Pushing the tag is what releases.** `build-desktop-apps.yml` triggers on
+  `push.tags: ['v*']`, builds all platforms, and publishes the release itself.
 - Only build locally when explicitly asked: "build locally"
 
-**IMPORTANT**: The workflow is now MANUAL-ONLY to prevent duplicate builds. No automatic builds on push/tag.
+### 🚨 Do NOT dispatch the build workflow manually
+
+`gh workflow run "Build Desktop Apps"` is **destructive on a non-tag ref** and
+there is never a reason to run it:
+
+- It takes **no inputs**. The workflow declares a bare `workflow_dispatch:`, so
+  `--field create_release=true` fails — that input does not exist.
+- On a non-tag ref the version falls back to `VERSION="v$(package.json version)"`.
+  On a branch whose `package.json` still holds the shipped version, the final
+  step runs `gh release upload "$VERSION" latest.json --clobber` and **overwrites
+  the updater manifest on the live release**.
+- Dispatching it *and* pushing the tag starts two builds racing for the same
+  release.
+
+Push the tag and stop. To verify a build before releasing, push to a `chore/**`
+branch — `verify-build.yml` compiles all three platforms and uploads nothing.
 
 ### Commands for releases:
 ```bash
-# Trigger GitHub build and release (DEFAULT)
-gh workflow run "Build Desktop Apps" --field create_release=true
-
-# Check workflow status
+# Check workflow status (the tag push starts it automatically)
 gh run list --workflow="Build Desktop Apps"
 
 # Monitor the build
@@ -46,38 +58,72 @@ npm run tauri:build
 ### ⚠️ MANDATORY Release Sequence:
 
 ```bash
-# 1. FIRST - Bump version using the script (REQUIRED)
+# 1. Bump package.json. `npm run update-version` does NOT increment anything -
+#    it only propagates package.json's CURRENT version, so set it first.
+npm version X.X.X --no-git-tag-version
+
+# 2. Propagate into constants.js, README.md, tauri.conf.json, Cargo.toml
 npm run update-version
 
-# 2. SECOND - Generate changelog for this release (REQUIRED)
+# 3. Let Cargo.lock pick up the new package version too
+cargo update -p opensubtitles-uploader-pro --offline --manifest-path src-tauri/Cargo.toml
+
+# 4. Pull PAST GitHub releases into the in-app changelog view
+#    (this cannot describe the release being cut - see note below)
 npm run generate-changelog
 
-# 3. THIRD - Commit and tag the version bump
-git add .
-git commit -m "🚀 RELEASE: Version X.X.X - Description"
-git tag vX.X.X
-git push && git push --tags
+# 5. Verify before committing
+npm test && npm run build
 
-# 4. FOURTH - Trigger builds/release ONLY after version is committed
-gh workflow run build-desktop-apps.yml --field create_release=true
-# OR make local build: npm run tauri:build
+# 6. Commit. The BODY of this commit becomes the published release notes.
+git commit -F - <<'MSG'
+🚀 RELEASE: Version X.X.X - Short description
 
-# 5. FIFTH - Create/publish GitHub release with proper version
-gh release create vX.X.X --title "vX.X.X - Description" --notes "..."
+<user-facing release notes go here>
+MSG
+
+# 7. Push the branch. Plain `main` is ambiguous in this repo (a stale TAG named
+#    `main` shadows the branch), so always use the full ref.
+git push origin refs/heads/main:refs/heads/main
+
+# 8. Push the tag. THIS builds and publishes the release. Nothing else to run.
+git tag vX.X.X && git push origin refs/tags/vX.X.X
 ```
+
+**Release notes come from the commit message.** The `Ensure release exists` step
+runs `git log -1 --format='%B'`, strips the leading `🚀 RELEASE: `, and passes the
+rest to `gh release create --notes`. The release commit body *is* the changelog
+users read — write it for them, not for the git log.
+
+**`npm run generate-changelog` is unrelated to that.** It pulls *already
+published* GitHub releases into `src/data/changelog.json` for the in-app
+changelog view, so the release being cut will only appear there in the *next*
+release.
+
+**Beware the stale `main` tag.** A tag named `main` exists alongside the branch,
+so every bare `main` reference is ambiguous: `git push origin main` fails, and
+`git diff main` silently diffs against the tag and unrelated history. Use
+`refs/heads/main`, and `git switch main` rather than `git checkout main`.
 
 ### 🚨 CRITICAL RULES:
 
-1. **NEVER build before version bump** - Always `npm run update-version` FIRST
-2. **NEVER manually edit versions** - Script handles package.json, Cargo.toml, tauri.conf.json consistently
+1. **NEVER build before version bump** - bump `package.json` FIRST, then propagate
+2. **NEVER manually edit versions** - the script keeps all five files consistent
+   (package.json, constants.js, tauri.conf.json, Cargo.toml, Cargo.lock)
 3. **NEVER skip version commit** - Git tag and version files must match exactly
-4. **ALWAYS verify version sync** - Check that build output matches expected version number
+4. **NEVER dispatch the build workflow** - see the warning above; the tag push is
+   the whole release mechanism
+5. **ALWAYS verify version sync** - check that build output matches expected version
 
 ### ❌ What NOT to do:
 - Build first, then bump version (causes version mismatches)
 - Manual version editing (causes inconsistencies)
 - Skipping git tag creation (breaks release automation)
 - Using different version numbers in different files
+- Running `npm run update-version` and expecting it to increment (it does not)
+- Dispatching "Build Desktop Apps" manually (no inputs; clobbers live assets
+  from a branch; races the tag build)
+- `git push origin main` or `git diff main` (ambiguous — stale `main` tag)
 
 ### ✅ Correct sequence prevents issues like:
 - Release v1.6.14 containing v1.6.13 files (version mismatch)
@@ -96,12 +142,40 @@ gh release create vX.X.X --title "vX.X.X - Description" --notes "..."
 
 **Auto-updater will FAIL without latest.json!**
 
+Presence is not enough — `latest.json` can exist while pointing at the *wrong*
+version (that is exactly what a stray workflow dispatch does to it). Verify the
+contents after the build finishes:
+
+```bash
+gh release view vX.X.X --json assets --jq '[.assets[].name]'
+curl -sL "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/vX.X.X/latest.json" \
+  | node -p "const j=JSON.parse(require('fs').readFileSync(0,'utf8')); j.version + ' | ' + Object.keys(j.platforms).join(', ')"
+```
+
+Expect `vX.X.X` and all five targets: `windows-x86_64`, `darwin-universal`,
+`darwin-x86_64`, `darwin-aarch64`, `linux-x86_64`.
+
 ## Testing Commands
 
 ```bash
 npm test          # Run test suite
 npm run lint      # Run linter
 npm run typecheck # Run TypeScript checks
+```
+
+**`npm run lint` does not pass on a clean tree.** It reports a standing baseline
+of pre-existing errors (32 as of v1.10.1, mostly `no-undef` on `React` in older
+files) plus a few hundred warnings. Do not read that as breakage you caused, and
+do not go fix it as a side quest. Lint only what you touched:
+
+```bash
+npx eslint <files you changed>
+```
+
+To confirm you added nothing new, compare the totals across a stash:
+
+```bash
+git stash -u && npm run lint 2>&1 | grep '^✖'; git stash pop && npm run lint 2>&1 | grep '^✖'
 ```
 
 ## Update System Testing
