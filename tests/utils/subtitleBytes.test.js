@@ -6,7 +6,7 @@ import {
   encodeLatin1,
   latin1ToDisplay,
 } from '../../src/utils/subtitleBytes.js';
-import { sanitizeSubtitle } from '../../src/services/subtitleSanitizer.js';
+import { findLinks, sanitizeSubtitle } from '../../src/services/subtitleSanitizer.js';
 
 const MODULE_URL = pathToFileURL(
   new URL('../../src/utils/subtitleBytes.js', import.meta.url).pathname
@@ -146,4 +146,129 @@ describe('sanitizing a UTF-8 subtitle keeps every untouched byte', () => {
     const view = decodeLatin1(new TextEncoder().encode('स्वागत'));
     assert.strictEqual(latin1ToDisplay(view), 'स्वागत');
   });
+});
+
+// Subtitles arrive in whatever the release group used. The latin1 view is
+// charset-agnostic by construction, but the matcher runs over those same bytes,
+// so each encoding family gets a real sample pushed through the full sanitizer.
+// Fixtures are stored as hex rather than generated with iconv so the test has
+// no external dependency.
+const ENCODED_DIALOGUE = {
+  utf8: { label: 'UTF-8', hex: 'e0a4a8e0a4aee0a4b8e0a58de0a4a4e0a58720e0a4a6e0a58be0a4b8e0a58de0a4a4e0a58be0a4822c20e0a486e0a4aae0a495e0a4be20e0a4b9e0a4aee0a4bee0a4b0e0a58720e0a49ae0a588e0a4a8e0a4b220e0a4aee0a587e0a48220e0a4b8e0a58de0a4b5e0a4bee0a497e0a4a420e0a4b9e0a588e0a5a4' },
+  cp1251: { label: 'CP1251', hex: 'cff0e8e2e5f22c20e4f0f3e7fcff2120c4eee1f0ee20efeee6e0ebeee2e0f2fc20ede020ede0f820eae0ede0eb2e' },
+  cp1250: { label: 'CP1250', hex: '41686f6a2070f8e174656ce92c2076ed74656a7465206e61206e619a656d206b616ee16c752e' },
+  big5: { label: 'BIG5', hex: 'a46aae61a66ea141c577aaefa8d3a8eca7daadccaabac057b944a143' },
+  shiftJis: { label: 'SHIFT_JIS', hex: '82b182f182c982bf82cd81418a4682b382f181428e8482bd82bf82cc836083838393836c838b82d682e682a482b182bb8142' },
+  gbk: { label: 'GBK', hex: 'b4f3bcd2bac3a3acbbb6d3adc0b4b5bdced2c3c7b5c4c6b5b5c0a1a3' },
+  eucKr: { label: 'EUC-KR', hex: 'bec8b3e7c7cfbcbcbfe420bfa9b7afbad02c20bfecb8ae20c3a4b3cebfa120bfc0bdc520b0cdc0bb20c8afbfb5c7d5b4cfb4d92e' },
+  koi8r: { label: 'KOI8-R', hex: 'f0d2c9d7c5d42c20c4d2d5dad8d12120e4cfc2d2cf20d0cfd6c1cccfd7c1d4d820cec120cec1db20cbc1cec1cc2e' },
+  greek: { label: 'ISO-8859-7', hex: 'c3e5e9e120f3e1f220f6dfebefe92c20eae1ebfef220def1e8e1f4e520f3f4ef20eae1eddcebe920ece1f22e' },
+  arabic: { label: 'CP1256', hex: 'e3d1cdc8c720c3d5cfdec7c6eda120c3e5e1c720c8dfe320dded20dee4c7cae4c72e' },
+};
+
+const fromHex = hex => Uint8Array.from(hex.match(/../g).map(b => parseInt(b, 16)));
+
+const concatBytes = parts => {
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+};
+
+const ascii = text => Uint8Array.from(text, c => c.charCodeAt(0));
+
+/** An SRT whose dialogue is raw `encoded` bytes, plus one ASCII link cue. */
+const buildEncodedSrt = encoded =>
+  concatBytes([
+    ascii('1\n00:00:01,000 --> 00:00:03,000\n'),
+    encoded,
+    ascii('\n\n2\n00:00:03,024 --> 00:00:04,024\nhttps://website.com\n\n3\n00:00:03,024 --> 00:00:05,024\n'),
+    encoded,
+    ascii('\n\n'),
+  ]);
+
+const indexOfBytes = (haystack, needle) => {
+  outer: for (let i = 0; i + needle.length <= haystack.length; i += 1) {
+    for (let j = 0; j < needle.length; j += 1) if (haystack[i + j] !== needle[j]) continue outer;
+    return i;
+  }
+  return -1;
+};
+
+describe('every encoding family survives link removal byte-for-byte', () => {
+  for (const [name, { label, hex }] of Object.entries(ENCODED_DIALOGUE)) {
+    test(`${name} (${label}) keeps its dialogue bytes and loses the link`, () => {
+      const dialogue = fromHex(hex);
+      const source = buildEncodedSrt(dialogue);
+      const output = encodeLatin1(sanitizeSubtitle(decodeLatin1(source)).content);
+
+      const first = indexOfBytes(output, dialogue);
+      assert.notStrictEqual(first, -1, `${label} dialogue bytes were altered`);
+      const second = indexOfBytes(output.subarray(first + dialogue.length), dialogue);
+      assert.notStrictEqual(second, -1, `${label} second dialogue line was altered`);
+      assert.strictEqual(indexOfBytes(output, ascii('website.com')), -1, 'link survived');
+    });
+  }
+});
+
+// The matcher is ASCII-only and every legacy DBCS trail byte starts at 0x40, so
+// '.', '/', ':' and '-' can never be the second half of a double-byte char.
+// '@' (0x40) can be — the handle scanner's opener guard is what stops it.
+describe('legacy double-byte encodings produce no false matches', () => {
+  const DBCS = {
+    big5: { lead: [[0xa1, 0xf9]], trail: [[0x40, 0x7e], [0xa1, 0xfe]] },
+    shiftJis: { lead: [[0x81, 0x9f], [0xe0, 0xef]], trail: [[0x40, 0x7e], [0x80, 0xfc]] },
+    gbk: { lead: [[0x81, 0xfe]], trail: [[0x40, 0x7e], [0x80, 0xfe]] },
+    eucKr: { lead: [[0xa1, 0xfe]], trail: [[0xa1, 0xfe]] },
+  };
+
+  const expand = ranges => ranges.flatMap(([a, b]) =>
+    Array.from({ length: b - a + 1 }, (_, i) => a + i));
+
+  for (const [name, spec] of Object.entries(DBCS)) {
+    test(`${name}: every lead/trail pair scans clean`, () => {
+      const leads = expand(spec.lead);
+      const trails = expand(spec.trail);
+      for (const lead of leads) {
+        const bytes = [];
+        for (const trail of trails) bytes.push(lead, trail);
+        const found = findLinks(decodeLatin1(Uint8Array.from(bytes)));
+        assert.deepStrictEqual(
+          found.map(f => f.text),
+          [],
+          `lead 0x${lead.toString(16)} produced a false match`
+        );
+      }
+    });
+  }
+
+  test('a trail byte of 0x40 is not read as a social handle', () => {
+    for (const lead of [0x81, 0xa1, 0xe0, 0xfe]) {
+      const bytes = Uint8Array.from([lead, 0x40, ...ascii('release')]);
+      assert.deepStrictEqual(findLinks(decodeLatin1(bytes)), [], `lead 0x${lead.toString(16)}`);
+    }
+  });
+});
+
+// UTF-16 interleaves NULs, so "https" is never contiguous and nothing matches.
+// That is a no-op, not corruption - the bytes must come back untouched.
+describe('UTF-16 subtitles are left completely alone', () => {
+  for (const [name, littleEndian] of [['UTF-16LE', true], ['UTF-16BE', false]]) {
+    test(`${name} is returned byte-identical`, () => {
+      const text = '1\n00:00:01,000 --> 00:00:03,000\nПривет\n\n2\n00:00:03,024 --> 00:00:04,024\nhttps://website.com\n\n';
+      const source = new Uint8Array(text.length * 2);
+      const view = new DataView(source.buffer);
+      for (let i = 0; i < text.length; i += 1) {
+        view.setUint16(i * 2, text.charCodeAt(i), littleEndian);
+      }
+      const result = sanitizeSubtitle(decodeLatin1(source));
+      assert.strictEqual(result.changed, false);
+      assert.deepStrictEqual(result.matches, []);
+      assert.deepStrictEqual(encodeLatin1(result.content), source);
+    });
+  }
 });
