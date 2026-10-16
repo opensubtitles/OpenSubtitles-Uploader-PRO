@@ -1,7 +1,7 @@
 # OpenSubtitles Uploader PRO
 
 [![Tests](https://github.com/opensubtitles/opensubtitles-uploader-pro/workflows/Tests/badge.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/actions)
-[![Version](https://img.shields.io/badge/version-1.10.0-blue.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)
+[![Version](https://img.shields.io/badge/version-1.10.1-blue.svg)](https://github.com/opensubtitles/opensubtitles-uploader-pro/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-uploader.opensubtitles.org-brightgreen.svg)](https://uploader.opensubtitles.org)
 
@@ -34,11 +34,13 @@ A professional subtitle uploader application that integrates with OpenSubtitles 
 - **Movie Hash Calculation** - Generates OpenSubtitles-compatible hashes for precise matching
 - **Automatic Tagging** - Detects HD quality, hearing impaired, foreign parts from filenames
 - **Subtitle Statistics** - Shows existing subtitle counts and language availability
+- **Remove Links from Subtitles** - Optional stripping of release-group ads, with a per-match preview ([details](#-remove-links-from-subtitles))
 
 ### 🎨 User Experience
 - **Modern UI** - Clean, responsive interface with automatic dark/light theme detection
 - **Performance Optimized** - Intelligent caching, retry logic, and parallel processing
 - **Upload Validation** - Comprehensive pre-upload checks to ensure successful submissions
+- **Upload Allowance** - Remaining daily/weekly allowance shown before you upload, with a **My Uploads** history view ([details](#-upload-limits))
 - **Ad Blocker Detection** - Automatic detection and guidance for browser compatibility
 
 ## 🚀 How to Use
@@ -54,6 +56,84 @@ A professional subtitle uploader application that integrates with OpenSubtitles 
    - Detects subtitle languages using AI
    - Identifies movies/episodes with IMDb integration
 4. **✅ Review & Upload** - Check detected information, customize if needed, and upload
+
+### 📒 Upload Limits
+
+Uploading is paced so the site stays usable for everyone.
+
+| Window | Limit |
+|---|---|
+| Last 24 hours | **50 subtitles** |
+| Last 7 days | **200 subtitles** |
+
+**What counts:** individual subtitle files you successfully upload — not movies, not batches, not releases. A 22-subtitle season pack uses 22 of your allowance, not 1.
+
+**What does not count:** subtitles already in the database (nothing was added) and failed uploads.
+
+Both windows are **rolling**, not calendar-based. Nothing resets at midnight or on Monday — each upload simply stops counting once it is 24 hours (or 7 days) old, so slots free up gradually rather than all at once.
+
+#### Limits per user level
+
+| User level | Last 24 hours | Last 7 days |
+|---|---|---|
+| Trusted | 50 | 200 |
+| Trusted member | 50 | 200 |
+| Gold member | 50 | 200 |
+| Platinum member | 50 | 200 |
+| Translator | 50 | 200 |
+| Subtranslator | unlimited | unlimited |
+| OS legend | unlimited | unlimited |
+| Moderator | unlimited | unlimited |
+| Administrator | unlimited | unlimited |
+
+If you hold more than one level, the most privileged one applies — a gold member who is also a moderator is not limited.
+
+Levels below these cannot upload subtitles at all, so no allowance applies to them.
+
+If a batch is larger than your remaining allowance, it is refused as a whole rather than uploaded halfway, so you never end up with a partial release. Your remaining allowance is shown above the Upload button and in the menu under your username, where **My Uploads** lists your upload history.
+
+### 🔗 Remove Links from Subtitles
+
+Release groups often embed advertising in the subtitle text itself. Enable
+**Settings → Processing → "Remove Links from Subtitles"** to strip it before uploading.
+The option is **off by default**.
+
+**What is matched**
+
+| Category | Examples |
+|---|---|
+| URLs | `http(s)://`, `ftp://`, `magnet:`, `www.` hosts, bare domains across all ~1280 delegated TLDs |
+| Email addresses | `releases@example.com` |
+| IPv4 addresses | with optional port and path |
+| Obfuscated links | `example (dot) com`, `example [.] com`, `www dot example dot com`, `hxxp://` |
+| Social handles | `@releasegroup` |
+
+**Nothing is removed silently.** When links are found you get a preview dialog listing every
+match with its line number and category, a live before/after diff, and a checkbox per match so
+you can keep anything matched by mistake.
+
+**Matching is deliberately conservative**, because subtitles are not clean prose:
+
+- A dotted token counts as a domain only when its last label is a real delegated TLD.
+  `example.com` is stripped; `example.commute` is left alone.
+- About 107 TLDs double as sentence-starting English words (`.it`, `.to`, `.me`, `.now`, `.one`).
+  Subtitles routinely drop the space after a period, so those need a scheme, a `www.` prefix, or a
+  path/port before they count — `"Stop.It's over"` and `"I know.Now go"` survive untouched, while
+  `http://stop.it` and `stop.it/freesubs` do not.
+- A Title-Cased TLD reads as a sentence boundary; ALL-CAPS still matches, so `VISIT EXAMPLE.COM`
+  is caught.
+
+Only the matched span is removed — the rest of the line stays. A cue is dropped only when the link
+was its *entire* text, and the remaining cues are renumbered so the file stays valid. Timing lines,
+indexes, ASS headers and MicroDVD frame markers are never touched.
+
+**Encodings.** Edits are applied byte-for-byte over the raw file, so cp1250/cp1251/Big5/Shift-JIS/
+GBK/EUC-KR files keep their original encoding exactly. This is covered by tests for UTF-8
+Devanagari, Cyrillic (CP1251 and KOI8-R), Czech, Greek, Arabic and all four legacy CJK encodings,
+plus an exhaustive sweep asserting no double-byte character can be mistaken for a link.
+UTF-16 subtitles are left untouched — links are currently not detected in them.
+
+The TLD list is generated from IANA via `npm run generate-tlds`.
 
 ### Supported File Formats
 

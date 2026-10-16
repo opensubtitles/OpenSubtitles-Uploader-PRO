@@ -15,8 +15,11 @@ const DAY_MS = 24 * HOUR_MS;
  * every window at once.
  */
 export const UPLOAD_LIMIT_WINDOWS = [
-  { key: 'day', label: 'day', windowMs: DAY_MS, limit: 50 },
-  { key: 'week', label: 'week', windowMs: 7 * DAY_MS, limit: 200 },
+  // `spanLabel` spells out that the window rolls. Users read "per day" as
+  // "resets at midnight" and then ask what the number is even counting, so the
+  // UI says "in last 24h" instead.
+  { key: 'day', label: 'day', spanLabel: 'in last 24h', windowMs: DAY_MS, limit: 50 },
+  { key: 'week', label: 'week', spanLabel: 'in last 7 days', windowMs: 7 * DAY_MS, limit: 200 },
 ];
 
 /**

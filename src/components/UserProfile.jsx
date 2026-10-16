@@ -264,7 +264,7 @@ const UserProfile = ({ onShowUploadHistory }) => {
                       <span>
                         {limitState.blocked
                           ? 'Upload limit reached'
-                          : `${limitState.allowance} uploads left`}
+                          : `${limitState.allowance} subtitle uploads left`}
                       </span>
                     </div>
                     <div className="space-y-0.5">
@@ -273,7 +273,7 @@ const UserProfile = ({ onShowUploadHistory }) => {
                           key={window.key}
                           className={`flex justify-between text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
                         >
-                          <span>Per {window.label}</span>
+                          <span>{window.spanLabel}</span>
                           <span
                             className={
                               window.remaining === 0

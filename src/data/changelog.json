@@ -1,8 +1,63 @@
 {
-  "generated_at": "2026-10-11T02:57:45.060Z",
+  "generated_at": "2026-10-16T03:17:03.677Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.10.0",
+      "name": "v1.10.0",
+      "published_at": "2026-10-11T02:59:16Z",
+      "body": "Version 1.10.0 - Upload limits, upload history, episode matching fix\n\n### Upload limits\n\nUploading is now paced to keep the site usable for everyone. Trusted, trusted member, gold member, platinum member and translator accounts can upload 50 subtitles per day and 200 per week. Administrators, moderators, OS legends and subtranslators are not limited.\n\nThe upload panel and the account menu both show how much of your allowance is left. If a batch is larger than what remains, it is refused as a whole rather than uploaded halfway. Only new subtitles count - duplicates already in the database and failed uploads do not.\n\n### My Uploads\n\nA new \"My Uploads\" view in the account menu lists what you have uploaded, when, and whether each one was accepted, already present, or failed - with your current allowance at the top.\n\n### Episode matching fix\n\nEpisodes without any existing subtitles were being uploaded against the series IMDb ID instead of their own. The uploader now reads the episode ID returned by the matching service, so gap episodes land on the correct page.\n\n### Login fix\n\nA failed login no longer hides the Login button. The error now appears next to it and can be dismissed, so you can correct your password and try again without reloading.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.10.0",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/latest.json",
+          "size": 4648
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "size": 31759385
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "size": 452
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_amd64.AppImage",
+          "size": 93788664
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_amd64.AppImage.sig",
+          "size": 464
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_amd64.deb",
+          "size": 16087472
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_universal.dmg",
+          "size": 31397189
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_x64-setup.exe",
+          "size": 13381120
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.0_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.0/OpenSubtitles.Uploader.PRO_1.10.0_x64-setup.exe.sig",
+          "size": 464
+        }
+      ]
+    },
     {
       "version": "v1.9.0",
       "name": "v1.9.0",
@@ -590,41 +645,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
           "size": 13139150
-        }
-      ]
-    },
-    {
-      "version": "v1.8.13",
-      "name": "v1.8.13",
-      "published_at": "2026-06-19T00:28:44Z",
-      "body": "Version 1.8.13 - Episode IMDb badge, language filter sync, MKV diagnostic logs",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.13",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.13/latest.json",
-          "size": 1194
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.13_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.13/OpenSubtitles.Uploader.PRO_1.8.13_amd64.AppImage",
-          "size": 100885696
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.13_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.13/OpenSubtitles.Uploader.PRO_1.8.13_amd64.deb",
-          "size": 15536036
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.13_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.13/OpenSubtitles.Uploader.PRO_1.8.13_universal.dmg",
-          "size": 30651250
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.13_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.13/OpenSubtitles.Uploader.PRO_1.8.13_x64-setup.exe",
-          "size": 13137048
         }
       ]
     }

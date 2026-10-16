@@ -1,5 +1,6 @@
 import React from 'react';
 import { APP_VERSION } from '../utils/constants.js';
+import { LIMITED_RANKS, UPLOAD_LIMIT_WINDOWS } from '../utils/uploadLimitPolicy.js';
 
 export const HelpOverlay = ({ isOpen, onClose, colors, isDark }) => {
   if (!isOpen) return null;
@@ -372,6 +373,89 @@ export const HelpOverlay = ({ isOpen, onClose, colors, isDark }) => {
                   <div style={{ color: colors.textSecondary }}>
                     Entire directories with nested subdirectories
                   </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Upload Limits */}
+            <section>
+              <h3
+                className="text-lg font-semibold mb-3 flex items-center gap-2"
+                style={{ color: colors.text }}
+              >
+                📒 <span>Upload Limits</span>
+              </h3>
+              <div className="space-y-3 text-sm" style={{ color: colors.textSecondary }}>
+                <div>
+                  Uploading is paced so the site stays usable for everyone. The counters shown above
+                  the Upload button count{' '}
+                  <span className="font-semibold" style={{ color: colors.text }}>
+                    individual subtitle files you successfully uploaded
+                  </span>{' '}
+                  — not movies, not batches. A 22-subtitle season pack uses 22 of your allowance,
+                  not 1.
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {UPLOAD_LIMIT_WINDOWS.map(window => (
+                    <div
+                      key={window.key}
+                      className="rounded-lg p-3"
+                      style={{ backgroundColor: colors.cardBackground, border: `1px solid ${colors.border}` }}
+                    >
+                      <div className="font-semibold text-base" style={{ color: colors.text }}>
+                        {window.limit} subtitles
+                      </div>
+                      <div>{window.spanLabel}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  Both windows are{' '}
+                  <span className="font-semibold" style={{ color: colors.text }}>
+                    rolling
+                  </span>
+                  , not calendar-based. Nothing resets at midnight — each upload simply stops
+                  counting once it is 24 hours (or 7 days) old, so slots free up gradually.
+                </div>
+
+                <div>
+                  <span className="font-semibold" style={{ color: colors.text }}>
+                    Does not count:
+                  </span>{' '}
+                  subtitles already in the database (nothing was added) and failed uploads.
+                </div>
+
+                <div>
+                  <div className="font-semibold mb-1" style={{ color: colors.text }}>
+                    Limits per user level
+                  </div>
+                  <div>
+                    <span className="font-semibold" style={{ color: colors.text }}>
+                      {LIMITED_RANKS.join(', ')}
+                    </span>{' '}
+                    — {UPLOAD_LIMIT_WINDOWS.map(w => `${w.limit} ${w.spanLabel}`).join(', ')}.
+                  </div>
+                  <div className="mt-1">
+                    <span className="font-semibold" style={{ color: colors.text }}>
+                      administrator, moderator, os legend, subtranslator
+                    </span>{' '}
+                    — unlimited.
+                  </div>
+                  <div className="mt-1">
+                    Hold more than one level and the most privileged one applies — a gold member who
+                    is also a moderator is not limited. Levels below these cannot upload at all.
+                  </div>
+                </div>
+
+                <div>
+                  If a batch is bigger than your remaining allowance it is refused as a whole rather
+                  than uploaded halfway. Open{' '}
+                  <span className="font-semibold" style={{ color: colors.text }}>
+                    My Uploads
+                  </span>{' '}
+                  from the menu under your username to see your history and current allowance.
                 </div>
               </div>
             </section>

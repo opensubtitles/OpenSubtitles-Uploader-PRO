@@ -503,8 +503,9 @@ export const UploadButton = ({
                     {limitBlocked ? '⛔' : '📒'}
                   </span>
                   <span style={{ color: limitBlocked ? themeColors.error : themeColors.textMuted }}>
+                    Subtitles you uploaded:{' '}
                     {limitState.windows
-                      .map(w => `${w.used}/${w.limit} per ${w.label}`)
+                      .map(w => `${w.used} of ${w.limit} ${w.spanLabel}`)
                       .join(' · ')}
                   </span>
                   {limitBlocked && limitState.nextSlotAt && (

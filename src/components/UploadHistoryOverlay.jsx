@@ -168,7 +168,7 @@ const UploadHistoryOverlay = ({ isOpen, onClose, userInfo, colors, isDark }) => 
                   <span>
                     {limitState.blocked
                       ? 'Upload limit reached'
-                      : `${limitState.allowance} uploads left right now`}
+                      : `${limitState.allowance} subtitle uploads left right now`}
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -180,7 +180,7 @@ const UploadHistoryOverlay = ({ isOpen, onClose, userInfo, colors, isDark }) => 
                           className="flex justify-between text-xs mb-1"
                           style={{ color: themeColors.textSecondary }}
                         >
-                          <span>Per {window.label}</span>
+                          <span>Uploaded {window.spanLabel}</span>
                           <span>
                             {window.used} / {window.limit}
                             {window.remaining === 0 && window.nextSlotAt
