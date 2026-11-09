@@ -569,47 +569,77 @@ jobs:
           
           # Fetch actual release notes from GitHub
           echo "📝 Fetching release notes for $VERSION..."
-          RELEASE_NOTES=$(gh release view "$VERSION" --json body | jq -r '.body // "OpenSubtitles Uploader PRO '"$VERSION"' - New release with improvements and bug fixes"')
-          
-          # Escape quotes and newlines for JSON (Linux compatible)
-          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-          
-          # Create updater manifest with proper Tauri v2 format and actual release notes
-          cat > latest.json << EOF
-          {
-            "version": "$VERSION",
-            "notes": "$RELEASE_NOTES_ESCAPED",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "$WIN_SIG",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe"
-              },
-              "darwin-universal": {
-                "signature": "$MAC_SIG",
-                "url": "$MACOS_URL"
-              },
-              "darwin-x86_64": {
-                "signature": "$MAC_SIG",
-                "url": "$MACOS_URL"
-              },
-              "darwin-aarch64": {
-                "signature": "$MAC_SIG",
-                "url": "$MACOS_URL"
-              },
-              "linux-x86_64": {
-                "signature": "$LINUX_SIG",
-                "url": "https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage"
-              }
-            }
-          }
-          EOF
-          
-          echo "📋 Generated manifest:"
-          cat latest.json | jq '.' || cat latest.json
-          
+          RELEASE_NOTES=$(gh release view "$VERSION" --json body --jq '.body // ""')
+          if [ -z "$RELEASE_NOTES" ]; then
+            RELEASE_NOTES="OpenSubtitles Uploader PRO $VERSION - New release with improvements and bug fixes"
+          fi
+
+          RELEASE_BASE="https://github.com/opensubtitles/opensubtitles-uploader-pro/releases/download/$VERSION"
+
+          # Build the manifest with jq rather than a heredoc.
+          #
+          # The notes used to be escaped by hand with
+          # `sed 's/"/\\"/g'` plus a newline pass, which never escaped
+          # BACKSLASHES. Any backslash in the release notes therefore became an
+          # invalid JSON escape: v1.10.2's notes contained the literal ASS tag
+          # `{\i1}` in an example, which produced `\i` and made latest.json
+          # unparseable, breaking auto-update on every platform at once.
+          # jq --arg encodes the value correctly whatever it contains.
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "$RELEASE_NOTES" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg win_sig "$WIN_SIG" \
+            --arg win_url "$RELEASE_BASE/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_x64-setup.exe" \
+            --arg mac_sig "$MAC_SIG" \
+            --arg mac_url "$MACOS_URL" \
+            --arg linux_sig "$LINUX_SIG" \
+            --arg linux_url "$RELEASE_BASE/OpenSubtitles.Uploader.PRO_${VERSION_NUM}_amd64.AppImage" \
+            '{
+               version: $version,
+               notes: $notes,
+               pub_date: $pub_date,
+               platforms: {
+                 "windows-x86_64":   { signature: $win_sig,   url: $win_url },
+                 "darwin-universal": { signature: $mac_sig,   url: $mac_url },
+                 "darwin-x86_64":    { signature: $mac_sig,   url: $mac_url },
+                 "darwin-aarch64":   { signature: $mac_sig,   url: $mac_url },
+                 "linux-x86_64":     { signature: $linux_sig, url: $linux_url }
+               }
+             }' > latest.json
+
+          # Validate before uploading. This used to be `jq '.' || cat`, whose
+          # `|| cat` swallowed the parse failure - the step stayed green and
+          # uploaded a manifest Tauri could not read. Now a bad manifest fails
+          # the build instead of shipping.
+          echo "📋 Validating manifest..."
+          if ! jq -e . latest.json > /dev/null; then
+            echo "::error::latest.json is not valid JSON — refusing to upload"
+            cat latest.json
+            exit 1
+          fi
+
+          for platform in windows-x86_64 darwin-universal darwin-x86_64 darwin-aarch64 linux-x86_64; do
+            if ! jq -e --arg p "$platform" '.platforms[$p].signature | length > 0' latest.json > /dev/null; then
+              echo "::error::latest.json is missing a signature for $platform — refusing to upload"
+              exit 1
+            fi
+            if ! jq -e --arg p "$platform" '.platforms[$p].url | startswith("https://")' latest.json > /dev/null; then
+              echo "::error::latest.json has no usable URL for $platform — refusing to upload"
+              exit 1
+            fi
+          done
+
+          if ! jq -e --arg v "$VERSION" '.version == $v' latest.json > /dev/null; then
+            echo "::error::latest.json version does not match $VERSION — refusing to upload"
+            exit 1
+          fi
+
+          jq '.platforms | keys' latest.json
+          echo "✅ Manifest valid: 5 platforms, all signed, version $VERSION"
+
           echo "📤 Uploading updater manifest to release..."
           gh release upload "$VERSION" latest.json --clobber
-          
+
           echo "✅ Updater manifest uploaded successfully"
 
