@@ -21,8 +21,13 @@ jobs:
             arch: 'x64'
             os: 'linux'
           
-          # macOS Universal Binary (Intel + Apple Silicon) - using 14 for compatibility
-          - platform: 'macos-14'
+          # macOS Universal Binary (Intel + Apple Silicon).
+          # Pinned to macos-15: the macos-14 label stopped being allocatable in
+          # Nov 2026 (job cancelled in ~1s, no runner assigned, zero steps), so
+          # v1.10.2 built Linux and Windows but silently produced no .dmg. Both
+          # darwin targets are added explicitly in "Rust setup", so the universal
+          # build does not care which arch the runner itself is.
+          - platform: 'macos-15'
             args: ''
             target: 'universal-apple-darwin'
             arch: 'universal'
