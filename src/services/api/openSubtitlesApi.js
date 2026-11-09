@@ -9,6 +9,7 @@ import { CacheService } from '../cache.js';
 import { CACHE_KEYS } from '../../utils/constants.js';
 import { retryAsync } from '../../utils/retryUtils.js';
 import { delayedFetch } from '../../utils/networkUtils.js';
+import { extractDialogueText } from '../../utils/subtitleDetectionText.js';
 import CryptoJS from 'crypto-js';
 
 /**
@@ -187,7 +188,10 @@ export class OpenSubtitlesApiService {
    * @returns {string} - Cache key
    */
   static generateLanguageDetectionCacheKey(fileHash) {
-    return `${CACHE_KEYS.LANGUAGE_DETECTION_CACHE}_${fileHash}`;
+    // v2: entries written before dialogue-only detection hold the ASS-header
+    // verdict (every .ass came back English). Changing the key abandons them
+    // instead of serving wrong languages for the rest of the 72h TTL.
+    return `${CACHE_KEYS.LANGUAGE_DETECTION_CACHE}_v2_${fileHash}`;
   }
 
   /**
@@ -220,16 +224,41 @@ export class OpenSubtitlesApiService {
    */
   static async detectLanguageUncached(subtitleFile) {
     try {
-      // Read first chunk of the file
-      const chunk = subtitleFile.file.slice(0, 5120); // 5KB
-      const text = await new Promise((resolve, reject) => {
+      // Read enough to get past format scaffolding before sampling dialogue.
+      // An ASS header is ~1.6 KB on its own and can run far longer when the
+      // script carries many styles or an embedded [Fonts] section, so the raw
+      // read window is much larger than the chunk we end up sending.
+      const readWindow = Math.min(
+        subtitleFile.file.size,
+        DEFAULT_SETTINGS.LANGUAGE_DETECTION_READ_WINDOW
+      );
+      const chunk = subtitleFile.file.slice(0, readWindow);
+      const raw = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(reader.error);
         reader.readAsText(chunk, 'utf-8');
       });
 
-      // Create blob for API
+      // Detection runs on dialogue only. Timecodes, style definitions and
+      // override blocks are ASCII in every language and drown out the real
+      // text - most severely in ASS, where the server otherwise samples the
+      // [Script Info] header and answers English for every file.
+      const { text: dialogue, format } = extractDialogueText(raw, {
+        maxChars: DEFAULT_SETTINGS.LANGUAGE_DETECTION_CHUNK_SIZE,
+      });
+      const strippedScaffolding = Boolean(dialogue);
+      const text = strippedScaffolding
+        ? dialogue
+        : raw.slice(0, DEFAULT_SETTINGS.LANGUAGE_DETECTION_CHUNK_SIZE);
+
+      // Create blob for API.
+      //
+      // The filename matters: the endpoint sniffs content first and falls back
+      // to the extension, so a stripped payload sent as `.txt` comes back as
+      // `file_kind: "text file"` - which useLanguageDetection reads as "not a
+      // subtitle" and removes the file. Keeping the original name preserves the
+      // real file_kind.
       const textBlob = new Blob([text], { type: 'text/plain' });
       const formData = new FormData();
       formData.append('text_file', textBlob, subtitleFile.name);
@@ -271,6 +300,11 @@ export class OpenSubtitlesApiService {
           file_kind: result.data.file_kind,
           filename: result.data.filename,
           text_sample: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+          // Lets callers know file_kind describes a payload we rewrote, so the
+          // "detected as text file, not subtitle" removal cannot fire on a
+          // stripped subtitle we already parsed as `format`.
+          detection_format: format,
+          stripped_scaffolding: strippedScaffolding,
         };
       }
 

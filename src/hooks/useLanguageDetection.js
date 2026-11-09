@@ -45,10 +45,17 @@ export const useLanguageDetection = (addDebugInfo, updateFile) => {
           addDebugInfo
         );
 
-        // Check if detected as text file (not a subtitle)
+        // Check if detected as text file (not a subtitle).
+        //
+        // Skipped when the payload was stripped to dialogue: the endpoint sniffs
+        // content before falling back to the extension, so a stripped subtitle
+        // can legitimately come back as "text file". We only strip files we
+        // already parsed as a real subtitle format, so that verdict describes
+        // our payload, not the user's file.
         if (
           detectedLanguage &&
           detectedLanguage.file_kind &&
+          !detectedLanguage.stripped_scaffolding &&
           detectedLanguage.file_kind.toLowerCase().includes('text file')
         ) {
           addDebugInfo(`Removing ${subtitleFile.name} - detected as text file, not subtitle`);

@@ -1,5 +1,5 @@
 // Application version - updated manually to match package.json
-export const APP_VERSION = '1.10.1';
+export const APP_VERSION = '1.10.2';
 
 // API Configuration - embedded keys take priority over environment variables
 // Global __EMBEDDED_OPENSUBTITLES_API_KEY__ is defined by Vite at build time
@@ -237,7 +237,11 @@ export const DEFAULT_SETTINGS = {
   FEATURES_CACHE_DURATION: 259200, // 72 hours in seconds (3 days)
   CHECKSUB_CACHE_DURATION: 86400, // 24 hours in seconds (1 day) - shorter for hash checks
   SEARCHSUB_CACHE_DURATION: 86400, // 24 hours - per-IMDB+language count from SearchSubtitles
-  LANGUAGE_DETECTION_CHUNK_SIZE: 5120, // 5KB
+  LANGUAGE_DETECTION_CHUNK_SIZE: 5120, // 5KB of dialogue text sent for detection
+  // Raw bytes read before extracting that dialogue. Must clear format
+  // scaffolding: an ASS [Script Info] + [V4+ Styles] header is ~1.6KB and an
+  // embedded [Fonts] section can run far longer.
+  LANGUAGE_DETECTION_READ_WINDOW: 4194304, // 4MB
   MOVIE_HASH_CHUNK_SIZE: 65536, // 64KB
   DEBUG_LOG_LIMIT: 1000,
 

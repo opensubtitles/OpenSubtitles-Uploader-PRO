@@ -1,8 +1,63 @@
 {
-  "generated_at": "2026-10-16T03:17:03.677Z",
+  "generated_at": "2026-11-09T05:24:24.805Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.10.1",
+      "name": "v1.10.1",
+      "published_at": "2026-10-16T03:18:46Z",
+      "body": "Version 1.10.1 - Encoding fix for link removal\n\n**Fixes subtitle corruption in \"Remove Links from Subtitles\".**\n\nIf you used this option on a subtitle in any non-Latin script — Hindi, Russian,\nGreek, Arabic, Chinese, Japanese, Korean — the saved file came out mojibake.\nThe damage was written into the uploaded file, not just the preview. Latin-script\nsubtitles were never affected.\n\nThanks to @vegatortoise for reporting it with the screenshots that pinned it down.\n\n**What went wrong**\n\nEdits are applied over a byte-exact view of the file so that subtitles in cp1250,\ncp1251, Big5 and friends keep their original encoding. That view was built with\n`TextDecoder('iso-8859-1')` — and in every browser and WebView, the ISO-8859-1\nlabel is an alias for the windows-1252 decoder. Bytes 0x80-0x9F came back as\ncode points above U+00FF and were written out as the wrong byte: 0x87 became\n`!`, 0x8B became `9`. That byte range appears throughout the UTF-8 encoding of\nmost non-Latin scripts, so the text was shredded.\n\nThe view is now built directly from the raw bytes, which is a true 1:1 mapping\neverywhere.\n\n**Verified across encodings**\n\nEvery encoding family now has a byte-for-byte test through the full sanitizer:\nUTF-8 Devanagari, CP1251 and KOI8-R Cyrillic, CP1250 Czech, ISO-8859-7 Greek,\nCP1256 Arabic, Big5, Shift-JIS, GBK and EUC-KR. An exhaustive sweep of all\n55,585 valid lead/trail byte pairs in the four legacy CJK encodings confirms no\ndouble-byte character can be mistaken for a link.\n\nUTF-16 subtitles are now explicitly left untouched. Links are not detected in\nthem, but nothing is damaged either.\n\n**Documentation**\n\nThe README now documents \"Remove Links from Subtitles\" in full — what is\nmatched, why matching is conservative, and the encoding guarantees — and a new\nin-app Help section explains the upload limits.\n\n**Upload limit wording**\n\nThe limit counters said \"50 per day\", which read as \"resets at midnight\". The\nwindows are rolling, so they now say \"50 of 50 in last 24h\" and \"in last 7 days\",\nand the counters make clear they count individual subtitle files.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.10.1",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/latest.json",
+          "size": 5524
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "size": 31759379
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "size": 452
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_amd64.AppImage",
+          "size": 93792760
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_amd64.AppImage.sig",
+          "size": 464
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_amd64.deb",
+          "size": 16087376
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_universal.dmg",
+          "size": 31397823
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_x64-setup.exe",
+          "size": 13378474
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.1_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.1/OpenSubtitles.Uploader.PRO_1.10.1_x64-setup.exe.sig",
+          "size": 464
+        }
+      ]
+    },
     {
       "version": "v1.10.0",
       "name": "v1.10.0",
@@ -610,41 +665,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
           "size": 13141476
-        }
-      ]
-    },
-    {
-      "version": "v1.8.14",
-      "name": "v1.8.14",
-      "published_at": "2026-06-20T02:14:13Z",
-      "body": "Version 1.8.14 - MKV fast path bypasses ffmpeg-WASM for Matroska files",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.14",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/latest.json",
-          "size": 1186
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.14_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_amd64.AppImage",
-          "size": 100885696
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.14_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_amd64.deb",
-          "size": 15544210
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.14_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_universal.dmg",
-          "size": 30661262
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.14/OpenSubtitles.Uploader.PRO_1.8.14_x64-setup.exe",
-          "size": 13139150
         }
       ]
     }
