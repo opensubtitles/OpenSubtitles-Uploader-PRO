@@ -1,8 +1,17 @@
 {
-  "generated_at": "2026-11-09T05:24:24.805Z",
+  "generated_at": "2026-11-09T05:43:15.089Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.10.2",
+      "name": "v1.10.2",
+      "published_at": "2026-11-09T05:25:50Z",
+      "body": "Version 1.10.2 - Correct language detection for ASS/SSA subtitles\n\n**Fixes every .ass and .ssa subtitle being detected as English.**\n\nDrop an MKV with multiple ASS subtitle tracks and all of them came back\nEnglish, no matter what language they actually were. A Crunchyroll release\nwith English, Latin American Spanish and Brazilian Portuguese tracks showed\nEnglish three times.\n\nReported against \"Digimon Beatbreak S01E01 1080p CR WEB-DL AAC2.0\nH.264-OldT.mkv\", which has exactly that layout.\n\n**What went wrong**\n\nLanguage detection sends the first 5 KB of a subtitle to the server and asks\nwhat language it is. The server samples roughly the first hundred lines of\nwhat it receives.\n\nFor SubRip that is mostly dialogue, so it worked. For Advanced SubStation\nAlpha it is not. An ASS file opens with a `[Script Info]` block and a\n`[V4+ Styles]` section — about 1.6 KB before the first line of dialogue — and\nevery event after that carries a long ASCII prefix:\n\n    Dialogue: 0,0:00:16.10,0:00:20.23,BottomCenter,,0,0,0,,{\\i1}Hello{\\i0}\n\nTimecodes, style names and override tags are identical in every language, and\nthey outweighed the real text in the sample. The server ended up reporting the\nheader back to us:\n\n    content_preview: \"ScriptType: v4.00+ Collisions: Normal PlayResX: 640 ...\"\n    languages:       en=0.192, de=0.070, ru=0.063\n\nThat same answer came back for all three tracks, which is why they all read\nEnglish — the detector never saw a word of dialogue.\n\n**The fix**\n\nDetection now runs on dialogue text only. Headers, style definitions,\ntimecodes, override blocks, vector drawing commands and `Comment:` events\n(translator notes, frequently English inside a non-English script) are left out\nof the sample. The window read from disk grew to 4 MB so scripts with many\nstyles or an embedded font section still reach their dialogue.\n\nThe same three tracks now detect correctly:\n\n| Track | Before | After |\n|-------|--------|-------|\n| English | en 19.2% | en 94.2% |\n| Latin American Spanish | en 19.2% | es 99.6% |\n| Brazilian Portuguese | en 19.2% | pt 99.7% |\n\nSRT, VTT and MicroDVD get the same treatment, so indexes, timecodes and `<i>`\nmarkup no longer dilute those samples either.\n\n**Your files are not touched.** Stripping applies only to the copy sent for\ndetection. ASS and SSA subtitles upload exactly as they are, byte for byte —\nnothing is converted to SRT.\n\nCached detection results from before this change are discarded rather than\nserved for the remainder of their 72-hour lifetime.\n\n**Also in this release**\n\n- 18 new tests, including a regression fixture built from the real tracks of\n  the reported file.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.10.2",
+      "prerelease": false,
+      "assets": []
+    },
     {
       "version": "v1.10.1",
       "name": "v1.10.1",
@@ -630,41 +639,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.16_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/OpenSubtitles.Uploader.PRO_1.8.16_x64-setup.exe",
           "size": 13137866
-        }
-      ]
-    },
-    {
-      "version": "v1.8.15",
-      "name": "v1.8.15",
-      "published_at": "2026-06-22T15:59:26Z",
-      "body": "Version 1.8.15 - IMDB fallback, MKV track SDH auto-flag, sibling language hints",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.15",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/latest.json",
-          "size": 1195
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.15_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_amd64.AppImage",
-          "size": 100881600
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.15_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_amd64.deb",
-          "size": 15534510
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.15_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_universal.dmg",
-          "size": 30676435
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.15/OpenSubtitles.Uploader.PRO_1.8.15_x64-setup.exe",
-          "size": 13141476
         }
       ]
     }

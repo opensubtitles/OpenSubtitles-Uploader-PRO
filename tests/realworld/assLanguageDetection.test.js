@@ -122,7 +122,11 @@ describe('Digimon Beatbreak S01E01 - three ASS tracks all reported as English', 
 
   test('the header alone yields nothing, so detection never runs on it', () => {
     for (const key of KEYS) {
-      assert.equal(extractDialogueText(TRACKS[key].header).text, '', `${key}: header produced text`);
+      assert.equal(
+        extractDialogueText(TRACKS[key].header).text,
+        '',
+        `${key}: header produced text`
+      );
     }
   });
 

@@ -69,6 +69,13 @@ class AuthService {
         // Fetch additional user info via getUserInfo to get complete profile data
         try {
           console.log('📋 Fetching additional user info via getUserInfo...');
+          // Dynamic by design, not for code-splitting: userService.js imports
+          // this module statically, so a static import here would close the
+          // cycle. Vite warns on every build that this "will not move module
+          // into another chunk" - that is expected and harmless, because the
+          // goal is breaking the cycle, not splitting the bundle. Do not
+          // convert these to a static import to silence the warning; removing
+          // userService.js's dependency on authService is the real fix.
           const { UserService } = await import('./userService.js');
           const detailedUserInfo = await UserService.getUserInfo(this.token);
 

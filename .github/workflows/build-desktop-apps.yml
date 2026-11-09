@@ -46,6 +46,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Full history: generate-changelog.js reads the release being built
+          # out of its "🚀 RELEASE: Version X.Y.Z" commit, which the default
+          # depth-1 clone cuts off whenever the tag points at a later commit.
+          fetch-depth: 0
 
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'

@@ -177,7 +177,8 @@ Dialogue: 0,0:00:05.00,0:00:06.00,BottomCenter,,0,0,0,,CCCCC
     const content = assFile(
       Array.from(
         { length: 400 },
-        (_, i) => `Dialogue: 0,0:00:01.00,0:00:02.00,BottomCenter,,0,0,0,,Line number ${i} of dialogue.`
+        (_, i) =>
+          `Dialogue: 0,0:00:01.00,0:00:02.00,BottomCenter,,0,0,0,,Line number ${i} of dialogue.`
       ).join('\n')
     );
 

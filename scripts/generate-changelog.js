@@ -8,12 +8,53 @@
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { withCurrentRelease } from './lib/changelogEntries.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const repoRoot = path.join(__dirname, '..');
 
 console.log('📝 Generating embedded changelog from GitHub releases...');
+
+const currentVersion = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+).version;
+
+/**
+ * Resolves the `🚀 RELEASE: Version X.Y.Z` commit for a version.
+ *
+ * Returns null when it cannot be found - no git, not a repo, or a shallow
+ * clone whose history was cut off before the release commit.
+ */
+const lookupReleaseCommit = version => {
+  let raw;
+  try {
+    raw = execFileSync(
+      'git',
+      [
+        'log',
+        '--max-count=1',
+        '--format=%aI%x1f%B',
+        '--fixed-strings',
+        `--grep=🚀 RELEASE: Version ${version}`,
+      ],
+      { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    ).trim();
+  } catch {
+    return null;
+  }
+
+  if (!raw) return null;
+  const separator = raw.indexOf('\u001f');
+  if (separator === -1) return null;
+
+  return {
+    authoredAt: raw.slice(0, separator),
+    message: raw.slice(separator + 1),
+  };
+};
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, '..', 'src', 'data');
@@ -37,28 +78,45 @@ https.get(options, (res) => {
     try {
       const releases = JSON.parse(data);
       
-      // Handle cases where API returns error or non-array
+      // Handle cases where API returns error or non-array (rate limit, outage)
       if (!Array.isArray(releases)) {
         console.log('⚠️ GitHub API returned non-array response:', releases);
-        console.log('🔄 Creating minimal changelog with no releases');
+        // Still emit the release being built - its notes come from the local
+        // commit, so an API failure should not ship a completely blank
+        // "What's new" panel.
+        const localOnly = withCurrentRelease({ releases: [], version: currentVersion, lookupReleaseCommit }).map(release => ({
+          version: release.tag_name,
+          name: release.name,
+          published_at: release.published_at,
+          body: release.body || 'No release notes available.',
+          html_url: release.html_url,
+          prerelease: release.prerelease,
+          assets: [],
+        }));
+        console.log(`🔄 Creating minimal changelog with ${localOnly.length} release(s)`);
         const emptyChangelog = {
           generated_at: new Date().toISOString(),
           generator: 'OpenSubtitles Uploader PRO Build System',
-          total_releases: 0,
-          releases: []
+          total_releases: localOnly.length,
+          releases: localOnly
         };
-        
+
         // Write empty JSON changelog
         const changelogPath = path.join(dataDir, 'changelog.json');
         fs.writeFileSync(changelogPath, JSON.stringify(emptyChangelog, null, 2));
-        console.log(`✅ Generated ${changelogPath} with 0 releases (empty)`);
+        console.log(`✅ Generated ${changelogPath} with ${localOnly.length} releases`);
         return;
       }
       
       // Filter out drafts and take latest 15 releases
-      const validReleases = releases
-        .filter(release => !release.draft)
-        .slice(0, 15);
+      const validReleases = withCurrentRelease({
+        releases: releases.filter(release => !release.draft),
+        version: currentVersion,
+        lookupReleaseCommit,
+      }).slice(
+        0,
+        15
+      );
       
       const changelog = {
         generated_at: new Date().toISOString(),
