@@ -6,6 +6,7 @@ import {
   evaluateUploadLimits,
 } from '../utils/uploadLimitPolicy.js';
 import { UserService } from './userService.js';
+import { safeSetItem } from '../utils/storageQuota.js';
 
 /**
  * Local upload ledger — records every upload this device performs and derives
@@ -53,7 +54,7 @@ export const getDeviceId = () => {
     let id = localStorage.getItem(DEVICE_ID_KEY);
     if (!id) {
       id = randomId();
-      localStorage.setItem(DEVICE_ID_KEY, id);
+      safeSetItem(DEVICE_ID_KEY, id, { label: 'ledger device id' });
     }
     return id;
   } catch {
@@ -109,8 +110,12 @@ export const readEntries = (userInfo, now = Date.now()) => {
 const writeEntries = (userInfo, entries, now = Date.now()) => {
   if (!hasStorage()) return false;
   try {
-    localStorage.setItem(getLedgerKey(userInfo), JSON.stringify(pruneEntries(entries, now)));
-    return true;
+    // safeSetItem rather than a bare write: a full quota used to drop the
+    // ledger silently, which quietly stopped the upload limit from counting.
+    // Caches get evicted to keep the ledger writable - it outranks them.
+    return safeSetItem(getLedgerKey(userInfo), JSON.stringify(pruneEntries(entries, now)), {
+      label: 'upload ledger',
+    });
   } catch (error) {
     console.warn('📒 Upload ledger write failed:', error.message);
     return false;
@@ -189,8 +194,7 @@ export const checkUploadAllowed = (userInfo, count, now = Date.now()) => {
  */
 export const getUploadHistory = (userInfo, now = Date.now()) => {
   const entries = readEntries(userInfo, now);
-  const countedSince = ms =>
-    entries.filter(entry => entry.counted && entry.ts > now - ms).length;
+  const countedSince = ms => entries.filter(entry => entry.counted && entry.ts > now - ms).length;
   const allSince = ms => entries.filter(entry => entry.ts > now - ms).length;
 
   return {

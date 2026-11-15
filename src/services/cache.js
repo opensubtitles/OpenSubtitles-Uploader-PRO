@@ -1,6 +1,7 @@
 import { CACHE_KEYS, DEFAULT_SETTINGS } from '../utils/constants.js';
 import pako from 'pako';
 import { uint8ArrayToBase64 } from '../utils/base64Utils.js';
+import { safeSetItem, purgeExpiredCacheEntries, getCacheFootprint } from '../utils/storageQuota.js';
 
 /**
  * Cache management service for OpenSubtitles data
@@ -108,18 +109,67 @@ export class CacheService {
   }
 
   /**
-   * Load data from cache if valid and decompress
+   * Load data from cache if valid and decompress.
+   *
+   * An expired entry is deleted on the way out. Without this, expiry only ever
+   * demoted an entry to a miss and left it occupying quota forever - the leak
+   * that eventually made login impossible.
    */
   static loadFromCache(cacheKey) {
     try {
       const cachedData = localStorage.getItem(cacheKey);
-      if (cachedData && this.isCacheValid(cacheKey)) {
+      if (cachedData === null) return null;
+
+      if (this.isCacheValid(cacheKey)) {
         return this.decompressData(cachedData);
       }
+
+      this.clearCache(cacheKey);
     } catch (error) {
       console.error(`Error loading from cache (${cacheKey}):`, error);
     }
     return null;
+  }
+
+  /**
+   * Store a value and its expiry as a pair, reclaiming space if the quota is
+   * already gone.
+   *
+   * The two keys are written together or not at all. A value without a live
+   * expiry can never be served by `isCacheValid`, so a half-written pair would
+   * be dead weight occupying the very quota we are short of.
+   *
+   * @param {string} cacheKey
+   * @param {any} data - compressed in place
+   * @param {number} expiryTime - absolute epoch ms
+   * @returns {boolean} true when both keys are on disk
+   */
+  static writeCacheEntry(cacheKey, data, expiryTime) {
+    const compressedData = this.compressData(data);
+    // Both halves reserve the value key so making room for one cannot evict
+    // the other and leave a half-written pair reported as a success.
+    const reserve = [cacheKey];
+
+    if (!safeSetItem(cacheKey, compressedData, { label: `cache ${cacheKey}`, reserve })) {
+      return false;
+    }
+
+    if (
+      !safeSetItem(cacheKey + '_expiry', expiryTime.toString(), {
+        label: `expiry ${cacheKey}`,
+        reserve,
+      })
+    ) {
+      // Roll back so no orphan value survives without its expiry.
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch {
+        /* nothing more we can do */
+      }
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -138,11 +188,9 @@ export class CacheService {
 
       const expiryTime = new Date().getTime() + maxAge * 1000;
 
-      // Compress data before storing
-      const compressedData = this.compressData(data);
-
-      localStorage.setItem(cacheKey, compressedData);
-      localStorage.setItem(cacheKey + '_expiry', expiryTime.toString());
+      if (!this.writeCacheEntry(cacheKey, data, expiryTime)) {
+        return { success: false, error: 'storage full' };
+      }
 
       return { success: true, expiryTime: maxAge };
     } catch (error) {
@@ -158,11 +206,9 @@ export class CacheService {
     try {
       const expiryTime = new Date().getTime() + durationInSeconds * 1000;
 
-      // Compress data before storing
-      const compressedData = this.compressData(data);
-
-      localStorage.setItem(cacheKey, compressedData);
-      localStorage.setItem(cacheKey + '_expiry', expiryTime.toString());
+      if (!this.writeCacheEntry(cacheKey, data, expiryTime)) {
+        return { success: false, error: 'storage full' };
+      }
 
       return { success: true, expiryTime: durationInSeconds };
     } catch (error) {
@@ -183,6 +229,27 @@ export class CacheService {
       console.error(`Error clearing cache (${cacheKey}):`, error);
       return false;
     }
+  }
+
+  /**
+   * Delete every expired cache entry. Called once at startup so quota is
+   * reclaimed before the app has a chance to need it, rather than only in
+   * response to a write that already failed.
+   *
+   * @returns {{removed: number, freedBytes: number}}
+   */
+  static purgeExpiredEntries() {
+    return purgeExpiredCacheEntries();
+  }
+
+  /**
+   * Footprint of the evictable caches, so the quota can be watched filling up.
+   *
+   * @returns {{entries: number, expiredEntries: number, bytes: number, formattedSize: string}}
+   */
+  static getCacheFootprint() {
+    const footprint = getCacheFootprint();
+    return { ...footprint, formattedSize: this.formatBytes(footprint.bytes) };
   }
 
   /**

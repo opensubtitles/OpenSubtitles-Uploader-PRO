@@ -3,6 +3,7 @@ import authService from '../services/authService.js';
 import { SessionManager } from '../services/sessionManager.js';
 import { startSessionKeepAlive, stopSessionKeepAlive } from '../services/sessionKeepAlive.js';
 import { detectSession, logSessionDetection, SessionSource } from '../utils/sessionUtils.js';
+import { persistAuthData, persistRememberedUsername } from '../utils/authStorage.js';
 
 /**
  * Authentication context for managing login state across the application
@@ -67,15 +68,10 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ User:', userInfo.UserNickName);
             console.log('✅ Rank:', userInfo.UserRank);
 
-            // Store in localStorage for future use
-            localStorage.setItem('opensubtitles_token', sessionId);
-            localStorage.setItem('opensubtitles_user_data', JSON.stringify(userInfo));
-            localStorage.setItem('opensubtitles_login_time', Date.now().toString());
-
-            // Remember username for future logins
-            if (userInfo.UserNickName) {
-              localStorage.setItem('opensubtitles_remembered_username', userInfo.UserNickName);
-            }
+            // Store for future use, including the nickname for the login form.
+            // Storage failure must not undo the state set above - the session
+            // is already verified and valid for this run.
+            persistAuthData(sessionId, userInfo);
 
             // If session came from URL, ensure it's stored by SessionManager
             if (sessionDetection.source === SessionSource.URL_PARAMETER) {
@@ -263,9 +259,7 @@ export const AuthProvider = ({ children }) => {
         console.log('✅ Login successful:', result.userData.UserNickName);
 
         // Remember username for future logins
-        if (result.userData.UserNickName) {
-          localStorage.setItem('opensubtitles_remembered_username', result.userData.UserNickName);
-        }
+        persistRememberedUsername(result.userData.UserNickName);
 
         return result;
       } else {

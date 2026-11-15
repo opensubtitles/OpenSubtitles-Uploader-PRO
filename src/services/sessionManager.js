@@ -5,6 +5,7 @@
 
 import { hideSensitiveData, logSensitiveData } from '../utils/securityUtils.js';
 import { SESSION_TOKEN_KEY } from '../utils/sessionUtils.js';
+import { safeSetItem } from '../utils/storageQuota.js';
 
 /**
  * Legacy key. This used to be the store, but `detectSession` never read it, so
@@ -46,7 +47,11 @@ export class SessionManager {
       // Silently check for existing session
       const existing = this.getStoredSessionId();
       if (existing) {
-        logSensitiveData('🔐 SessionManager: ✅ Using existing stored session', existing, 'session');
+        logSensitiveData(
+          '🔐 SessionManager: ✅ Using existing stored session',
+          existing,
+          'session'
+        );
       }
     }
 
@@ -73,7 +78,9 @@ export class SessionManager {
    */
   static storeSessionId(sessionId) {
     try {
-      localStorage.setItem(SESSION_TOKEN_KEY, sessionId);
+      // safeSetItem rather than a bare write: on a full quota this reclaims
+      // cache space instead of just losing the session.
+      safeSetItem(SESSION_TOKEN_KEY, sessionId, { label: 'session token' });
 
       // Verify storage worked
       const stored = localStorage.getItem(SESSION_TOKEN_KEY);

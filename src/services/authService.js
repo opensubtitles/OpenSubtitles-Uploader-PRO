@@ -1,6 +1,7 @@
 import { xmlrpcCall } from './api/xmlrpc.js';
 import { APP_VERSION } from '../utils/constants.js';
 import { logSensitiveData } from '../utils/securityUtils.js';
+import { persistAuthData, persistUserData } from '../utils/authStorage.js';
 
 /**
  * Authentication service for OpenSubtitles XML-RPC API
@@ -56,10 +57,10 @@ class AuthService {
         logSensitiveData('🔐 Token received', this.token, 'token');
         console.log('🔐 User data received:', this.userData);
 
-        // Store in localStorage for persistence
-        localStorage.setItem('opensubtitles_token', this.token);
-        localStorage.setItem('opensubtitles_user_data', JSON.stringify(this.userData));
-        localStorage.setItem('opensubtitles_login_time', Date.now().toString());
+        // Store for persistence. Never allowed to fail the login: the server
+        // has already granted this session, so a storage problem costs the
+        // user a re-login next launch, not this one.
+        persistAuthData(this.token, this.userData, { rememberUsername: false });
 
         console.log('✅ Login successful');
         console.log('👤 User:', this.userData.UserNickName || 'Anonymous');
@@ -92,8 +93,8 @@ class AuthService {
             this.userData._canUpload = uploadPermission.canUpload;
             this.userData._uploadRestrictionReason = uploadPermission.reason;
 
-            // Update localStorage with enhanced user data (getUserInfo priority)
-            localStorage.setItem('opensubtitles_user_data', JSON.stringify(this.userData));
+            // Update stored profile with enhanced user data (getUserInfo priority)
+            persistUserData(this.userData);
 
             console.log(
               '✅ Enhanced user info retrieved via getUserInfo (using as primary data source)'

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { safeSetItem } from '../utils/storageQuota.js';
 
 /**
  * Hook for managing test mode functionality
@@ -26,7 +27,7 @@ export const useTestMode = () => {
   const toggleTestMode = useCallback(() => {
     const newMode = !isTestMode;
     setIsTestMode(newMode);
-    localStorage.setItem('uploader_test_mode', newMode.toString());
+    safeSetItem('uploader_test_mode', newMode.toString(), { label: 'test mode flag' });
 
     if (!newMode) {
       setCurrentTestCase(null);
@@ -127,7 +128,7 @@ export const useTestMode = () => {
 
       const newTestCases = [...testCases, finalTestCase];
       setTestCases(newTestCases);
-      localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+      safeSetItem('uploader_test_cases', JSON.stringify(newTestCases), { label: 'test cases' });
       setCurrentTestCase(null);
 
       return finalTestCase;
@@ -139,7 +140,7 @@ export const useTestMode = () => {
     id => {
       const newTestCases = testCases.filter(tc => tc.id !== id);
       setTestCases(newTestCases);
-      localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+      safeSetItem('uploader_test_cases', JSON.stringify(newTestCases), { label: 'test cases' });
     },
     [testCases]
   );
@@ -182,7 +183,9 @@ export const useTestMode = () => {
             if (importData.version && importData.testCases) {
               const newTestCases = [...testCases, ...importData.testCases];
               setTestCases(newTestCases);
-              localStorage.setItem('uploader_test_cases', JSON.stringify(newTestCases));
+              safeSetItem('uploader_test_cases', JSON.stringify(newTestCases), {
+                label: 'test cases',
+              });
               resolve(importData.testCases.length);
             } else {
               reject(new Error('Invalid test case format'));

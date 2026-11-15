@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+import { persistRememberedUsername } from '../utils/authStorage.js';
 
 /**
  * Login dialog component for user authentication
@@ -54,8 +55,10 @@ const LoginDialog = ({ isOpen, onClose }) => {
     const result = await login(formData.username, formData.password, 'en');
 
     if (result.success) {
-      // Save username for future logins
-      localStorage.setItem('opensubtitles_remembered_username', formData.username);
+      // Save username for future logins. Guarded because this runs *after* a
+      // successful login - an unguarded throw here left the dialog open and
+      // onClose() unreached, which looked like a failed login.
+      persistRememberedUsername(formData.username);
 
       onClose();
       // Reset form but keep username for next time

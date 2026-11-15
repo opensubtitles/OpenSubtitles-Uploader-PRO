@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { safeSetItem, THEME_CACHE_KEY } from '../utils/storageQuota.js';
 
 const ThemeContext = createContext();
 
@@ -16,7 +17,7 @@ export const ThemeProvider = ({ children }) => {
   // Detect system preference and cache for 1 hour
   const detectSystemTheme = () => {
     const now = Date.now();
-    const cacheKey = 'opensubtitles-uploader-theme-cache';
+    const cacheKey = THEME_CACHE_KEY;
     const cacheData = localStorage.getItem(cacheKey);
 
     if (cacheData) {
@@ -35,13 +36,15 @@ export const ThemeProvider = ({ children }) => {
     const prefersDark =
       window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Cache the detected preference
-    localStorage.setItem(
+    // Cache the detected preference. Guarded: this runs from a mount effect,
+    // where a throw would take the whole provider down over a 1-hour cache.
+    safeSetItem(
       cacheKey,
       JSON.stringify({
         theme: prefersDark ? 'dark' : 'light',
         timestamp: now,
-      })
+      }),
+      { label: 'theme cache' }
     );
 
     return prefersDark;
@@ -73,7 +76,9 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    localStorage.setItem('opensubtitles-uploader-theme', newTheme ? 'dark' : 'light');
+    safeSetItem('opensubtitles-uploader-theme', newTheme ? 'dark' : 'light', {
+      label: 'theme preference',
+    });
   };
 
   // Theme configuration

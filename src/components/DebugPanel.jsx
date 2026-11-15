@@ -30,7 +30,12 @@ export const DebugPanel = ({
   // Update cache info and session info when debug panel opens or cache is cleared
   useEffect(() => {
     const updateInfo = async () => {
-      setCacheInfo(CacheService.getCacheSize());
+      // Merge in the expired count so a cache that is mostly dead weight is
+      // visible here rather than only discovered when a write fails.
+      setCacheInfo({
+        ...CacheService.getCacheSize(),
+        expiredEntries: CacheService.getCacheFootprint().expiredEntries,
+      });
       setSessionInfo({
         hasSessionId: !!authService.getToken(),
         // Never the value, not even a prefix - this object is rendered on screen
@@ -62,7 +67,6 @@ export const DebugPanel = ({
     let content = '=== DEBUG INFORMATION ===\n\n';
 
     try {
-
       // Add verbose log status
       content += `Verbose log: ${debugMode ? 'ON' : 'OFF'}\n`;
       content += `Timestamp: ${new Date().toISOString()}\n\n`;
@@ -325,7 +329,8 @@ export const DebugPanel = ({
                   {cacheInfo.itemCount > 0 && (
                     <span style={{ color: themeColors.textMuted }}>
                       {' '}
-                      ({cacheInfo.itemCount} items)
+                      ({cacheInfo.itemCount} items
+                      {cacheInfo.expiredEntries > 0 && `, ${cacheInfo.expiredEntries} expired`})
                     </span>
                   )}
                 </span>
