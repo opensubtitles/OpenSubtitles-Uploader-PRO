@@ -110,6 +110,7 @@ import { ThemeProvider, useTheme } from '../contexts/ThemeContext.jsx';
 import LoginDialog from './LoginDialog.jsx';
 import { getThemeStyles, createHoverHandlers } from '../utils/themeUtils.js';
 import { APP_VERSION, isLinkRemovalEnabled } from '../utils/constants.js';
+import { propagateShowToSiblings } from '../utils/episodePropagation.js';
 import { SessionManager } from '../services/sessionManager.js';
 import TestModePanel from './TestModePanel.jsx';
 import UserProfile from './UserProfile.jsx';
@@ -1068,6 +1069,31 @@ function SubtitleUploaderInner() {
 
       // Update the movie guess immediately (setTimeout removed - debug mode issues fixed)
       setMovieGuess(videoPath, newMovieGuess);
+
+      // A show + episode picked by hand: give that show to the other files of
+      // the same series, each with its own SxxEyy (see episodePropagation.js).
+      const siblings = [
+        ...pairedFiles
+          .filter(pair => pair.video)
+          .map(pair => ({
+            path: pair.video.fullPath,
+            name: pair.video.name,
+          })),
+        ...orphanedSubtitles.map(sub => ({ path: sub.fullPath, name: sub.name })),
+      ];
+      const propagated = propagateShowToSiblings({
+        changedPath: videoPath,
+        newGuess: newMovieGuess,
+        files: siblings,
+        movieGuesses,
+      });
+      const propagatedPaths = Object.keys(propagated);
+      if (propagatedPaths.length > 0) {
+        propagatedPaths.forEach(path => setMovieGuess(path, propagated[path]));
+        addDebugInfo(
+          `Applied ${newMovieGuess.title} to ${propagatedPaths.length} other file(s) of the same series`
+        );
+      }
 
       // Fetch new features data for the new IMDb ID
       if (newMovieGuess.imdbid) {
