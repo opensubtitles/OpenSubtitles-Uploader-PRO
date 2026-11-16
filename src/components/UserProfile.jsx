@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LogIn, LogOut, User, ChevronDown, AlertTriangle, Loader2, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import LoginDialog from './LoginDialog.jsx';
+import { WEB_EMBED, requestHostLogin } from '../config/environments.js';
 
 /**
  * User profile component showing login status and providing logout functionality
@@ -19,7 +20,8 @@ const UserProfile = () => {
 
   const handleLoginClick = () => {
     clearError();
-    setShowLoginDialog(true);
+    if (WEB_EMBED) requestHostLogin();
+    else setShowLoginDialog(true);
   };
 
   const isAnon = isAnonymous && isAnonymous();
@@ -154,7 +156,9 @@ const UserProfile = () => {
         </div>
       )}
 
-      <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} />
+      {!WEB_EMBED && (
+        <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} />
+      )}
 
       {showUserMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />

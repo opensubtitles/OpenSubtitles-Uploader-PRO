@@ -7,6 +7,7 @@ import AdBlockTestPage from './components/AdBlockTestPage.jsx';
 import RankRestrictionWarning from './components/RankRestrictionWarning.jsx';
 import UploadHistory from './components/history/UploadHistory.jsx';
 import { logAppInit } from './utils/appLogger.js';
+import { WEB_EMBED } from './config/environments.js';
 
 function App() {
   // Initialize system logging on app start
@@ -22,7 +23,7 @@ function App() {
           <Routes>
             <Route path="/" element={<SubtitleUploader />} />
             <Route path="/history" element={<UploadHistory />} />
-            <Route path="/adblock" element={<AdBlockTestPage />} />
+            {!WEB_EMBED && <Route path="/adblock" element={<AdBlockTestPage />} />}
           </Routes>
         </Router>
       </ThemeProvider>

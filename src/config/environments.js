@@ -61,6 +61,24 @@ export const DEV_ONLY =
   (typeof __USE_DEV_ONLY__ !== 'undefined' && __USE_DEV_ONLY__ === 'true') ||
   readEnv('VITE_USE_DEV_ONLY') === 'true';
 
+// A web build (VITE_WEB_EMBED=true) runs in an iframe on a page of the
+// website (same origin), which owns sign-in: before loading this app the page
+// writes the user's JWT where the app keeps its login (localStorage,
+// osdb_com_<environment>_jwt), never in the URL, and writes a fresh one and
+// reloads the app when it fires `osdb:auth-expired`. So the web build drops
+// what only makes sense on the desktop (update checks, API health probes, the
+// debug panel, the ad-blocker test page) and never shows its own login box —
+// it fires `osdb:login-requested` on its window for the page to handle.
+export const WEB_EMBED =
+  (typeof __WEB_EMBED__ !== 'undefined' && __WEB_EMBED__ === 'true') ||
+  readEnv('VITE_WEB_EMBED') === 'true';
+
+export const requestHostLogin = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('osdb:login-requested'));
+  }
+};
+
 // Production base URL override. Same globalThis-property shape as the dev
 // override above, and read from VITE_OPENSUBTITLES_BASE_URL_PROD otherwise.
 // Exists so a tester build can reach the API server directly while its public

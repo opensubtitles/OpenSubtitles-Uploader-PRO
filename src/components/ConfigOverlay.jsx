@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import UpdateSettings from './UpdateSettings.jsx';
 import { isLinkRemovalEnabled } from '../utils/constants.js';
+import { WEB_EMBED } from '../config/environments.js';
 
 export const ConfigOverlay = ({
   isOpen,
@@ -763,8 +764,9 @@ export const ConfigOverlay = ({
                     <div
                       className="w-11 h-6 rounded-full peer transition-colors duration-200 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
                       style={{
-                        backgroundColor:
-                          isLinkRemovalEnabled(localConfig) ? colors.success : colors.border,
+                        backgroundColor: isLinkRemovalEnabled(localConfig)
+                          ? colors.success
+                          : colors.border,
                       }}
                     />
                   </label>
@@ -883,8 +885,8 @@ export const ConfigOverlay = ({
             {/* Minimal separator line */}
             <div className="h-px" style={{ backgroundColor: colors.border, opacity: 0.3 }} />
 
-            {/* Update Settings */}
-            <UpdateSettings />
+            {/* Update Settings: desktop only, the web build is updated with the site */}
+            {!WEB_EMBED && <UpdateSettings />}
           </div>
         </div>
 

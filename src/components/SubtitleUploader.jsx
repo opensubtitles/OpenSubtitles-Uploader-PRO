@@ -110,11 +110,13 @@ import { ThemeProvider, useTheme } from '../contexts/ThemeContext.jsx';
 import LoginDialog from './LoginDialog.jsx';
 import { getThemeStyles, createHoverHandlers } from '../utils/themeUtils.js';
 import { APP_VERSION, isLinkRemovalEnabled } from '../utils/constants.js';
+import { propagateShowToSiblings } from '../utils/episodePropagation.js';
 import { SessionManager } from '../services/sessionManager.js';
 import TestModePanel from './TestModePanel.jsx';
 import UserProfile from './UserProfile.jsx';
 import UpdateNotification from './UpdateNotification.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { WEB_EMBED, requestHostLogin } from '../config/environments.js';
 
 // Lazy load the DebugPanel component
 const DebugPanel = lazy(() =>
@@ -1067,6 +1069,31 @@ function SubtitleUploaderInner() {
 
       // Update the movie guess immediately (setTimeout removed - debug mode issues fixed)
       setMovieGuess(videoPath, newMovieGuess);
+
+      // A show + episode picked by hand: give that show to the other files of
+      // the same series, each with its own SxxEyy (see episodePropagation.js).
+      const siblings = [
+        ...pairedFiles
+          .filter(pair => pair.video)
+          .map(pair => ({
+            path: pair.video.fullPath,
+            name: pair.video.name,
+          })),
+        ...orphanedSubtitles.map(sub => ({ path: sub.fullPath, name: sub.name })),
+      ];
+      const propagated = propagateShowToSiblings({
+        changedPath: videoPath,
+        newGuess: newMovieGuess,
+        files: siblings,
+        movieGuesses,
+      });
+      const propagatedPaths = Object.keys(propagated);
+      if (propagatedPaths.length > 0) {
+        propagatedPaths.forEach(path => setMovieGuess(path, propagated[path]));
+        addDebugInfo(
+          `Applied ${newMovieGuess.title} to ${propagatedPaths.length} other file(s) of the same series`
+        );
+      }
 
       // Fetch new features data for the new IMDb ID
       if (newMovieGuess.imdbid) {
@@ -2440,112 +2467,130 @@ function SubtitleUploaderInner() {
 
   return (
     <div className="min-h-screen bg-base-200 p-6">
-      {/* Update Notification */}
-      <UpdateNotification />
+      {/* Update Notification and API health probe: desktop only */}
+      {!WEB_EMBED && <UpdateNotification />}
 
       {/* Unified API and Ad Blocker Warning */}
-      <ApiHealthCheck
-        onApiBlocked={reason => {
-          addDebugInfo(`🚫 API blocked by ${reason}: Ad blocker or network issue detected`);
-        }}
-      />
+      {!WEB_EMBED && (
+        <ApiHealthCheck
+          onApiBlocked={reason => {
+            addDebugInfo(`🚫 API blocked by ${reason}: Ad blocker or network issue detected`);
+          }}
+        />
+      )}
 
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="card bg-base-100 shadow-sm mb-6">
-          <div className="card-body p-5 flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <a
-                href="https://www.opensubtitles.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block hover:opacity-80 transition-opacity shrink-0"
-              >
-                <img
-                  src={isDark ? logoDark : logoWhite}
-                  alt="OpenSubtitles"
-                  className="h-12 w-auto"
-                  onError={e => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'block';
-                  }}
-                />
-                <div className="text-3xl hidden" style={{ display: 'none' }}>
-                  🎬
+        {/* Header. The web build is shown inside a page of the website, which
+            already has the logo, the account menu and the theme switch: it
+            keeps only the Config button. */}
+        {WEB_EMBED ? (
+          <div className="flex justify-end mb-3">
+            <button
+              type="button"
+              onClick={handleConfigToggle}
+              className="btn btn-ghost btn-sm gap-2"
+              title="Open configuration"
+            >
+              <Settings className="size-4" />
+              <span>Config</span>
+            </button>
+          </div>
+        ) : (
+          <div className="card bg-base-100 shadow-sm mb-6">
+            <div className="card-body p-5 flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <a
+                  href="https://www.opensubtitles.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block hover:opacity-80 transition-opacity shrink-0"
+                >
+                  <img
+                    src={isDark ? logoDark : logoWhite}
+                    alt="OpenSubtitles"
+                    className="h-12 w-auto"
+                    onError={e => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'block';
+                    }}
+                  />
+                  <div className="text-3xl hidden" style={{ display: 'none' }}>
+                    🎬
+                  </div>
+                </a>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h1 className="text-2xl font-semibold text-base-content truncate">
+                      OpenSubtitles Uploader
+                    </h1>
+                    <button
+                      type="button"
+                      className="badge badge-success badge-sm cursor-pointer"
+                      onClick={() => setShowChangelogOverlay(true)}
+                      title="Click to view changelog"
+                    >
+                      v{APP_VERSION}
+                    </button>
+                  </div>
+                  <p className="text-sm text-base-content/60">
+                    Subtitle uploader for{' '}
+                    <a
+                      href="https://www.opensubtitles.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="link link-hover link-primary"
+                    >
+                      OpenSubtitles
+                    </a>
+                  </p>
                 </div>
-              </a>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h1 className="text-2xl font-semibold text-base-content truncate">
-                    OpenSubtitles Uploader
-                  </h1>
+              </div>
+
+              {/* User Info and Action Buttons - Right Side */}
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <UserProfile />
+                <div className="flex items-center gap-1">
+                  <EnvironmentSwitch />
+                  <a
+                    href="#/history"
+                    className="btn btn-ghost btn-sm gap-2"
+                    title="View upload history"
+                  >
+                    <History className="size-4" />
+                    <span className="hidden sm:inline">History</span>
+                  </a>
                   <button
                     type="button"
-                    className="badge badge-success badge-sm cursor-pointer"
-                    onClick={() => setShowChangelogOverlay(true)}
-                    title="Click to view changelog"
+                    onClick={handleConfigToggle}
+                    className="btn btn-ghost btn-sm gap-2"
+                    title="Open configuration"
                   >
-                    v{APP_VERSION}
+                    <Settings className="size-4" />
+                    <span className="hidden sm:inline">Config</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleHelpToggle}
+                    className="btn btn-ghost btn-sm gap-2"
+                    title="Help & Features"
+                  >
+                    <HelpCircle className="size-4" />
+                    <span className="hidden sm:inline">Help</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="btn btn-ghost btn-sm gap-2"
+                    title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                  >
+                    {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                    <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
                   </button>
                 </div>
-                <p className="text-sm text-base-content/60">
-                  Subtitle uploader for{' '}
-                  <a
-                    href="https://www.opensubtitles.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="link link-hover link-primary"
-                  >
-                    OpenSubtitles
-                  </a>
-                </p>
-              </div>
-            </div>
-
-            {/* User Info and Action Buttons - Right Side */}
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <UserProfile />
-              <div className="flex items-center gap-1">
-                <EnvironmentSwitch />
-                <a
-                  href="#/history"
-                  className="btn btn-ghost btn-sm gap-2"
-                  title="View upload history"
-                >
-                  <History className="size-4" />
-                  <span className="hidden sm:inline">History</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={handleConfigToggle}
-                  className="btn btn-ghost btn-sm gap-2"
-                  title="Open configuration"
-                >
-                  <Settings className="size-4" />
-                  <span className="hidden sm:inline">Config</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleHelpToggle}
-                  className="btn btn-ghost btn-sm gap-2"
-                  title="Help & Features"
-                >
-                  <HelpCircle className="size-4" />
-                  <span className="hidden sm:inline">Help</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="btn btn-ghost btn-sm gap-2"
-                  title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-                >
-                  {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                  <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
-                </button>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Drop Zone */}
         <DropZone
@@ -2811,7 +2856,8 @@ function SubtitleUploaderInner() {
             </div>
             <button
               onClick={() => {
-                setShowLoginDialog(true);
+                if (WEB_EMBED) requestHostLogin();
+                else setShowLoginDialog(true);
               }}
               className="inline-flex items-center gap-3 px-8 py-4 rounded-xl transition-all transform cursor-pointer"
               style={{
@@ -2885,7 +2931,9 @@ function SubtitleUploaderInner() {
         />
 
         {/* Login Dialog for "Login to Upload" button */}
-        <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} />
+        {!WEB_EMBED && (
+          <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} />
+        )}
 
         {/* Progress Overlay */}
         <ProgressOverlay
@@ -2897,82 +2945,86 @@ function SubtitleUploaderInner() {
           startTime={processingProgress.startTime}
         />
 
-        {/* Debug Panel */}
-        <Suspense
-          fallback={
-            <div
-              className="mt-6 p-4 rounded-lg text-center"
-              style={{ backgroundColor: colors.cardBackground, color: colors.textSecondary }}
-            >
-              Loading debug panel...
-            </div>
-          }
-        >
-          <DebugPanel
-            debugMode={debugMode}
-            debugInfo={debugInfo}
-            languagesLoading={languagesLoading}
-            languagesError={languagesError}
-            movieGuesses={movieGuesses}
-            featuresByImdbId={featuresByImdbId}
-            hashCheckResults={hashCheckResults}
-            hashCheckLoading={hashCheckLoading}
-            hashCheckProcessed={hashCheckProcessed}
-            getHashCheckSummary={getHashCheckSummary}
-            toggleDebugMode={toggleDebugMode}
-            clearAllCache={clearAllCache}
-            colors={colors}
-            isDark={isDark}
-          />
-        </Suspense>
+        {/* Debug Panel: desktop only */}
+        {!WEB_EMBED && (
+          <Suspense
+            fallback={
+              <div
+                className="mt-6 p-4 rounded-lg text-center"
+                style={{ backgroundColor: colors.cardBackground, color: colors.textSecondary }}
+              >
+                Loading debug panel...
+              </div>
+            }
+          >
+            <DebugPanel
+              debugMode={debugMode}
+              debugInfo={debugInfo}
+              languagesLoading={languagesLoading}
+              languagesError={languagesError}
+              movieGuesses={movieGuesses}
+              featuresByImdbId={featuresByImdbId}
+              hashCheckResults={hashCheckResults}
+              hashCheckLoading={hashCheckLoading}
+              hashCheckProcessed={hashCheckProcessed}
+              getHashCheckSummary={getHashCheckSummary}
+              toggleDebugMode={toggleDebugMode}
+              clearAllCache={clearAllCache}
+              colors={colors}
+              isDark={isDark}
+            />
+          </Suspense>
+        )}
 
-        {/* Footer */}
-        <div
-          className="mt-8 pt-6 border-t text-center text-sm"
-          style={{ borderTopColor: colors.border, color: colors.textSecondary }}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-4">
-              {isStandalone && (
-                <button
-                  onClick={() => checkForUpdates(true)}
-                  disabled={isChecking}
-                  className="hover:underline transition-all flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0"
-                  style={styles.link}
-                  {...createHoverHandlers(colors, styles.link, styles.linkHover)}
-                  title="Check for new version"
-                >
-                  {isChecking ? (
-                    <>
-                      <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <span>🔔{updateAvailable && '✨'}</span>
-                      Check for Updates
-                    </>
-                  )}
-                </button>
-              )}
+        {/* Footer: desktop only (the website has its own) */}
+        {!WEB_EMBED && (
+          <div
+            className="mt-8 pt-6 border-t text-center text-sm"
+            style={{ borderTopColor: colors.border, color: colors.textSecondary }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-4">
+                {isStandalone && (
+                  <button
+                    onClick={() => checkForUpdates(true)}
+                    disabled={isChecking}
+                    className="hover:underline transition-all flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0"
+                    style={styles.link}
+                    {...createHoverHandlers(colors, styles.link, styles.linkHover)}
+                    title="Check for new version"
+                  >
+                    {isChecking ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <span>🔔{updateAvailable && '✨'}</span>
+                        Check for Updates
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs opacity-75">Built with ❤️ for the OpenSubtitles community</p>
             </div>
-            <p className="text-xs opacity-75">Built with ❤️ for the OpenSubtitles community</p>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Test Mode Panel - Only shows in development */}

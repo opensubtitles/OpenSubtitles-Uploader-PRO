@@ -62,9 +62,16 @@ if (USE_DEV_ONLY) {
   process.env.OPENSUBTITLES_API_KEY_PROD = '';
 }
 
+// VITE_WEB_EMBED=true: the build served in an iframe on the website (see
+// WEB_EMBED in src/config/environments.js). Its assets are relative, so it
+// works from any folder (the site serves it at /uploader/); the desktop build
+// keeps absolute paths, which Tauri expects.
+const WEB_EMBED = (process.env.VITE_WEB_EMBED || fileEnv.VITE_WEB_EMBED) === 'true';
+
 export default defineConfig({
   plugins: [react(), embedApiKeysPlugin()],
   publicDir: 'public',
+  base: WEB_EMBED ? './' : '/',
 
   // Define global constants for embedded API keys and polyfills
   define: {
@@ -83,6 +90,7 @@ export default defineConfig({
     ),
     __ENV_SWITCH_ENABLED__: JSON.stringify(process.env.VITE_ENV_SWITCH || ''),
     __USE_DEV_ONLY__: JSON.stringify(USE_DEV_ONLY ? 'true' : ''),
+    __WEB_EMBED__: JSON.stringify(WEB_EMBED ? 'true' : ''),
     global: 'globalThis',
   },
 
