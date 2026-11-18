@@ -40,11 +40,23 @@ describe('errorCopy', () => {
     assert.equal(r.body, message);
   });
 
+  test('too_small says the file holds no subtitle, not spam', () => {
+    const r = errorCopy({ code: 'too_small', message: 'The file contains no subtitle' });
+    assert.match(r.title, /empty/i);
+    assert.match(r.body, /no subtitle/i);
+    assert.doesNotMatch(r.body, /spam/i);
+  });
+
+  test('spam_content no longer describes a size problem', () => {
+    const r = errorCopy({ code: 'spam_content' });
+    assert.doesNotMatch(`${r.title} ${r.body}`, /small/i);
+  });
+
   test('handles every plan-listed code without throwing', () => {
     const codes = [
       'offline', 'network_error', 'timeout', 'server_error',
       'unauthorized', 'banned', 'quota_exceeded', 'duplicate',
-      'spam_filename', 'spam_content', 'anon_duplicate_language',
+      'spam_filename', 'spam_content', 'too_small', 'anon_duplicate_language',
       'feature_not_found', 'feature_required', 'episode_not_found',
       'episode_required', 'ambiguous_tmdb_id', 'lookup_unavailable',
       'invalid_language', 'language_required', 'invalid_content',

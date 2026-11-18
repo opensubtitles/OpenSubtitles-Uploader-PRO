@@ -61,7 +61,7 @@ HTTP status matches the error semantics (401, 403, 404, 409, 422, 429). `error_c
 |---|---|---|---|
 | All check errors above (if somehow skipped check) | — | (same) | (same) |
 | `422 Subhash mismatch` | 422 | `subhash_mismatch` | "File changed during upload — please restart" |
-| Subtitle content too small (< 100 B) | 403 | `spam_content` | "Subtitle is too small to be valid" |
+| Subtitle content under the format floor (30 B SRT/VTT/ASS/SSA, 8 B compact; since 2026-11, was < 100 B → `spam_content`) | 400 | `too_small` | "The file contains no subtitle" |
 | Duplicate exists (race vs check) | 409 | `duplicate` | "Someone else just uploaded this — here's the link" |
 | Internal error | 500 | `error` | Generic "Unexpected error — please try again" + support CTA |
 
@@ -144,7 +144,8 @@ const COPY = {
   duplicate:             { icon: '♻️', title: 'Already in database',    body: null, action: 'open-existing' },
   subhash_mismatch:      { icon: '🔄', title: 'File changed — restart', body: null },
   invalid_content:       { icon: '❌', title: 'Corrupt subtitle',       body: null },
-  spam_content:          { icon: '🗑️', title: 'Subtitle too small',    body: null },
+  spam_content:          { icon: '🗑️', title: 'Content not permitted', body: null },
+  too_small:             { icon: '📄', title: 'File is empty',         body: null },
   validation_error:      { icon: '✏️', title: 'Please check the fields',body: null },
   invalid_language:      { icon: '🌐', title: 'Unknown language',       body: null },
   missing_title:         { icon: '📝', title: 'Title is required',      body: null },

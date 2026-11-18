@@ -16,7 +16,12 @@ export const ERROR_COPY = Object.freeze({
   quota_exceeded:          { icon: '⏳', title: 'Daily limit reached', body: "You've hit your daily upload quota. Try again tomorrow, or upgrade for a higher limit." },
   duplicate:               { icon: '♻️', title: 'Already in the database', body: 'This subtitle has been uploaded before.' },
   spam_filename:           { icon: '⚠️', title: 'Filename not allowed', body: 'Try renaming the subtitle file.' },
-  spam_content:            { icon: '🗑️', title: 'Subtitle too small', body: 'The subtitle file looks like spam — too small to be valid.' },
+  // Content matched a spam pattern. Until 2026-11 the server also sent this for
+  // files under 100 bytes; size refusals are now too_small.
+  spam_content:            { icon: '🗑️', title: 'Content not permitted', body: 'The subtitle text was refused by the spam filter.' },
+  // Under the format's floor (30 bytes for SRT/VTT/ASS/SSA, 8 for compact
+  // formats): no cue can fit, so the file holds no subtitle.
+  too_small:               { icon: '📄', title: 'File is empty', body: 'The file contains no subtitle. Check that you picked the right file.' },
   anon_duplicate_language: { icon: '👤', title: 'Not allowed for guests', body: 'Anonymous uploads cannot duplicate an existing language. Log in, or pick a different language.', showLogin: true },
   feature_not_found:       { icon: '🎬', title: 'Title not in database', body: 'Use "Create new entry" to register a provisional title.' },
   feature_required:        { icon: '🎬', title: 'Pick a movie or episode', body: 'Choose which movie or episode this subtitle belongs to before uploading.' },
