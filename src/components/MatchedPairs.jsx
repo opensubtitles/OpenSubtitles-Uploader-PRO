@@ -777,27 +777,39 @@ export const MatchedPairs = ({
 
                               const count = dup.count ?? 0;
                               const isZero = count === 0;
-                              const label = isZero
-                                ? '🟢 0 on OS — new language for this title'
-                                : `🟡 ${count} on OS`;
-                              const tooltip = isZero
-                                ? 'OpenSubtitles has no subtitles for this movie in this language yet — your upload will be the first.'
-                                : `OpenSubtitles already has ${count} subtitle${count === 1 ? '' : 's'} for this movie in this language. Click to compare.`;
+                              const isFallback = dup.isSeriesFallback || false;
+
+                              // Different messaging based on fallback status
+                              const label = isFallback
+                                ? isZero
+                                  ? '🟡 0 on OS (series-wide) — may be new for this episode'
+                                  : `🟡 ${count} on OS (series-wide)`
+                                : isZero
+                                  ? '🟢 0 on OS — new language for this title'
+                                  : `🟡 ${count} on OS`;
+
+                              const tooltip = isFallback
+                                ? isZero
+                                  ? 'Could not resolve episode-specific IMDb ID, so checking the entire series. Series has no subtitles in this language, but verify before uploading.'
+                                  : `Could not resolve episode-specific IMDb ID. The series has ${count} subtitle${count === 1 ? '' : 's'} in this language, but this count may include other episodes. Click to compare.`
+                                : isZero
+                                  ? 'OpenSubtitles has no subtitles for this movie in this language yet — your upload will be the first.'
+                                  : `OpenSubtitles already has ${count} subtitle${count === 1 ? '' : 's'} for this movie in this language. Click to compare.`;
 
                               const badgeStyle = {
-                                color: isZero
+                                color: isZero && !isFallback
                                   ? themeColors.success || '#10b981'
                                   : isDark
                                     ? '#fcd34d'
                                     : '#92400e',
-                                backgroundColor: isZero
+                                backgroundColor: isZero && !isFallback
                                   ? isDark
                                     ? '#064e3b'
                                     : '#ecfdf5'
                                   : isDark
                                     ? '#3f2d0a'
                                     : '#fef3c7',
-                                border: `1px solid ${isZero ? (isDark ? '#065f46' : '#a7f3d0') : isDark ? '#78350f' : '#fde68a'}`,
+                                border: `1px solid ${isZero && !isFallback ? (isDark ? '#065f46' : '#a7f3d0') : isDark ? '#78350f' : '#fde68a'}`,
                               };
 
                               return dup.searchUrl ? (

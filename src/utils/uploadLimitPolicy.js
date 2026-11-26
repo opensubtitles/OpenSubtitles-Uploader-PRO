@@ -197,11 +197,11 @@ export const evaluateUploadLimits = (entries, { ranks, now = Date.now(), windows
  *
  * @param {object} limitState - result of evaluateUploadLimits
  * @param {number} count - subtitles the user is trying to upload
- * @returns {{allowed: boolean, reason: string|null}}
+ * @returns {{allowed: boolean, reason: string|null, allowPartial: boolean, allowedCount: number}}
  */
 export const canUploadBatch = (limitState, count) => {
-  if (!limitState?.enforced) return { allowed: true, reason: null };
-  if (!Number.isFinite(count) || count <= 0) return { allowed: true, reason: null };
+  if (!limitState?.enforced) return { allowed: true, reason: null, allowPartial: false, allowedCount: count };
+  if (!Number.isFinite(count) || count <= 0) return { allowed: true, reason: null, allowPartial: false, allowedCount: 0 };
 
   if (limitState.blocked) {
     const window = limitState.blockingWindow;
@@ -210,6 +210,8 @@ export const canUploadBatch = (limitState, count) => {
       reason: window
         ? `Upload limit reached (${window.used}/${window.limit} per ${window.label}).`
         : 'Upload limit reached.',
+      allowPartial: false,
+      allowedCount: 0,
     };
   }
 
@@ -220,10 +222,12 @@ export const canUploadBatch = (limitState, count) => {
       reason: window
         ? `Only ${limitState.allowance} of ${window.limit} uploads left this ${window.label} — ${count} selected.`
         : `Only ${limitState.allowance} uploads left — ${count} selected.`,
+      allowPartial: true,
+      allowedCount: limitState.allowance,
     };
   }
 
-  return { allowed: true, reason: null };
+  return { allowed: true, reason: null, allowPartial: false, allowedCount: count };
 };
 
 /**

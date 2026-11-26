@@ -344,7 +344,15 @@ export const UploadButton = ({
     // first — being over the limit is not the user's most urgent problem if
     // their files are also unmatched.
     const limitCheck = UploadLedgerService.checkUploadAllowed(userInfo, readySubtitlesCount);
-    if (!limitCheck.allowed) {
+
+    // If partial upload is possible, add a warning instead of an error
+    if (!limitCheck.allowed && limitCheck.allowPartial) {
+      warnings.push({
+        type: 'upload_limit_partial',
+        message: `${limitCheck.reason} You can upload ${limitCheck.allowedCount} now and ${readySubtitlesCount - limitCheck.allowedCount} will be skipped.`,
+        subtitlePath: null,
+      });
+    } else if (!limitCheck.allowed) {
       errors.push({
         type: 'upload_limit',
         message: limitCheck.reason,
@@ -360,6 +368,8 @@ export const UploadButton = ({
       readySubtitlesCount,
       totalSubtitles,
       limitState: limitCheck.limitState,
+      partialUploadAllowed: limitCheck.allowPartial || false,
+      partialUploadCount: limitCheck.allowedCount || 0,
     };
   };
 
@@ -414,9 +424,18 @@ export const UploadButton = ({
   };
 
   const validation = validateUpload();
-  const { isValid, errors, warnings, readySubtitlesCount, totalSubtitles, limitState } =
-    validation;
+  const {
+    isValid,
+    errors,
+    warnings,
+    readySubtitlesCount,
+    totalSubtitles,
+    limitState,
+    partialUploadAllowed,
+    partialUploadCount,
+  } = validation;
   const limitBlocked = errors.some(error => error.type === 'upload_limit');
+  const limitPartialWarning = warnings.some(warning => warning.type === 'upload_limit_partial');
 
   // Report validation errors to parent component for highlighting subtitles
   const prevErrorsRef = useRef([]);
@@ -491,10 +510,19 @@ export const UploadButton = ({
                 <span className="font-medium">{readySubtitlesCount}</span> of{' '}
                 <span className="font-medium">{totalSubtitles}</span> selected subtitles ready
               </div>
-              {isValid && (
+              {isValid && !limitPartialWarning && (
                 <div className="flex items-center gap-2" style={{ color: themeColors.success }}>
                   <span>✅</span>
                   <span>All requirements met!</span>
+                </div>
+              )}
+              {isValid && limitPartialWarning && partialUploadAllowed && (
+                <div className="flex items-center gap-2" style={{ color: themeColors.warning }}>
+                  <span>⚠️</span>
+                  <span>
+                    Will upload {partialUploadCount} now, {readySubtitlesCount - partialUploadCount}{' '}
+                    will be skipped (upload limit)
+                  </span>
                 </div>
               )}
               {limitState?.enforced && (
@@ -609,12 +637,18 @@ export const UploadButton = ({
                 ) : isValid ? (
                   <div className="flex items-center gap-3">
                     <span>🚀</span>
-                    <span>UPLOAD SUBTITLES</span>
+                    <span>
+                      {limitPartialWarning && partialUploadAllowed
+                        ? `UPLOAD ${partialUploadCount} NOW`
+                        : 'UPLOAD SUBTITLES'}
+                    </span>
                     <span
                       className="px-2 py-1 rounded text-sm"
                       style={{ backgroundColor: '#185DA0' }}
                     >
-                      {readySubtitlesCount}
+                      {limitPartialWarning && partialUploadAllowed
+                        ? `${partialUploadCount}/${readySubtitlesCount}`
+                        : readySubtitlesCount}
                     </span>
                   </div>
                 ) : (

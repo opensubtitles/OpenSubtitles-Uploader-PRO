@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { XmlRpcService } from '../services/api/xmlrpc.js';
 import { SubtitleHashService } from '../services/subtitleHash.js';
-import { resolveEpisodeImdbId } from '../utils/fileUtils.js';
+import { resolveEpisodeImdbId, isSeriesLevelFallback } from '../utils/fileUtils.js';
 
 /**
  * useOsDuplicateCount
@@ -61,12 +61,20 @@ export const useOsDuplicateCount = (addDebugInfo) => {
         );
         if (!imdbid) continue;
 
+        // Check if this IMDb ID is a series-level fallback
+        const isFallback = isSeriesLevelFallback(
+          imdbid,
+          movie,
+          featuresByImdbId,
+          guessItData?.[pair.video.fullPath]
+        );
+
         for (const subtitle of pair.subtitles) {
           const langCode = getSubtitleLanguage?.(subtitle);
           if (!langCode) continue;
           const sublang = SubtitleHashService.getLanguageId(langCode, combinedLanguages);
           if (!sublang) continue;
-          tasks.push({ fullPath: subtitle.fullPath, imdbid, sublang });
+          tasks.push({ fullPath: subtitle.fullPath, imdbid, sublang, isSeriesFallback: isFallback });
         }
       }
 
@@ -75,10 +83,12 @@ export const useOsDuplicateCount = (addDebugInfo) => {
       // De-dup tasks by (imdb, lang) — but every task still maps to its own fullPath row
       const pairKey = (t) => `${String(t.imdbid).replace(/^tt/i, '').replace(/^0+/, '')}|${t.sublang}`;
       const grouped = new Map();
+      const tasksByPath = new Map(); // Track full task info by path
       for (const task of tasks) {
         const key = pairKey(task);
         if (!grouped.has(key)) grouped.set(key, []);
         grouped.get(key).push(task.fullPath);
+        tasksByPath.set(task.fullPath, task);
       }
 
       // Mark rows that don't yet have a result as loading
@@ -112,11 +122,13 @@ export const useOsDuplicateCount = (addDebugInfo) => {
           promise = XmlRpcService.searchSubtitlesByImdb(imdbid, sublang, addDebugInfo)
             .then((data) => {
               for (const fp of paths) {
+                const task = tasksByPath.get(fp);
                 setRowState(fp, {
                   status: 'done',
                   count: data.count,
                   searchUrl: data.searchUrl,
                   pairKey: key,
+                  isSeriesFallback: task?.isSeriesFallback || false,
                 });
               }
               return data;
@@ -146,11 +158,13 @@ export const useOsDuplicateCount = (addDebugInfo) => {
           promise.then((data) => {
             if (!data) return;
             for (const fp of paths) {
+              const task = tasksByPath.get(fp);
               setRowState(fp, {
                 status: 'done',
                 count: data.count,
                 searchUrl: data.searchUrl,
                 pairKey: key,
+                isSeriesFallback: task?.isSeriesFallback || false,
               });
             }
           });

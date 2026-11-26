@@ -239,6 +239,9 @@ const LoginDialog = ({ isOpen, onClose }) => {
             <strong>Required:</strong> You need an OpenSubtitles.org account to upload subtitles.
           </p>
           <p>Your credentials are sent securely and only used for authentication.</p>
+          <p className="mt-2">
+            <strong>Note:</strong> Your session will be remembered for 30 days.
+          </p>
         </div>
       </div>
     </div>

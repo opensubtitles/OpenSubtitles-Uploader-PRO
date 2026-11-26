@@ -106,6 +106,34 @@ export const resolveEpisodeImdbId = (movie, featuresByImdbId, guessItForPath) =>
   return baseImdb;
 };
 
+/**
+ * Check if the resolved IMDb ID is a series-level fallback rather than
+ * episode-specific. This happens when we have season/episode info but couldn't
+ * resolve the episode's individual IMDb ID, so we fell back to the series IMDb.
+ *
+ * @param {string} imdbId - The resolved IMDb ID
+ * @param {object} movie - movieGuesses[videoPath] entry
+ * @param {object} featuresByImdbId - { [imdb]: { data: [{ attributes }] } }
+ * @param {object} guessItForPath - guessItData[videoPath]
+ * @returns {boolean} - true if this is a series-level fallback
+ */
+export const isSeriesLevelFallback = (imdbId, movie, featuresByImdbId, guessItForPath) => {
+  if (!imdbId || !movie) return false;
+
+  const features = featuresByImdbId?.[imdbId];
+  const attrs = features?.data?.[0]?.attributes;
+
+  // If the IMDb ID is explicitly marked as an episode, it's not a fallback
+  if (attrs?.feature_type === 'Episode') return false;
+
+  // If it's a series/tvshow AND we have season/episode info, it's a fallback
+  const isSeries = attrs?.feature_type === 'Tvshow' || attrs?.feature_type === 'tv_series';
+  const season = getEffectiveSeason(movie, guessItForPath);
+  const episode = getEffectiveEpisode(movie, guessItForPath);
+
+  return isSeries && (season != null || episode != null);
+};
+
 export const getEffectiveSeason = (movie, guessItForPath) =>
   guessItForPath?.season ??
   guessItForPath?.episode_info?.season ??

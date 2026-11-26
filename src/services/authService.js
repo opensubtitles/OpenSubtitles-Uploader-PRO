@@ -308,11 +308,11 @@ class AuthService {
       const loginTime = localStorage.getItem('opensubtitles_login_time');
 
       if (token && userData && loginTime) {
-        // Check if token is not too old (24 hours)
+        // Check if token is not too old (30 days for persistent sessions)
         const now = Date.now();
         const loginTimestamp = parseInt(loginTime);
         const tokenAge = now - loginTimestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
 
         if (tokenAge < maxAge) {
           this.token = token;

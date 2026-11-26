@@ -1,8 +1,63 @@
 {
-  "generated_at": "2026-11-15T00:20:54.245Z",
+  "generated_at": "2026-11-26T13:03:08.011Z",
   "generator": "OpenSubtitles Uploader PRO Build System",
   "total_releases": 15,
   "releases": [
+    {
+      "version": "v1.10.3",
+      "name": "v1.10.3",
+      "published_at": "2026-11-15T00:22:24Z",
+      "body": "Version 1.10.3 - Fix login being blocked by a full local cache\n\nFixes a bug that could permanently lock you out of logging in, with the\nerror \"Login failed: Failed to execute 'setItem' on 'Storage': Setting\nthe value of 'opensubtitles_login_time' exceeded the quota.\"\n\n**What was happening**\n\nThe login actually succeeded - the app then threw the valid session away.\nEvery cache in the app (GuessIt results, movie guesses, detected\nlanguages, IMDb features, hash checks) stored one entry per file, and\nnothing ever deleted them. Expired entries were ignored on read but left\non disk forever, so after enough uploads the browser storage filled up.\nOnce it was full, saving the login timestamp failed, and that failure was\nreported as a failed login. Retrying could not help: it freed only a few\nhundred bytes before hitting the same wall.\n\n**What changes**\n\n- A verified session is never discarded because it could not be saved.\n  Storage problems now cost you a re-login next launch at worst, instead\n  of blocking login entirely.\n- Expired cache entries are deleted when they are found, and swept once\n  at startup, so the cache stops growing without bound.\n- When storage does run out, the app reclaims space automatically -\n  expired entries first, then the entries closest to expiry - and retries\n  the write. Logins, saved settings and upload history are never evicted.\n- The same crash could also happen right after a successful login while\n  remembering your username, or while saving your theme. Both are fixed.\n- Upload history can no longer be silently dropped when storage is tight,\n  which previously made upload limits stop counting.\n- The Debug panel now shows how many cached entries are expired, so a\n  filling cache is visible before it becomes a problem.\n\nNo action is needed on your side. If you are currently locked out on\n1.10.2, updating to 1.10.3 clears the stale entries on first launch.",
+      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.10.3",
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "latest.json",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/latest.json",
+          "size": 5318
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO.app.tar.gz",
+          "size": 31736584
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO.app.tar.gz.sig",
+          "size": 452
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_amd64.AppImage",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_amd64.AppImage",
+          "size": 93776376
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_amd64.AppImage.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_amd64.AppImage.sig",
+          "size": 464
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_amd64.deb",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_amd64.deb",
+          "size": 16086988
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_universal.dmg",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_universal.dmg",
+          "size": 31356476
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_x64-setup.exe",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_x64-setup.exe",
+          "size": 13385984
+        },
+        {
+          "name": "OpenSubtitles.Uploader.PRO_1.10.3_x64-setup.exe.sig",
+          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.10.3/OpenSubtitles.Uploader.PRO_1.10.3_x64-setup.exe.sig",
+          "size": 464
+        }
+      ]
+    },
     {
       "version": "v1.10.2",
       "name": "v1.10.2",
@@ -650,41 +705,6 @@
           "name": "OpenSubtitles.Uploader.PRO_1.8.17_x64-setup.exe",
           "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.17/OpenSubtitles.Uploader.PRO_1.8.17_x64-setup.exe",
           "size": 13099573
-        }
-      ]
-    },
-    {
-      "version": "v1.8.16",
-      "name": "v1.8.16",
-      "published_at": "2026-06-23T18:17:10Z",
-      "body": "Version 1.8.16 - Anubis-aware movie search fallback, broader sibling-language families",
-      "html_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/tag/v1.8.16",
-      "prerelease": false,
-      "assets": [
-        {
-          "name": "latest.json",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/latest.json",
-          "size": 1202
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.16_amd64.AppImage",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/OpenSubtitles.Uploader.PRO_1.8.16_amd64.AppImage",
-          "size": 100893888
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.16_amd64.deb",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/OpenSubtitles.Uploader.PRO_1.8.16_amd64.deb",
-          "size": 15547800
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.16_universal.dmg",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/OpenSubtitles.Uploader.PRO_1.8.16_universal.dmg",
-          "size": 30667333
-        },
-        {
-          "name": "OpenSubtitles.Uploader.PRO_1.8.16_x64-setup.exe",
-          "download_url": "https://github.com/opensubtitles/OpenSubtitles-Uploader-PRO/releases/download/v1.8.16/OpenSubtitles.Uploader.PRO_1.8.16_x64-setup.exe",
-          "size": 13137866
         }
       ]
     }
